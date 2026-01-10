@@ -37,7 +37,8 @@ import {
   TrendingDown,
   TrendingUp,
   History,
-  HelpCircle
+  HelpCircle,
+  Calendar
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { FinanceItem, HistorySnapshot } from "@/types";

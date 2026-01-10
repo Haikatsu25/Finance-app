@@ -5,7 +5,8 @@ const FinanceItemSchema = new Schema({
     label: String,
     amount: Number,
     date: String,
-    type: String
+    type: String,
+    category: String
 });
 
 const HistorySnapshotSchema = new Schema({

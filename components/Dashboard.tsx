@@ -17,6 +17,8 @@ import {
   Spacer,
   Chip,
   Progress,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import {
   Plus,
@@ -29,10 +31,14 @@ import {
   TrendingDown,
   TrendingUp,
   History,
+  HelpCircle
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { FinanceItem, HistorySnapshot } from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
+import Analytics from "./Analytics";
+import { startTour } from "./Tutorial";
 
 export default function Dashboard() {
   const [assets, setAssets] = useState<FinanceItem[]>([]);
@@ -41,6 +47,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState<HistorySnapshot[]>([]);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { theme, resolvedTheme } = useTheme();
 
   // Load data from MongoDB on mount
   useEffect(() => {
@@ -64,11 +71,12 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // Save changes to MongoDB whenever state changes
-  // Debounce could be good here, but for now we'll save on every change EFFECTively
-  // Actually, to avoid too many writes, let's create an explicit "Save" function or use a custom hook. 
-  // For this "personal" scale, saving on effect is fine but let's debounce slightly or just trust the user to "Guardar Snapshot" for history?
-  // User asked for "sync", so it should be auto-save.
+  // First time tour trigger (optional, could use localStorage to only show once)
+  useEffect(() => {
+    if (!isLoading && mounted && assets.length === 0 && liabilities.length === 0 && buckets.length === 0) {
+      // Could auto-start tour here for empty state users
+    }
+  }, [isLoading, mounted, assets, liabilities, buckets]);
 
   const saveData = async (newAssets: any, newLiabilities: any, newBuckets: any, newHistory: any) => {
     try {
@@ -89,30 +97,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!mounted || isLoading) return;
-
-    // Auto-save logic
     const timer = setTimeout(() => {
       saveData(assets, liabilities, buckets, history);
-    }, 1000); // 1s debounce
-
+    }, 1000);
     return () => clearTimeout(timer);
   }, [assets, liabilities, buckets, history, mounted, isLoading]);
 
   const totalAssets = assets.reduce((sum, item) => sum + item.amount, 0);
-  const totalLiabilities = liabilities.reduce(
-    (sum, item) => sum + item.amount,
-    0
-  );
+  const totalLiabilities = liabilities.reduce((sum, item) => sum + item.amount, 0);
   const totalBuckets = buckets.reduce((sum, item) => sum + item.amount, 0);
 
   const available = totalAssets - totalLiabilities - totalBuckets;
-  const displayAvailable = available; // Allow negative for reality check
+  const displayAvailable = available;
 
   const handleAddItem = (
     type: "asset" | "liability" | "bucket",
     label: string,
     amount: string,
-    date: string
+    date: string,
+    category: string
   ) => {
     const item: FinanceItem = {
       id: crypto.randomUUID(),
@@ -120,6 +123,7 @@ export default function Dashboard() {
       amount: parseFloat(amount),
       date: date || new Date().toISOString().split("T")[0],
       type,
+      category
     };
 
     if (type === "asset") setAssets([...assets, item]);
@@ -129,8 +133,7 @@ export default function Dashboard() {
 
   const removeItem = (id: string, type: "asset" | "liability" | "bucket") => {
     if (type === "asset") setAssets(assets.filter((i) => i.id !== id));
-    if (type === "liability")
-      setLiabilities(liabilities.filter((i) => i.id !== id));
+    if (type === "liability") setLiabilities(liabilities.filter((i) => i.id !== id));
     if (type === "bucket") setBuckets(buckets.filter((i) => i.id !== id));
   };
 
@@ -153,6 +156,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleStartTour = () => {
+    const isDark = resolvedTheme === 'dark';
+    startTour(isDark);
+  }
+
   if (!mounted) return null;
 
   return (
@@ -170,6 +178,16 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              isIconOnly
+              variant="light"
+              onPress={handleStartTour}
+              className="text-default-500 hover:text-primary"
+              id="tour-welcome"
+              aria-label="Iniciar Tour"
+            >
+              <HelpCircle size={22} />
+            </Button>
             <ThemeSwitcher />
             <SignedIn>
               <UserButton />
@@ -201,7 +219,7 @@ export default function Dashboard() {
           <section className="grid grid-cols-1 md:grid-cols-12 gap-6">
 
             {/* Main Available Balance Card */}
-            <Card className={`col-span-1 md:col-span-8 border-none shadow-2xl bg-gradient-to-br ${displayAvailable >= 0 ? 'from-emerald-500 to-teal-600 dark:from-emerald-600 dark:to-teal-800' : 'from-rose-500 to-red-600 dark:from-rose-600 dark:to-red-800'}`}>
+            <Card id="balance-card" className={`col-span-1 md:col-span-8 border-none shadow-2xl bg-gradient-to-br ${displayAvailable >= 0 ? 'from-emerald-500 to-teal-600 dark:from-emerald-600 dark:to-teal-800' : 'from-rose-500 to-red-600 dark:from-rose-600 dark:to-red-800'}`}>
               <CardBody className="py-10 px-8 flex flex-col justify-center items-start">
                 <p className={`${displayAvailable >= 0 ? 'text-emerald-100' : 'text-rose-100'} font-semibold text-sm tracking-wider uppercase mb-2 flex items-center gap-2`}>
                   <PiggyBank size={18} />
@@ -212,6 +230,7 @@ export default function Dashboard() {
                 </h2>
                 <div className="mt-6 flex gap-3">
                   <Button
+                    id="save-snapshot-btn"
                     variant="solid"
                     className="bg-white/20 text-white backdrop-blur-md border border-white/30 font-semibold hover:bg-white/30"
                     startContent={<Save size={18} />}
@@ -276,8 +295,18 @@ export default function Dashboard() {
 
           <Divider className="my-8" />
 
+          {/* Analytics Section */}
+          <Analytics
+            history={history}
+            assets={assets}
+            liabilities={liabilities}
+            isDark={resolvedTheme === 'dark'}
+          />
+
+          <Divider className="my-8" />
+
           {/* Management Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" id="management-sections">
 
             <Section
               title="Ingresos & Activos"
@@ -286,7 +315,8 @@ export default function Dashboard() {
               items={assets}
               total={totalAssets}
               color="success" // HeroUI semantic color
-              onAdd={(l: string, a: string, d: string) => handleAddItem("asset", l, a, d)}
+              categories={["Efectivo", "Banco", "Inversión", "Propiedad", "Otros"]}
+              onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("asset", l, a, d, c)}
               onRemove={(id: string) => removeItem(id, "asset")}
             />
 
@@ -297,7 +327,8 @@ export default function Dashboard() {
               items={liabilities}
               total={totalLiabilities}
               color="danger"
-              onAdd={(l: string, a: string, d: string) => handleAddItem("liability", l, a, d)}
+              categories={["Tarjeta de Crédito", "Préstamo", "Servicios", "Hogar", "Comida", "Transporte", "Otros"]}
+              onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("liability", l, a, d, c)}
               onRemove={(id: string) => removeItem(id, "liability")}
             />
 
@@ -308,7 +339,8 @@ export default function Dashboard() {
               items={buckets}
               total={totalBuckets}
               color="warning"
-              onAdd={(l: string, a: string, d: string) => handleAddItem("bucket", l, a, d)}
+              categories={["Emergencia", "Viaje", "Auto", "Regalos", "Ahorro", "Otros"]}
+              onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("bucket", l, a, d, c)}
               onRemove={(id: string) => removeItem(id, "bucket")}
             />
           </div>
@@ -368,17 +400,19 @@ export default function Dashboard() {
 }
 
 // Reusable Section Component
-function Section({ title, description, icon, items, total, color, onAdd, onRemove }: any) {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove }: any) {
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
+  const [category, setCategory] = useState(categories[0]);
 
   const handleAdd = () => {
     if (!label || !amount) return;
-    onAdd(label, amount, date);
+    onAdd(label, amount, date, category);
     setLabel("");
     setAmount("");
     setDate("");
+    setCategory(categories[0]);
   };
 
   const mapColorToTextColor = (c: string) => {
@@ -419,7 +453,10 @@ function Section({ title, description, icon, items, total, color, onAdd, onRemov
               <div key={item.id} className="group flex justify-between items-center p-3 rounded-xl bg-default-50 hover:bg-default-100 transition-colors border border-transparent hover:border-default-200">
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-default-700">{item.label}</span>
-                  {item.date && <span className="text-[10px] text-default-400 uppercase tracking-wide">{item.date}</span>}
+                  <div className="flex items-center gap-2">
+                    {item.category && <Chip size="sm" variant="flat" className="text-[10px] h-5">{item.category}</Chip>}
+                    {item.date && <span className="text-[10px] text-default-400 uppercase tracking-wide">{item.date}</span>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-mono font-medium text-default-900">${item.amount.toLocaleString()}</span>
@@ -446,6 +483,19 @@ function Section({ title, description, icon, items, total, color, onAdd, onRemov
             value={label}
             onValueChange={setLabel}
           />
+          <Select
+            placeholder="Categoría"
+            size="sm"
+            variant="faded"
+            selectedKeys={[category]}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            {categories.map((cat: string) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </Select>
           <div className="flex gap-2">
             <Input
               type="number"

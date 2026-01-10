@@ -479,73 +479,77 @@ export default function Dashboard() {
                         <Divider />
 
                         {/* Detailed Lists */}
+                        {/* Detailed Lists */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div>
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-emerald-600"><DollarSign size={16} /> Activos</h4>
                             <div className="space-y-2">
-                              {selectedSnapshot.assets?.length ? selectedSnapshot.assets.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
-                                  <div>
-                                    <p className="font-medium text-default-700">{item.label}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Chip size="sm" variant="flat" className="h-5 text-[10px] px-1 bg-default-200">{item.category || 'General'}</Chip>
-                                      {item.date && (
-                                        <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <CalendarIcon size={12} />
-                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-                                        </div>
-                                      )}
+                              {selectedSnapshot.assets?.length ? selectedSnapshot.assets.map((item, idx) => {
+                                const itemDate = item.date ? new Date(item.date + 'T12:00:00') : null;
+                                return (
+                                  <div key={idx} className="flex gap-3 items-center p-2 bg-default-50 rounded-xl border border-default-100">
+                                    {/* Date Box */}
+                                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0">
+                                      <span className="text-[9px] uppercase font-bold leading-none">{itemDate ? itemDate.toLocaleDateString(undefined, { month: 'short' }) : '-'}</span>
+                                      <span className="text-lg font-bold leading-tight">{itemDate ? itemDate.getDate() : '-'}</span>
                                     </div>
+
+                                    <div className="flex-grow min-w-0">
+                                      <p className="font-bold text-sm text-default-700 truncate">{item.label}</p>
+                                      <p className="text-xs text-default-400 truncate">{item.category || 'General'}</p>
+                                    </div>
+                                    <span className="font-mono font-bold text-emerald-600 text-sm">${item.amount.toLocaleString()}</span>
                                   </div>
-                                  <span className="font-mono font-semibold text-emerald-600">${item.amount.toLocaleString()}</span>
-                                </div>
-                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                                )
+                              }) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>
                           </div>
 
                           <div>
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-rose-600"><ShieldAlert size={16} /> Deudas</h4>
                             <div className="space-y-2">
-                              {selectedSnapshot.liabilities?.length ? selectedSnapshot.liabilities.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
-                                  <div>
-                                    <p className="font-medium text-default-700">{item.label}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Chip size="sm" variant="flat" color="danger" className="h-5 text-[10px] px-1 bg-rose-100 text-rose-700">{item.category || 'General'}</Chip>
-                                      {item.date && (
-                                        <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <CalendarIcon size={12} />
-                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-                                        </div>
-                                      )}
+                              {selectedSnapshot.liabilities?.length ? selectedSnapshot.liabilities.map((item, idx) => {
+                                const itemDate = item.date ? new Date(item.date + 'T12:00:00') : null;
+                                return (
+                                  <div key={idx} className="flex gap-3 items-center p-2 bg-default-50 rounded-xl border border-default-100">
+                                    {/* Date Box */}
+                                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 shrink-0">
+                                      <span className="text-[9px] uppercase font-bold leading-none">{itemDate ? itemDate.toLocaleDateString(undefined, { month: 'short' }) : '-'}</span>
+                                      <span className="text-lg font-bold leading-tight">{itemDate ? itemDate.getDate() : '-'}</span>
                                     </div>
+
+                                    <div className="flex-grow min-w-0">
+                                      <p className="font-bold text-sm text-default-700 truncate">{item.label}</p>
+                                      <p className="text-xs text-default-400 truncate">{item.category || 'General'}</p>
+                                    </div>
+                                    <span className="font-mono font-bold text-rose-600 text-sm">${item.amount.toLocaleString()}</span>
                                   </div>
-                                  <span className="font-mono font-semibold text-rose-600">${item.amount.toLocaleString()}</span>
-                                </div>
-                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                                )
+                              }) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>
                           </div>
 
                           <div>
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-amber-600"><Wallet size={16} /> Apartados</h4>
                             <div className="space-y-2">
-                              {selectedSnapshot.buckets?.length ? selectedSnapshot.buckets.map((item, idx) => (
-                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
-                                  <div>
-                                    <p className="font-medium text-default-700">{item.label}</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Chip size="sm" variant="flat" color="warning" className="h-5 text-[10px] px-1 bg-amber-100 text-amber-700">{item.category || 'General'}</Chip>
-                                      {item.date && (
-                                        <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <CalendarIcon size={12} />
-                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
-                                        </div>
-                                      )}
+                              {selectedSnapshot.buckets?.length ? selectedSnapshot.buckets.map((item, idx) => {
+                                const itemDate = item.date ? new Date(item.date + 'T12:00:00') : null;
+                                return (
+                                  <div key={idx} className="flex gap-3 items-center p-2 bg-default-50 rounded-xl border border-default-100">
+                                    {/* Date Box */}
+                                    <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20 shrink-0">
+                                      <span className="text-[9px] uppercase font-bold leading-none">{itemDate ? itemDate.toLocaleDateString(undefined, { month: 'short' }) : '-'}</span>
+                                      <span className="text-lg font-bold leading-tight">{itemDate ? itemDate.getDate() : '-'}</span>
                                     </div>
+
+                                    <div className="flex-grow min-w-0">
+                                      <p className="font-bold text-sm text-default-700 truncate">{item.label}</p>
+                                      <p className="text-xs text-default-400 truncate">{item.category || 'General'}</p>
+                                    </div>
+                                    <span className="font-mono font-bold text-amber-600 text-sm">${item.amount.toLocaleString()}</span>
                                   </div>
-                                  <span className="font-mono font-semibold text-amber-600">${item.amount.toLocaleString()}</span>
-                                </div>
-                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                                )
+                              }) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>
                           </div>
                         </div>

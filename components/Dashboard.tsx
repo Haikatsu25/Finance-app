@@ -459,15 +459,20 @@ export default function Dashboard() {
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-emerald-600"><DollarSign size={16} /> Activos</h4>
                             <div className="space-y-2">
                               {selectedSnapshot.assets?.length ? selectedSnapshot.assets.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
                                   <div>
-                                    <p className="font-medium">{item.label}</p>
-                                    <div className="flex gap-1">
-                                      <span className="text-[10px] text-default-400">{item.category}</span>
-                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    <p className="font-medium text-default-700">{item.label}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Chip size="sm" variant="flat" className="h-5 text-[10px] px-1 bg-default-200">{item.category || 'General'}</Chip>
+                                      {item.date && (
+                                        <div className="flex items-center gap-1 text-xs text-default-400">
+                                          <Calendar size={12} />
+                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                  <span className="font-mono font-semibold text-emerald-600">${item.amount.toLocaleString()}</span>
                                 </div>
                               )) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>
@@ -477,15 +482,20 @@ export default function Dashboard() {
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-rose-600"><ShieldAlert size={16} /> Deudas</h4>
                             <div className="space-y-2">
                               {selectedSnapshot.liabilities?.length ? selectedSnapshot.liabilities.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
                                   <div>
-                                    <p className="font-medium">{item.label}</p>
-                                    <div className="flex gap-1">
-                                      <span className="text-[10px] text-default-400">{item.category}</span>
-                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    <p className="font-medium text-default-700">{item.label}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Chip size="sm" variant="flat" color="danger" className="h-5 text-[10px] px-1 bg-rose-100 text-rose-700">{item.category || 'General'}</Chip>
+                                      {item.date && (
+                                        <div className="flex items-center gap-1 text-xs text-default-400">
+                                          <Calendar size={12} />
+                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                  <span className="font-mono font-semibold text-rose-600">${item.amount.toLocaleString()}</span>
                                 </div>
                               )) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>
@@ -495,15 +505,20 @@ export default function Dashboard() {
                             <h4 className="font-bold mb-3 flex items-center gap-2 text-amber-600"><Wallet size={16} /> Apartados</h4>
                             <div className="space-y-2">
                               {selectedSnapshot.buckets?.length ? selectedSnapshot.buckets.map((item, idx) => (
-                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                <div key={idx} className="flex justify-between items-start text-sm p-3 bg-default-50 rounded-lg border border-default-100">
                                   <div>
-                                    <p className="font-medium">{item.label}</p>
-                                    <div className="flex gap-1">
-                                      <span className="text-[10px] text-default-400">{item.category}</span>
-                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    <p className="font-medium text-default-700">{item.label}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Chip size="sm" variant="flat" color="warning" className="h-5 text-[10px] px-1 bg-amber-100 text-amber-700">{item.category || 'General'}</Chip>
+                                      {item.date && (
+                                        <div className="flex items-center gap-1 text-xs text-default-400">
+                                          <Calendar size={12} />
+                                          <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
-                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                  <span className="font-mono font-semibold text-amber-600">${item.amount.toLocaleString()}</span>
                                 </div>
                               )) : <p className="text-xs text-default-400 italic">No disponible</p>}
                             </div>

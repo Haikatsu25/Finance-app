@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { FinanceItem, HistorySnapshot } from "@/types";
+import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 
 export default function Dashboard() {
   const [assets, setAssets] = useState<FinanceItem[]>([]);
@@ -168,177 +169,200 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold tracking-tight">Finance Control</h1>
             </div>
           </div>
-          <ThemeSwitcher />
+          <div className="flex items-center gap-4">
+            <ThemeSwitcher />
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto p-6 space-y-8">
-
-        {/* Hero Section: Financial Overview */}
-        <section className="grid grid-cols-1 md:grid-cols-12 gap-6">
-
-          {/* Main Available Balance Card */}
-          <Card className={`col-span-1 md:col-span-8 border-none shadow-2xl bg-gradient-to-br ${displayAvailable >= 0 ? 'from-emerald-500 to-teal-600 dark:from-emerald-600 dark:to-teal-800' : 'from-rose-500 to-red-600 dark:from-rose-600 dark:to-red-800'}`}>
-            <CardBody className="py-10 px-8 flex flex-col justify-center items-start">
-              <p className={`${displayAvailable >= 0 ? 'text-emerald-100' : 'text-rose-100'} font-semibold text-sm tracking-wider uppercase mb-2 flex items-center gap-2`}>
-                <PiggyBank size={18} />
-                {displayAvailable >= 0 ? 'Disponible (Neto)' : 'Déficit (Negativo)'}
-              </p>
-              <h2 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight drop-shadow-sm">
-                ${displayAvailable.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-              </h2>
-              <div className="mt-6 flex gap-3">
-                <Button
-                  variant="solid"
-                  className="bg-white/20 text-white backdrop-blur-md border border-white/30 font-semibold hover:bg-white/30"
-                  startContent={<Save size={18} />}
-                  onPress={saveSnapshot}
-                >
-                  Guardar Snapshot
-                </Button>
-                <Button
-                  variant="light"
-                  className="text-white hover:bg-white/10"
-                  isIconOnly
-                  startContent={<History size={20} />}
-                  onPress={() => document.getElementById('history-section')?.scrollIntoView({ behavior: 'smooth' })}
-                />
-              </div>
-            </CardBody>
-          </Card>
-
-          {/* Quick Stats Grid */}
-          <div className="col-span-1 md:col-span-4 flex flex-col gap-4">
-            <Card className="flex-1 bg-content1 border border-divider shadow-sm">
-              <CardBody className="flex flex-row justify-between items-center p-6">
-                <div>
-                  <p className="text-default-500 text-xs font-bold uppercase">Total Activos</p>
-                  <p className="text-2xl font-bold text-emerald-500">
-                    ${totalAssets.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-600">
-                  <TrendingUp size={24} />
-                </div>
-              </CardBody>
-            </Card>
-            <Card className="flex-1 bg-content1 border border-divider shadow-sm">
-              <CardBody className="flex flex-row justify-between items-center p-6">
-                <div>
-                  <p className="text-default-500 text-xs font-bold uppercase">Total Gastos/Deudas</p>
-                  <p className="text-2xl font-bold text-rose-500">
-                    ${totalLiabilities.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 bg-rose-500/10 rounded-full text-rose-600">
-                  <TrendingDown size={24} />
-                </div>
-              </CardBody>
-            </Card>
-            <Card className="flex-1 bg-content1 border border-divider shadow-sm">
-              <CardBody className="flex flex-row justify-between items-center p-6">
-                <div>
-                  <p className="text-default-500 text-xs font-bold uppercase">Total Apartados</p>
-                  <p className="text-2xl font-bold text-amber-500">
-                    ${totalBuckets.toLocaleString()}
-                  </p>
-                </div>
-                <div className="p-3 bg-amber-500/10 rounded-full text-amber-600">
-                  <Wallet size={24} />
-                </div>
-              </CardBody>
-            </Card>
-          </div>
-        </section>
-
-        <Divider className="my-8" />
-
-        {/* Management Sections */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-
-          <Section
-            title="Ingresos & Activos"
-            description="Cuentas, efectivo, inversiones"
-            icon={<DollarSign size={20} />}
-            items={assets}
-            total={totalAssets}
-            color="success" // HeroUI semantic color
-            onAdd={(l: string, a: string, d: string) => handleAddItem("asset", l, a, d)}
-            onRemove={(id: string) => removeItem(id, "asset")}
-          />
-
-          <Section
-            title="Gastos & Deudas"
-            description="Tarjetas, préstamos, pendientes"
-            icon={<ShieldAlert size={20} />}
-            items={liabilities}
-            total={totalLiabilities}
-            color="danger"
-            onAdd={(l: string, a: string, d: string) => handleAddItem("liability", l, a, d)}
-            onRemove={(id: string) => removeItem(id, "liability")}
-          />
-
-          <Section
-            title="Apartados & Ahorro"
-            description="Fondos reservados, sobres"
-            icon={<Wallet size={20} />}
-            items={buckets}
-            total={totalBuckets}
-            color="warning"
-            onAdd={(l: string, a: string, d: string) => handleAddItem("bucket", l, a, d)}
-            onRemove={(id: string) => removeItem(id, "bucket")}
-          />
-        </div>
-
-        {/* History Section */}
-        <section id="history-section" className="pt-10">
-          <div className="flex justify-between items-end mb-4">
-            <div>
-              <h3 className="text-2xl font-bold">Historial</h3>
-              <p className="text-default-500">Registro de balances mensuales</p>
-            </div>
-            <Button size="sm" color="danger" variant="light" startContent={<Trash2 size={16} />} onPress={clearHistory}>
-              Limpiar
+      <SignedOut>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+            Controla tus finanzas
+          </h1>
+          <p className="text-xl text-default-500 mb-8 max-w-2xl">
+            Gestiona tus activos, pasivos y apartados de forma inteligente y segura.
+          </p>
+          <SignInButton mode="modal">
+            <Button size="lg" color="primary" variant="shadow" className="font-bold">
+              Iniciar Sesión
             </Button>
+          </SignInButton>
+        </div>
+      </SignedOut>
+
+      <SignedIn>
+        <main className="max-w-6xl mx-auto p-6 space-y-8">
+
+          {/* Hero Section: Financial Overview */}
+          <section className="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+            {/* Main Available Balance Card */}
+            <Card className={`col-span-1 md:col-span-8 border-none shadow-2xl bg-gradient-to-br ${displayAvailable >= 0 ? 'from-emerald-500 to-teal-600 dark:from-emerald-600 dark:to-teal-800' : 'from-rose-500 to-red-600 dark:from-rose-600 dark:to-red-800'}`}>
+              <CardBody className="py-10 px-8 flex flex-col justify-center items-start">
+                <p className={`${displayAvailable >= 0 ? 'text-emerald-100' : 'text-rose-100'} font-semibold text-sm tracking-wider uppercase mb-2 flex items-center gap-2`}>
+                  <PiggyBank size={18} />
+                  {displayAvailable >= 0 ? 'Disponible (Neto)' : 'Déficit (Negativo)'}
+                </p>
+                <h2 className="text-5xl md:text-6xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                  ${displayAvailable.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </h2>
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    variant="solid"
+                    className="bg-white/20 text-white backdrop-blur-md border border-white/30 font-semibold hover:bg-white/30"
+                    startContent={<Save size={18} />}
+                    onPress={saveSnapshot}
+                  >
+                    Guardar Snapshot
+                  </Button>
+                  <Button
+                    variant="light"
+                    className="text-white hover:bg-white/10"
+                    isIconOnly
+                    startContent={<History size={20} />}
+                    onPress={() => document.getElementById('history-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  />
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Quick Stats Grid */}
+            <div className="col-span-1 md:col-span-4 flex flex-col gap-4">
+              <Card className="flex-1 bg-content1 border border-divider shadow-sm">
+                <CardBody className="flex flex-row justify-between items-center p-6">
+                  <div>
+                    <p className="text-default-500 text-xs font-bold uppercase">Total Activos</p>
+                    <p className="text-2xl font-bold text-emerald-500">
+                      ${totalAssets.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-600">
+                    <TrendingUp size={24} />
+                  </div>
+                </CardBody>
+              </Card>
+              <Card className="flex-1 bg-content1 border border-divider shadow-sm">
+                <CardBody className="flex flex-row justify-between items-center p-6">
+                  <div>
+                    <p className="text-default-500 text-xs font-bold uppercase">Total Gastos/Deudas</p>
+                    <p className="text-2xl font-bold text-rose-500">
+                      ${totalLiabilities.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-rose-500/10 rounded-full text-rose-600">
+                    <TrendingDown size={24} />
+                  </div>
+                </CardBody>
+              </Card>
+              <Card className="flex-1 bg-content1 border border-divider shadow-sm">
+                <CardBody className="flex flex-row justify-between items-center p-6">
+                  <div>
+                    <p className="text-default-500 text-xs font-bold uppercase">Total Apartados</p>
+                    <p className="text-2xl font-bold text-amber-500">
+                      ${totalBuckets.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-amber-500/10 rounded-full text-amber-600">
+                    <Wallet size={24} />
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          </section>
+
+          <Divider className="my-8" />
+
+          {/* Management Sections */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+            <Section
+              title="Ingresos & Activos"
+              description="Cuentas, efectivo, inversiones"
+              icon={<DollarSign size={20} />}
+              items={assets}
+              total={totalAssets}
+              color="success" // HeroUI semantic color
+              onAdd={(l: string, a: string, d: string) => handleAddItem("asset", l, a, d)}
+              onRemove={(id: string) => removeItem(id, "asset")}
+            />
+
+            <Section
+              title="Gastos & Deudas"
+              description="Tarjetas, préstamos, pendientes"
+              icon={<ShieldAlert size={20} />}
+              items={liabilities}
+              total={totalLiabilities}
+              color="danger"
+              onAdd={(l: string, a: string, d: string) => handleAddItem("liability", l, a, d)}
+              onRemove={(id: string) => removeItem(id, "liability")}
+            />
+
+            <Section
+              title="Apartados & Ahorro"
+              description="Fondos reservados, sobres"
+              icon={<Wallet size={20} />}
+              items={buckets}
+              total={totalBuckets}
+              color="warning"
+              onAdd={(l: string, a: string, d: string) => handleAddItem("bucket", l, a, d)}
+              onRemove={(id: string) => removeItem(id, "bucket")}
+            />
           </div>
 
-          <Card className="border border-divider shadow-sm">
-            <Table
-              aria-label="History Table"
-              removeWrapper
-              className="bg-content1"
-              color="primary"
-              selectionMode="none"
-            >
-              <TableHeader>
-                <TableColumn>FECHA</TableColumn>
-                <TableColumn>ACTIVOS</TableColumn>
-                <TableColumn>GASTOS</TableColumn>
-                <TableColumn>APARTADOS</TableColumn>
-                <TableColumn>DISPONIBLE</TableColumn>
-              </TableHeader>
-              <TableBody emptyContent="No hay historial guardado.">
-                {history.map((h) => (
-                  <TableRow key={h.id} className="border-b border-divider last:border-none">
-                    <TableCell className="font-medium text-default-700">
-                      {new Date(h.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </TableCell>
-                    <TableCell>${h.totalAssets.toLocaleString()}</TableCell>
-                    <TableCell className="text-rose-500">-${h.totalLiabilities.toLocaleString()}</TableCell>
-                    <TableCell className="text-amber-500">-${h.totalBuckets.toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Chip color={h.available >= 0 ? "success" : "danger"} variant="flat" size="sm" className="font-bold">
-                        ${h.available.toLocaleString()}
-                      </Chip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </section>
+          {/* History Section */}
+          <section id="history-section" className="pt-10">
+            <div className="flex justify-between items-end mb-4">
+              <div>
+                <h3 className="text-2xl font-bold">Historial</h3>
+                <p className="text-default-500">Registro de balances mensuales</p>
+              </div>
+              <Button size="sm" color="danger" variant="light" startContent={<Trash2 size={16} />} onPress={clearHistory}>
+                Limpiar
+              </Button>
+            </div>
 
-      </main>
+            <Card className="border border-divider shadow-sm">
+              <Table
+                aria-label="History Table"
+                removeWrapper
+                className="bg-content1"
+                color="primary"
+                selectionMode="none"
+              >
+                <TableHeader>
+                  <TableColumn>FECHA</TableColumn>
+                  <TableColumn>ACTIVOS</TableColumn>
+                  <TableColumn>GASTOS</TableColumn>
+                  <TableColumn>APARTADOS</TableColumn>
+                  <TableColumn>DISPONIBLE</TableColumn>
+                </TableHeader>
+                <TableBody emptyContent="No hay historial guardado.">
+                  {history.map((h) => (
+                    <TableRow key={h.id} className="border-b border-divider last:border-none">
+                      <TableCell className="font-medium text-default-700">
+                        {new Date(h.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </TableCell>
+                      <TableCell>${h.totalAssets.toLocaleString()}</TableCell>
+                      <TableCell className="text-rose-500">-${h.totalLiabilities.toLocaleString()}</TableCell>
+                      <TableCell className="text-amber-500">-${h.totalBuckets.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Chip color={h.available >= 0 ? "success" : "danger"} variant="flat" size="sm" className="font-bold">
+                          ${h.available.toLocaleString()}
+                        </Chip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </section>
+
+        </main>
+      </SignedIn>
     </div>
   );
 }

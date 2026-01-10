@@ -1,18 +1,24 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Finance from '@/models/Finance';
+import { auth } from '@clerk/nextjs/server';
 
 export async function GET() {
     await dbConnect();
+    const { userId } = auth();
+
+    if (!userId) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
 
     try {
-        // For single user mode, we just fetch the default document
-        let data = await Finance.findOne({ userId: 'default_user' });
+        // Fetch specific user data
+        let data = await Finance.findOne({ userId: userId });
 
         if (!data) {
-            // Initialize default data if none exists
+            // Initialize default data if none exists for this user
             data = await Finance.create({
-                userId: 'default_user',
+                userId: userId,
                 assets: [],
                 liabilities: [],
                 buckets: [],
@@ -28,14 +34,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
     await dbConnect();
+    const { userId } = auth();
+
+    if (!userId) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
 
     try {
         const body = await request.json();
 
-        // Update the singleton document
-        // relying on the frontend passing the entire state arrays for simplicity in this migration
+        // Update the specific user's document
         const data = await Finance.findOneAndUpdate(
-            { userId: 'default_user' },
+            { userId: userId },
             {
                 $set: {
                     assets: body.assets,
@@ -44,7 +54,7 @@ export async function POST(request: Request) {
                     history: body.history
                 }
             },
-            { new: true, upsert: true } // Upsert ensures creation if missing
+            { new: true, upsert: true }
         );
 
         return NextResponse.json(data);

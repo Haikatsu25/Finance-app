@@ -2,14 +2,15 @@ export interface FinanceItem {
     id: string;
     label: string;
     amount: number;
-    date?: string; // ISO date string YYYY-MM-DD
-    type: 'income' | 'expense' | 'asset' | 'liability' | 'bucket';
+    date?: string;
+    type: "asset" | "liability" | "bucket";
+    category?: string;
 }
 
 export interface FinanceState {
-    assets: FinanceItem[];     // Current money (e.g., NU)
-    liabilities: FinanceItem[]; // Debts/Payments (e.g., 31/12/25 payment)
-    buckets: FinanceItem[];    // Reserved money (e.g., Personal)
+    assets: FinanceItem[];
+    liabilities: FinanceItem[];
+    buckets: FinanceItem[];
     history: HistorySnapshot[];
 }
 

@@ -491,7 +491,7 @@ function Section({ title, description, icon, items, total, color, categories, on
             onChange={(e) => setCategory(e.target.value)}
           >
             {categories.map((cat: string) => (
-              <SelectItem key={cat} value={cat}>
+              <SelectItem key={cat}>
                 {cat}
               </SelectItem>
             ))}

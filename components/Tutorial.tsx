@@ -7,7 +7,7 @@ export const startTour = (isDark: boolean) => {
     const driverObj = driver({
         showProgress: true,
         overlayColor: isDark ? '#000000' : '#ffffff',
-        theme: isDark ? 'dark' : 'light',
+        // theme property removed as it is invalid in this version
         steps: [
             {
                 element: '#tour-welcome',

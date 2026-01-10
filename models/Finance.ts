@@ -17,6 +17,9 @@ const HistorySnapshotSchema = new Schema({
     totalBuckets: Number,
     available: Number,
     deficit: Number,
+    assets: [FinanceItemSchema],
+    liabilities: [FinanceItemSchema],
+    buckets: [FinanceItemSchema],
 });
 
 const FinanceSchema = new Schema({

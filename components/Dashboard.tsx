@@ -19,6 +19,12 @@ import {
   Progress,
   Select,
   SelectItem,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
 } from "@heroui/react";
 import {
   Plus,
@@ -137,6 +143,9 @@ export default function Dashboard() {
     if (type === "bucket") setBuckets(buckets.filter((i) => i.id !== id));
   };
 
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
+
   const saveSnapshot = () => {
     const snapshot: HistorySnapshot = {
       id: crypto.randomUUID(),
@@ -146,6 +155,9 @@ export default function Dashboard() {
       totalBuckets,
       available: displayAvailable,
       deficit: available < 0 ? Math.abs(available) : 0,
+      assets: [...assets],
+      liabilities: [...liabilities],
+      buckets: [...buckets]
     };
     setHistory([snapshot, ...history]);
   };
@@ -159,6 +171,11 @@ export default function Dashboard() {
   const handleStartTour = () => {
     const isDark = resolvedTheme === 'dark';
     startTour(isDark);
+  }
+
+  const openHistoryDetails = (snapshot: HistorySnapshot) => {
+    setSelectedSnapshot(snapshot);
+    onOpen();
   }
 
   if (!mounted) return null;
@@ -374,7 +391,11 @@ export default function Dashboard() {
                 </TableHeader>
                 <TableBody emptyContent="No hay historial guardado.">
                   {history.map((h) => (
-                    <TableRow key={h.id} className="border-b border-divider last:border-none">
+                    <TableRow
+                      key={h.id}
+                      className="border-b border-divider last:border-none cursor-pointer hover:bg-default-100 transition-colors"
+                      onClick={() => openHistoryDetails(h)}
+                    >
                       <TableCell className="font-medium text-default-700">
                         {new Date(h.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                       </TableCell>
@@ -392,6 +413,113 @@ export default function Dashboard() {
               </Table>
             </Card>
           </section>
+
+          {/* History Details Modal */}
+          <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside">
+            <ModalContent>
+              {(onClose) => (
+                <>
+                  <ModalHeader className="flex flex-col gap-1">
+                    Detalles del Historial
+                    <span className="text-small font-normal text-default-500">
+                      {selectedSnapshot && new Date(selectedSnapshot.date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                  </ModalHeader>
+                  <ModalBody>
+                    {selectedSnapshot && (
+                      <div className="space-y-6">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-3 gap-4">
+                          <Card className="bg-emerald-500/10 border-emerald-500/20">
+                            <CardBody className="py-2">
+                              <p className="text-xs text-emerald-600 font-bold uppercase">Activos</p>
+                              <p className="text-lg font-bold text-emerald-700">${selectedSnapshot.totalAssets.toLocaleString()}</p>
+                            </CardBody>
+                          </Card>
+                          <Card className="bg-rose-500/10 border-rose-500/20">
+                            <CardBody className="py-2">
+                              <p className="text-xs text-rose-600 font-bold uppercase">Deudas</p>
+                              <p className="text-lg font-bold text-rose-700">-${selectedSnapshot.totalLiabilities.toLocaleString()}</p>
+                            </CardBody>
+                          </Card>
+                          <Card className="bg-amber-500/10 border-amber-500/20">
+                            <CardBody className="py-2">
+                              <p className="text-xs text-amber-600 font-bold uppercase">Apartados</p>
+                              <p className="text-lg font-bold text-amber-700">-${selectedSnapshot.totalBuckets.toLocaleString()}</p>
+                            </CardBody>
+                          </Card>
+                        </div>
+
+                        <Divider />
+
+                        {/* Detailed Lists */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div>
+                            <h4 className="font-bold mb-3 flex items-center gap-2 text-emerald-600"><DollarSign size={16} /> Activos</h4>
+                            <div className="space-y-2">
+                              {selectedSnapshot.assets?.length ? selectedSnapshot.assets.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                  <div>
+                                    <p className="font-medium">{item.label}</p>
+                                    <div className="flex gap-1">
+                                      <span className="text-[10px] text-default-400">{item.category}</span>
+                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    </div>
+                                  </div>
+                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                </div>
+                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 className="font-bold mb-3 flex items-center gap-2 text-rose-600"><ShieldAlert size={16} /> Deudas</h4>
+                            <div className="space-y-2">
+                              {selectedSnapshot.liabilities?.length ? selectedSnapshot.liabilities.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                  <div>
+                                    <p className="font-medium">{item.label}</p>
+                                    <div className="flex gap-1">
+                                      <span className="text-[10px] text-default-400">{item.category}</span>
+                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    </div>
+                                  </div>
+                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                </div>
+                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h4 className="font-bold mb-3 flex items-center gap-2 text-amber-600"><Wallet size={16} /> Apartados</h4>
+                            <div className="space-y-2">
+                              {selectedSnapshot.buckets?.length ? selectedSnapshot.buckets.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-sm p-2 bg-default-50 rounded-lg">
+                                  <div>
+                                    <p className="font-medium">{item.label}</p>
+                                    <div className="flex gap-1">
+                                      <span className="text-[10px] text-default-400">{item.category}</span>
+                                      <span className="text-[10px] text-default-400">{item.date}</span>
+                                    </div>
+                                  </div>
+                                  <span className="font-mono">${item.amount.toLocaleString()}</span>
+                                </div>
+                              )) : <p className="text-xs text-default-400 italic">No disponible</p>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button color="danger" variant="light" onPress={onClose}>
+                      Cerrar
+                    </Button>
+                  </ModalFooter>
+                </>
+              )}
+            </ModalContent>
+          </Modal>
 
         </main>
       </SignedIn>

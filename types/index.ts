@@ -22,4 +22,7 @@ export interface HistorySnapshot {
     totalBuckets: number;
     available: number;
     deficit: number;
+    assets?: FinanceItem[];
+    liabilities?: FinanceItem[];
+    buckets?: FinanceItem[];
 }

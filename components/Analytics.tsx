@@ -62,10 +62,15 @@ export default function Analytics({ history, assets, liabilities, isDark }: Anal
                             <LineChart data={trendData}>
                                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                                 <XAxis dataKey="date" stroke={isDark ? '#888' : '#666'} fontSize={12} />
-                                <YAxis stroke={isDark ? '#888' : '#666'} fontSize={12} />
+                                <YAxis
+                                    stroke={isDark ? '#888' : '#666'}
+                                    fontSize={12}
+                                    tickFormatter={(value) => `$${value.toLocaleString()}`}
+                                />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: isDark ? '#18181b' : '#fff', borderRadius: '8px', border: 'none' }}
                                     itemStyle={{ color: isDark ? '#e4e4e7' : '#18181b' }}
+                                    formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Cantidad"]}
                                 />
                                 <Legend />
                                 <Line type="monotone" dataKey="available" stroke="#10b981" strokeWidth={3} name="Disponible" dot={{ r: 4 }} />

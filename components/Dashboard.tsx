@@ -506,6 +506,7 @@ function Section({ title, description, icon, items, total, color, categories, on
               className="flex-1"
               value={amount}
               onValueChange={setAmount}
+              description={amount ? `$${parseFloat(amount).toLocaleString()}` : ""}
             />
             <Input
               type="date"

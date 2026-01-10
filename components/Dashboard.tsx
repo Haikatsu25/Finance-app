@@ -39,28 +39,63 @@ export default function Dashboard() {
   const [buckets, setBuckets] = useState<FinanceItem[]>([]);
   const [history, setHistory] = useState<HistorySnapshot[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load data from MongoDB on mount
   useEffect(() => {
     setMounted(true);
-    const saved = localStorage.getItem("finance_app_data");
-    if (saved) {
+    const fetchData = async () => {
       try {
-        const data = JSON.parse(saved);
-        setAssets(data.assets || []);
-        setLiabilities(data.liabilities || []);
-        setBuckets(data.buckets || []);
-        setHistory(data.history || []);
-      } catch (e) {
-        console.error("Failed to load data", e);
+        const res = await fetch('/api/finance');
+        if (res.ok) {
+          const data = await res.json();
+          setAssets(data.assets || []);
+          setLiabilities(data.liabilities || []);
+          setBuckets(data.buckets || []);
+          setHistory(data.history || []);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+    fetchData();
   }, []);
 
+  // Save changes to MongoDB whenever state changes
+  // Debounce could be good here, but for now we'll save on every change EFFECTively
+  // Actually, to avoid too many writes, let's create an explicit "Save" function or use a custom hook. 
+  // For this "personal" scale, saving on effect is fine but let's debounce slightly or just trust the user to "Guardar Snapshot" for history?
+  // User asked for "sync", so it should be auto-save.
+
+  const saveData = async (newAssets: any, newLiabilities: any, newBuckets: any, newHistory: any) => {
+    try {
+      await fetch('/api/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assets: newAssets,
+          liabilities: newLiabilities,
+          buckets: newBuckets,
+          history: newHistory
+        })
+      });
+    } catch (error) {
+      console.error("Failed to save data:", error);
+    }
+  };
+
   useEffect(() => {
-    if (!mounted) return;
-    const data = { assets, liabilities, buckets, history };
-    localStorage.setItem("finance_app_data", JSON.stringify(data));
-  }, [assets, liabilities, buckets, history, mounted]);
+    if (!mounted || isLoading) return;
+
+    // Auto-save logic
+    const timer = setTimeout(() => {
+      saveData(assets, liabilities, buckets, history);
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timer);
+  }, [assets, liabilities, buckets, history, mounted, isLoading]);
 
   const totalAssets = assets.reduce((sum, item) => sum + item.amount, 0);
   const totalLiabilities = liabilities.reduce(

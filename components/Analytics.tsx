@@ -70,7 +70,7 @@ export default function Analytics({ history, assets, liabilities, isDark }: Anal
                                 <Tooltip
                                     contentStyle={{ backgroundColor: isDark ? '#18181b' : '#fff', borderRadius: '8px', border: 'none' }}
                                     itemStyle={{ color: isDark ? '#e4e4e7' : '#18181b' }}
-                                    formatter={(value: any) => [`$${Number(value).toLocaleString()}`, "Cantidad"]}
+                                    formatter={(value: any, name: any) => [`$${Number(value).toLocaleString()}`, name]}
                                 />
                                 <Legend />
                                 <Line type="monotone" dataKey="available" stroke="#10b981" strokeWidth={3} name="Disponible" dot={{ r: 4 }} />

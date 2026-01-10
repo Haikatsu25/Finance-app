@@ -5,7 +5,7 @@ import { auth } from '@clerk/nextjs/server';
 
 export async function GET() {
     await dbConnect();
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
         return new NextResponse("Unauthorized", { status: 401 });
@@ -34,7 +34,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
     await dbConnect();
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
         return new NextResponse("Unauthorized", { status: 401 });

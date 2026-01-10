@@ -441,6 +441,17 @@ export default function Dashboard() {
                               value={parseDate(selectedSnapshot.date.split('T')[0])}
                               isReadOnly
                               className="shadow-md border border-default-100"
+                              isDateUnavailable={(date) => {
+                                const dateStr = date.toString();
+                                const snapshotDate = selectedSnapshot.date.split('T')[0];
+                                if (dateStr === snapshotDate) return false;
+
+                                const hasAsset = selectedSnapshot.assets?.some(a => a.date === dateStr);
+                                const hasLiability = selectedSnapshot.liabilities?.some(l => l.date === dateStr);
+                                const hasBucket = selectedSnapshot.buckets?.some(b => b.date === dateStr);
+
+                                return !(hasAsset || hasLiability || hasBucket);
+                              }}
                             />
                           </div>
 

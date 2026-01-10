@@ -74,6 +74,7 @@ export default function Analytics({ history, assets, liabilities, isDark }: Anal
                                 />
                                 <Legend />
                                 <Line type="monotone" dataKey="assets" stroke="#3b82f6" strokeWidth={3} name="Total Activos" dot={{ r: 4 }} />
+                                <Line type="monotone" dataKey="liabilities" stroke="#ef4444" strokeWidth={3} name="Total Deudas" dot={{ r: 4 }} />
                                 <Line type="monotone" dataKey="available" stroke="#10b981" strokeWidth={3} name="Disponible Restante" dot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>

@@ -25,7 +25,9 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
+  Calendar as CalendarWidget,
 } from "@heroui/react";
+import { parseDate } from "@internationalized/date";
 import {
   Plus,
   Trash2,
@@ -38,7 +40,7 @@ import {
   TrendingUp,
   History,
   HelpCircle,
-  Calendar
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { FinanceItem, HistorySnapshot } from "@/types";
@@ -429,26 +431,49 @@ export default function Dashboard() {
                   <ModalBody>
                     {selectedSnapshot && (
                       <div className="space-y-6">
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-3 gap-4">
-                          <Card className="bg-emerald-500/10 border-emerald-500/20">
-                            <CardBody className="py-2">
-                              <p className="text-xs text-emerald-600 font-bold uppercase">Activos</p>
-                              <p className="text-lg font-bold text-emerald-700">${selectedSnapshot.totalAssets.toLocaleString()}</p>
-                            </CardBody>
-                          </Card>
-                          <Card className="bg-rose-500/10 border-rose-500/20">
-                            <CardBody className="py-2">
-                              <p className="text-xs text-rose-600 font-bold uppercase">Deudas</p>
-                              <p className="text-lg font-bold text-rose-700">-${selectedSnapshot.totalLiabilities.toLocaleString()}</p>
-                            </CardBody>
-                          </Card>
-                          <Card className="bg-amber-500/10 border-amber-500/20">
-                            <CardBody className="py-2">
-                              <p className="text-xs text-amber-600 font-bold uppercase">Apartados</p>
-                              <p className="text-lg font-bold text-amber-700">-${selectedSnapshot.totalBuckets.toLocaleString()}</p>
-                            </CardBody>
-                          </Card>
+
+                        {/* Summary & Date */}
+                        <div className="flex flex-col md:flex-row gap-6">
+                          {/* Calendar View */}
+                          <div className="flex justify-center">
+                            <CalendarWidget
+                              aria-label="Snapshot Date"
+                              value={parseDate(selectedSnapshot.date.split('T')[0])}
+                              isReadOnly
+                              className="shadow-md border border-default-100"
+                            />
+                          </div>
+
+                          {/* Summary Cards */}
+                          <div className="flex-grow grid grid-cols-1 gap-4 content-center">
+                            <Card className="bg-emerald-500/10 border-emerald-500/20">
+                              <CardBody className="py-4 flex flex-row items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-emerald-600 font-bold uppercase">Activos</p>
+                                  <p className="text-2xl font-bold text-emerald-700">${selectedSnapshot.totalAssets.toLocaleString()}</p>
+                                </div>
+                                <div className="p-2 bg-emerald-100 rounded-full text-emerald-600"><DollarSign size={24} /></div>
+                              </CardBody>
+                            </Card>
+                            <Card className="bg-rose-500/10 border-rose-500/20">
+                              <CardBody className="py-4 flex flex-row items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-rose-600 font-bold uppercase">Deudas</p>
+                                  <p className="text-2xl font-bold text-rose-700">-${selectedSnapshot.totalLiabilities.toLocaleString()}</p>
+                                </div>
+                                <div className="p-2 bg-rose-100 rounded-full text-rose-600"><ShieldAlert size={24} /></div>
+                              </CardBody>
+                            </Card>
+                            <Card className="bg-amber-500/10 border-amber-500/20">
+                              <CardBody className="py-4 flex flex-row items-center justify-between">
+                                <div>
+                                  <p className="text-xs text-amber-600 font-bold uppercase">Apartados</p>
+                                  <p className="text-2xl font-bold text-amber-700">-${selectedSnapshot.totalBuckets.toLocaleString()}</p>
+                                </div>
+                                <div className="p-2 bg-amber-100 rounded-full text-amber-600"><Wallet size={24} /></div>
+                              </CardBody>
+                            </Card>
+                          </div>
                         </div>
 
                         <Divider />
@@ -466,7 +491,7 @@ export default function Dashboard() {
                                       <Chip size="sm" variant="flat" className="h-5 text-[10px] px-1 bg-default-200">{item.category || 'General'}</Chip>
                                       {item.date && (
                                         <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <Calendar size={12} />
+                                          <CalendarIcon size={12} />
                                           <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
                                         </div>
                                       )}
@@ -489,7 +514,7 @@ export default function Dashboard() {
                                       <Chip size="sm" variant="flat" color="danger" className="h-5 text-[10px] px-1 bg-rose-100 text-rose-700">{item.category || 'General'}</Chip>
                                       {item.date && (
                                         <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <Calendar size={12} />
+                                          <CalendarIcon size={12} />
                                           <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
                                         </div>
                                       )}
@@ -512,7 +537,7 @@ export default function Dashboard() {
                                       <Chip size="sm" variant="flat" color="warning" className="h-5 text-[10px] px-1 bg-amber-100 text-amber-700">{item.category || 'General'}</Chip>
                                       {item.date && (
                                         <div className="flex items-center gap-1 text-xs text-default-400">
-                                          <Calendar size={12} />
+                                          <CalendarIcon size={12} />
                                           <span>{new Date(item.date + 'T12:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
                                         </div>
                                       )}

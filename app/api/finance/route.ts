@@ -28,24 +28,19 @@ export async function GET() {
                     { new: true }
                 );
             }
-            // Case 2: User has data, but it's empty (just created) -> delete empty and migrate legacy
+            // Case 2: User has data (empty or not) -> Merge legacy into current
             else {
-                const isDataEmpty = data.assets.length === 0 &&
-                    data.liabilities.length === 0 &&
-                    data.buckets.length === 0 &&
-                    data.history.length === 0;
+                // Merge arrays
+                data.assets.push(...legacyData.assets);
+                data.liabilities.push(...legacyData.liabilities);
+                data.buckets.push(...legacyData.buckets);
+                data.history.push(...legacyData.history);
 
-                if (isDataEmpty) {
-                    // Delete the empty record to avoid unique constraint error
-                    await Finance.deleteOne({ _id: data._id });
+                // Save merged data
+                await data.save();
 
-                    // Migrate legacy data
-                    data = await Finance.findOneAndUpdate(
-                        { userId: 'default_user' },
-                        { userId: userId },
-                        { new: true }
-                    );
-                }
+                // Delete legacy data to prevent duplicate merges in future
+                await Finance.deleteOne({ _id: legacyData._id });
             }
         }
 

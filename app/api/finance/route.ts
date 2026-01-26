@@ -16,14 +16,26 @@ export async function GET() {
         let data = await Finance.findOne({ userId: userId });
 
         if (!data) {
-            // Initialize default data if none exists for this user
-            data = await Finance.create({
-                userId: userId,
-                assets: [],
-                liabilities: [],
-                buckets: [],
-                history: []
-            });
+            // Check for legacy default user data
+            const legacyData = await Finance.findOne({ userId: 'default_user' });
+
+            if (legacyData) {
+                // Migrate legacy data to current user
+                data = await Finance.findOneAndUpdate(
+                    { userId: 'default_user' },
+                    { userId: userId },
+                    { new: true }
+                );
+            } else {
+                // Initialize default data if none exists for this user
+                data = await Finance.create({
+                    userId: userId,
+                    assets: [],
+                    liabilities: [],
+                    buckets: [],
+                    history: []
+                });
+            }
         }
 
         return NextResponse.json(data);

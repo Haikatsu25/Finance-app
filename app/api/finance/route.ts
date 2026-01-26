@@ -15,27 +15,49 @@ export async function GET() {
         // Fetch specific user data
         let data = await Finance.findOne({ userId: userId });
 
-        if (!data) {
-            // Check for legacy default user data
-            const legacyData = await Finance.findOne({ userId: 'default_user' });
+        // Check for legacy default user data
+        const legacyData = await Finance.findOne({ userId: 'default_user' });
 
-            if (legacyData) {
-                // Migrate legacy data to current user
+        // If we have legacy data, we might need to migrate it
+        if (legacyData) {
+            // Case 1: No data for current user at all -> just migrate
+            if (!data) {
                 data = await Finance.findOneAndUpdate(
                     { userId: 'default_user' },
                     { userId: userId },
                     { new: true }
                 );
-            } else {
-                // Initialize default data if none exists for this user
-                data = await Finance.create({
-                    userId: userId,
-                    assets: [],
-                    liabilities: [],
-                    buckets: [],
-                    history: []
-                });
             }
+            // Case 2: User has data, but it's empty (just created) -> delete empty and migrate legacy
+            else {
+                const isDataEmpty = data.assets.length === 0 &&
+                    data.liabilities.length === 0 &&
+                    data.buckets.length === 0 &&
+                    data.history.length === 0;
+
+                if (isDataEmpty) {
+                    // Delete the empty record to avoid unique constraint error
+                    await Finance.deleteOne({ _id: data._id });
+
+                    // Migrate legacy data
+                    data = await Finance.findOneAndUpdate(
+                        { userId: 'default_user' },
+                        { userId: userId },
+                        { new: true }
+                    );
+                }
+            }
+        }
+
+        // Final fallback: If still no data (no legacy and no current), create new
+        if (!data) {
+            data = await Finance.create({
+                userId: userId,
+                assets: [],
+                liabilities: [],
+                buckets: [],
+                history: []
+            });
         }
 
         return NextResponse.json(data);

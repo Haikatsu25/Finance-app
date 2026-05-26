@@ -35,6 +35,8 @@ export async function GET() {
                 data.liabilities.push(...legacyData.liabilities);
                 data.buckets.push(...legacyData.buckets);
                 data.history.push(...legacyData.history);
+                if (legacyData.subscriptions) data.subscriptions.push(...legacyData.subscriptions);
+                if (legacyData.goals) data.goals.push(...legacyData.goals);
 
                 // Save merged data
                 await data.save();
@@ -51,6 +53,8 @@ export async function GET() {
                 assets: [],
                 liabilities: [],
                 buckets: [],
+                subscriptions: [],
+                goals: [],
                 history: []
             });
         }
@@ -77,10 +81,12 @@ export async function POST(request: Request) {
             { userId: userId },
             {
                 $set: {
-                    assets: body.assets,
-                    liabilities: body.liabilities,
-                    buckets: body.buckets,
-                    history: body.history
+                    assets: body.assets || [],
+                    liabilities: body.liabilities || [],
+                    buckets: body.buckets || [],
+                    subscriptions: body.subscriptions || [],
+                    goals: body.goals || [],
+                    history: body.history || []
                 }
             },
             { new: true, upsert: true }

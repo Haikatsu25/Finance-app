@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -7,15 +7,16 @@ import { ClerkProvider } from '@clerk/nextjs'
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Finance Control",
-  description: "Gestión financiera personal",
+  title: "Finance Control — Gestión Financiera Inteligente",
+  description: "Controla tus activos, gastos y apartados con analíticas avanzadas e Inteligencia Artificial.",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#10b981",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

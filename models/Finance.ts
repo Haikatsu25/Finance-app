@@ -9,6 +9,22 @@ const FinanceItemSchema = new Schema({
     category: String
 });
 
+const SubscriptionItemSchema = new Schema({
+    id: String,
+    label: String,
+    amount: Number,
+    billingCycle: String,
+    category: String
+});
+
+const GoalItemSchema = new Schema({
+    id: String,
+    label: String,
+    targetAmount: Number,
+    currentAmount: Number,
+    deadline: String
+});
+
 const HistorySnapshotSchema = new Schema({
     id: String,
     date: String,
@@ -20,6 +36,8 @@ const HistorySnapshotSchema = new Schema({
     assets: [FinanceItemSchema],
     liabilities: [FinanceItemSchema],
     buckets: [FinanceItemSchema],
+    subscriptions: [SubscriptionItemSchema],
+    goals: [GoalItemSchema],
 });
 
 const FinanceSchema = new Schema({
@@ -27,6 +45,8 @@ const FinanceSchema = new Schema({
     assets: [FinanceItemSchema],
     liabilities: [FinanceItemSchema],
     buckets: [FinanceItemSchema],
+    subscriptions: [SubscriptionItemSchema],
+    goals: [GoalItemSchema],
     history: [HistorySnapshotSchema],
 }, { timestamps: true });
 

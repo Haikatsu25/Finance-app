@@ -33,7 +33,7 @@ interface AnalyticsProps {
 // ─────────────────────────────────────────
 // Custom Tooltip
 // ─────────────────────────────────────────
-function CustomTooltip({ active, payload, label, isDark }: TooltipProps<number, string> & { isDark: boolean }) {
+function CustomTooltip({ active, payload, label, isDark }: any) {
     if (!active || !payload?.length) return null;
     return (
         <div

@@ -45,7 +45,7 @@ function CustomTooltip({ active, payload, label, isDark }: any) {
             }}
         >
             <p className="font-bold text-default-500 mb-2">{label}</p>
-            {payload.map((p) => (
+            {payload.map((p: any) => (
                 <div key={p.name} className="flex items-center gap-2 mb-1">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color }} />
                     <span className="text-default-500">{p.name}:</span>

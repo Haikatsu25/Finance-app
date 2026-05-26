@@ -58,7 +58,7 @@ function CustomTooltip({ active, payload, label, isDark }: any) {
     );
 }
 
-function PieTooltip({ active, payload, isDark }: TooltipProps<number, string> & { isDark: boolean }) {
+function PieTooltip({ active, payload, isDark }: any) {
     if (!active || !payload?.length) return null;
     const d = payload[0];
     return (

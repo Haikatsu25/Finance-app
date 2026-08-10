@@ -77,7 +77,8 @@ function forwardPass(inputs: number[]): ForwardResult {
 function extractFeatures(
   history: HistorySnapshot[],
   assets: FinanceItem[],
-  liabilities: FinanceItem[]
+  liabilities: FinanceItem[],
+  buckets: FinanceItem[]
 ): { features: number[]; raw: Record<string, number> } {
   const totalAssets     = assets.reduce((s, i) => s + i.amount, 0);
   const totalLiabilities = liabilities.reduce((s, i) => s + i.amount, 0);
@@ -102,10 +103,9 @@ function extractFeatures(
     assetGrowth   = oldest > 0 ? Math.min(1, Math.max(-1, (newest - oldest) / oldest)) : 0;
   }
 
-  // Bucket percentage (savings allocation)
-  const totalBuckets = assets.length > 0
-    ? history.length > 0 ? history[0].totalBuckets : 0
-    : 0;
+  // Bucket percentage (savings allocation) — de los apartados ACTUALES,
+  // no del último snapshot (que puede estar viejo o no existir)
+  const totalBuckets = buckets.reduce((s, i) => s + i.amount, 0);
   const bucketPct = totalAssets > 0
     ? Math.min(1, totalBuckets / totalAssets)
     : 0;
@@ -302,14 +302,15 @@ interface FinanceAIProps {
   history: HistorySnapshot[];
   assets: FinanceItem[];
   liabilities: FinanceItem[];
+  buckets: FinanceItem[];
   isDark: boolean;
 }
 
-export default function FinanceAI({ history, assets, liabilities, isDark }: FinanceAIProps) {
+export default function FinanceAI({ history, assets, liabilities, buckets, isDark }: FinanceAIProps) {
   const [showDetails, setShowDetails] = useState(false);
 
-  const { features, raw, result, health, predictedBalance } = useMemo(() => {
-    const { features, raw } = extractFeatures(history, assets, liabilities);
+  const { raw, result, health, predictedBalance } = useMemo(() => {
+    const { features, raw } = extractFeatures(history, assets, liabilities, buckets);
     const result = forwardPass(features);
 
     const balanceScore = result.outputs[0];
@@ -326,7 +327,7 @@ export default function FinanceAI({ history, assets, liabilities, isDark }: Fina
     const predictedBalance = currentNet * (1 + growthFactor);
 
     return { features, raw, result, health, predictedBalance };
-  }, [history, assets, liabilities]);
+  }, [history, assets, liabilities, buckets]);
 
   const hasData = assets.length > 0 || liabilities.length > 0;
 
@@ -396,7 +397,7 @@ export default function FinanceAI({ history, assets, liabilities, isDark }: Fina
                   ) : (
                     <TrendingDown className="text-rose-500 w-5 h-5 shrink-0" />
                   )}
-                  <span className={`text-2xl font-extrabold font-mono ${
+                  <span className={`text-2xl font-extrabold tnum ${
                     predictedBalance >= 0 ? "text-emerald-500" : "text-rose-500"
                   }`}>
                     ${Math.abs(predictedBalance).toLocaleString("en-US", { maximumFractionDigits: 0 })}
@@ -418,7 +419,7 @@ export default function FinanceAI({ history, assets, liabilities, isDark }: Fina
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-default-500">Score de Balance</span>
-                    <span className="font-mono font-bold text-emerald-500">
+                    <span className="tnum font-bold text-emerald-500">
                       {(result.outputs[0] * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -432,7 +433,7 @@ export default function FinanceAI({ history, assets, liabilities, isDark }: Fina
                 <div>
                   <div className="flex justify-between text-xs mb-1">
                     <span className="text-default-500">Índice de Riesgo</span>
-                    <span className="font-mono font-bold text-rose-500">
+                    <span className="tnum font-bold text-rose-500">
                       {(result.outputs[1] * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -497,21 +498,20 @@ export default function FinanceAI({ history, assets, liabilities, isDark }: Fina
               </CardHeader>
               <CardBody className="pt-3">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {/* Clases COMPLETAS en un mapa: Tailwind no genera clases
+                      construidas por interpolación (bg-${color}-...) */}
                   {[
-                    { label: "Tasa de Ahorro",    value: raw.savingsRate,   unit: "%",  color: "emerald", desc: "% de ingresos que se conservan" },
-                    { label: "Ratio de Deuda",     value: raw.debtRatio,    unit: "%",  color: "rose",    desc: "Deuda vs Activos totales" },
-                    { label: "Crecimiento",        value: raw.assetGrowth,  unit: "%",  color: "blue",    desc: "Variación histórica de activos" },
-                    { label: "% Apartado",         value: raw.bucketPct,    unit: "%",  color: "amber",   desc: "Fondos reservados vs activos" },
-                    { label: "Ratio Liquidez",     value: raw.liquidityRatio, unit: "x", color: "purple", desc: "Activos / Pasivos" },
-                  ].map(({ label, value, unit, color, desc }) => (
-                    <div
-                      key={label}
-                      className={`p-3 rounded-xl bg-${color === 'blue' ? 'blue' : color === 'purple' ? 'purple' : color}-500/10 border border-${color === 'blue' ? 'blue' : color === 'purple' ? 'purple' : color}-500/20`}
-                    >
-                      <p className={`text-xs font-bold text-${color === 'blue' ? 'blue' : color === 'purple' ? 'indigo' : color}-600 dark:text-${color === 'blue' ? 'blue' : color === 'purple' ? 'indigo' : color}-400`}>
+                    { label: "Tasa de Ahorro", value: raw.savingsRate,    unit: "%", desc: "% de ingresos que se conservan",  box: "bg-emerald-500/10 border-emerald-500/20", txt: "text-emerald-600 dark:text-emerald-400" },
+                    { label: "Ratio de Deuda", value: raw.debtRatio,      unit: "%", desc: "Deuda vs Activos totales",        box: "bg-rose-500/10 border-rose-500/20",       txt: "text-rose-600 dark:text-rose-400" },
+                    { label: "Crecimiento",    value: raw.assetGrowth,    unit: "%", desc: "Variación histórica de activos",  box: "bg-blue-500/10 border-blue-500/20",       txt: "text-blue-600 dark:text-blue-400" },
+                    { label: "% Apartado",     value: raw.bucketPct,      unit: "%", desc: "Fondos reservados vs activos",    box: "bg-amber-500/10 border-amber-500/20",     txt: "text-amber-600 dark:text-amber-400" },
+                    { label: "Ratio Liquidez", value: raw.liquidityRatio, unit: "x", desc: "Activos / Pasivos",               box: "bg-purple-500/10 border-purple-500/20",   txt: "text-indigo-600 dark:text-indigo-400" },
+                  ].map(({ label, value, unit, desc, box, txt }) => (
+                    <div key={label} className={`p-3 rounded-xl border ${box}`}>
+                      <p className={`text-xs font-bold ${txt}`}>
                         {label}
                       </p>
-                      <p className="text-lg font-extrabold font-mono">
+                      <p className="text-lg font-extrabold tnum">
                         {typeof value === 'number' ? value.toFixed(1) : '—'}{unit}
                       </p>
                       {showDetails && (

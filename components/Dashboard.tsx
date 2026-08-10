@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   CardHeader,
@@ -15,7 +15,6 @@ import {
   TableCell,
   Divider,
   Chip,
-  Progress,
   Select,
   SelectItem,
   Modal,
@@ -39,7 +38,6 @@ import {
   TrendingUp,
   History,
   HelpCircle,
-  Calendar as CalendarIcon,
   Calendar,
   Target,
   BarChart2,
@@ -50,70 +48,123 @@ import {
   Download,
   Upload,
   Database,
+  Undo2,
+  Check,
+  CloudUpload,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem } from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
+import { money, moneyExact, round2 } from "@/lib/format";
 import Analytics from "./Analytics";
 import FinanceAI from "./FinanceAI";
 import { startTour } from "./Tutorial";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TONOS — mapa explícito de clases. Tailwind escanea el código como texto,
+// así que las clases deben aparecer COMPLETAS (nunca `bg-${color}-500/10`).
+// ─────────────────────────────────────────────────────────────────────────────
+type ToneName = "emerald" | "rose" | "amber" | "indigo" | "purple" | "blue";
+
+const TONE: Record<ToneName, {
+  text: string; textStrong: string; bg: string; bgBadge: string;
+  border: string; iconBg: string;
+}> = {
+  emerald: { text: "text-emerald-600 dark:text-emerald-400", textStrong: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-500/10", bgBadge: "bg-emerald-500/12", border: "border-emerald-500/20", iconBg: "bg-emerald-500/12" },
+  rose:    { text: "text-rose-600 dark:text-rose-400",       textStrong: "text-rose-700 dark:text-rose-300",       bg: "bg-rose-500/10",    bgBadge: "bg-rose-500/12",    border: "border-rose-500/20",    iconBg: "bg-rose-500/12" },
+  amber:   { text: "text-amber-600 dark:text-amber-400",     textStrong: "text-amber-700 dark:text-amber-300",     bg: "bg-amber-500/10",   bgBadge: "bg-amber-500/12",   border: "border-amber-500/20",   iconBg: "bg-amber-500/12" },
+  indigo:  { text: "text-indigo-600 dark:text-indigo-400",   textStrong: "text-indigo-700 dark:text-indigo-300",   bg: "bg-indigo-500/10",  bgBadge: "bg-indigo-500/12",  border: "border-indigo-500/20",  iconBg: "bg-indigo-500/12" },
+  purple:  { text: "text-purple-600 dark:text-purple-400",   textStrong: "text-purple-700 dark:text-purple-300",   bg: "bg-purple-500/10",  bgBadge: "bg-purple-500/12",  border: "border-purple-500/20",  iconBg: "bg-purple-500/12" },
+  blue:    { text: "text-blue-600 dark:text-blue-400",       textStrong: "text-blue-700 dark:text-blue-300",       bg: "bg-blue-500/10",    bgBadge: "bg-blue-500/12",    border: "border-blue-500/20",    iconBg: "bg-blue-500/12" },
+};
+
+const SECTION_TONE: Record<"success" | "danger" | "warning", ToneName> = {
+  success: "emerald",
+  danger: "rose",
+  warning: "amber",
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ANIMATED COUNTER HOOK
 // ─────────────────────────────────────────────────────────────────────────────
-function useAnimatedCounter(target: number, duration = 800) {
-  const [value, setValue] = useState(0);
+function useAnimatedCounter(target: number, duration = 700) {
+  const [value, setValue] = useState(target);
   const rafRef = useRef<number>(0);
+  const valueRef = useRef(target);
+  valueRef.current = value;
 
   useEffect(() => {
     const start = performance.now();
-    const from = value;
+    const from = valueRef.current;
 
     const animate = (now: number) => {
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
-      // Easing: easeOutExpo
-      const eased = 1 - Math.pow(2, -10 * progress);
+      const eased = 1 - Math.pow(2, -10 * progress); // easeOutExpo
       setValue(from + (target - from) * eased);
       if (progress < 1) rafRef.current = requestAnimationFrame(animate);
     };
 
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target]);
+  }, [target, duration]);
 
   return value;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STAT CARD COMPONENT
+// STAT CARD
 // ─────────────────────────────────────────────────────────────────────────────
 function StatCard({
-  label, value, icon, colorClass, bgClass, delay = 0
+  label, value, icon, tone, delay = 0,
 }: {
-  label: string; value: number; icon: React.ReactNode;
-  colorClass: string; bgClass: string; delay?: number;
+  label: string; value: number; icon: React.ReactNode; tone: ToneName; delay?: number;
 }) {
   const animated = useAnimatedCounter(value);
+  const t = TONE[tone];
   return (
     <Card
-      className={`glass card-hover border-0 animate-fade-in-scale`}
+      className="glass card-hover border-0 animate-fade-in-scale"
       style={{ animationDelay: `${delay}ms` }}
     >
       <CardBody className="flex flex-row justify-between items-center p-5">
-        <div>
-          <p className="text-default-400 text-xs font-bold uppercase tracking-wide mb-1">{label}</p>
-          <p className={`text-2xl font-extrabold font-mono ${colorClass}`}>
-            ${Math.abs(animated).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+        <div className="min-w-0">
+          <p className="text-default-500 text-[11px] font-bold uppercase tracking-wider mb-1">{label}</p>
+          <p className={`text-2xl font-extrabold tnum tracking-tight ${t.text}`}>
+            {money(Math.abs(animated))}
           </p>
         </div>
-        <div className={`p-3 ${bgClass} rounded-2xl`}>
-          <div className={colorClass}>{icon}</div>
+        <div className={`p-3 ${t.iconBg} rounded-2xl shrink-0`}>
+          <div className={t.text}>{icon}</div>
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SKELETON — carga con forma, nunca pantalla en blanco
+// ─────────────────────────────────────────────────────────────────────────────
+function DashboardSkeleton() {
+  return (
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6" aria-busy="true" aria-label="Cargando tus finanzas">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <div className="col-span-1 md:col-span-8 skeleton h-[280px]" />
+        <div className="col-span-1 md:col-span-4 flex flex-col gap-3">
+          <div className="skeleton h-[86px]" />
+          <div className="skeleton h-[86px]" />
+          <div className="skeleton h-[86px]" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="skeleton h-[320px]" />
+        <div className="skeleton h-[320px]" />
+        <div className="skeleton h-[320px] hidden lg:block" />
+      </div>
+    </main>
   );
 }
 
@@ -125,9 +176,9 @@ type NavTab = "dashboard" | "analytics" | "ai" | "history";
 function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab) => void }) {
   const tabs: { id: NavTab; icon: React.ReactNode; label: string }[] = [
     { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Inicio" },
-    { id: "analytics", icon: <BarChart2 size={20} />,      label: "Análisis" },
-    { id: "ai",        icon: <Brain size={20} />,           label: "IA" },
-    { id: "history",   icon: <History size={20} />,         label: "Historial" },
+    { id: "analytics", icon: <BarChart2 size={20} />,       label: "Análisis" },
+    { id: "ai",        icon: <Brain size={20} />,            label: "IA" },
+    { id: "history",   icon: <History size={20} />,          label: "Historial" },
   ];
 
   return (
@@ -139,21 +190,15 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
             <button
               key={t.id}
               onClick={() => onChange(t.id)}
-              className={`flex flex-col items-center gap-1 px-4 py-1 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? "text-emerald-500 scale-105"
-                  : "text-default-400 hover:text-default-600"
+              className={`relative flex flex-col items-center gap-1 px-4 py-1.5 min-w-[64px] rounded-xl transition-all duration-200 ${
+                isActive ? "text-emerald-600 dark:text-emerald-400" : "text-default-400 hover:text-default-600"
               }`}
               aria-label={t.label}
               aria-current={isActive ? "page" : undefined}
             >
-              <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""}`}>
-                {t.icon}
-              </div>
+              {t.icon}
               <span className="text-[10px] font-semibold">{t.label}</span>
-              {isActive && (
-                <span className="absolute bottom-0 w-6 h-0.5 rounded-full bg-emerald-500" />
-              )}
+              {isActive && <span className="absolute -bottom-0.5 w-6 h-0.5 rounded-full bg-emerald-500" />}
             </button>
           );
         })}
@@ -163,96 +208,81 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION COMPONENT — Financial input section
+// SECTION — captura de activos / gastos / apartados
 // ─────────────────────────────────────────────────────────────────────────────
-function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove }: any) {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove }: {
+  title: string; description: string; icon: React.ReactNode;
+  items: FinanceItem[]; total: number;
+  color: "success" | "danger" | "warning"; categories: string[];
+  onAdd: (label: string, amount: string, date: string, category: string) => void;
+  onRemove: (id: string) => void;
+}) {
   const [label, setLabel]       = useState("");
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState("");
   const [category, setCategory] = useState(categories[0]);
 
+  const t = TONE[SECTION_TONE[color]];
+  const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
+
   const handleAdd = () => {
-    if (!label || !amount) return;
-    onAdd(label, amount, date, category);
+    if (!label.trim() || !amountValid) return;
+    onAdd(label.trim(), amount, date, category);
     setLabel("");
     setAmount("");
     setDate("");
     setCategory(categories[0]);
   };
 
-  const colorMap: Record<string, { text: string; bg: string; border: string; badge: string }> = {
-    success: {
-      text:   "text-emerald-500",
-      bg:     "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-      badge:  "bg-emerald-500/15",
-    },
-    danger: {
-      text:   "text-rose-500",
-      bg:     "bg-rose-500/10",
-      border: "border-rose-500/20",
-      badge:  "bg-rose-500/15",
-    },
-    warning: {
-      text:   "text-amber-500",
-      bg:     "bg-amber-500/10",
-      border: "border-amber-500/20",
-      badge:  "bg-amber-500/15",
-    },
-  };
-  const c = colorMap[color] ?? colorMap.success;
-
   return (
-    <Card className={`glass card-hover border ${c.border} h-full`}>
+    <Card className={`glass card-hover border ${t.border} h-full`}>
       <CardHeader className="flex flex-col items-start px-5 pt-5 pb-0 gap-1">
-        <div className={`p-2.5 rounded-xl ${c.bg} mb-2`}>
-          <div className={c.text}>{icon}</div>
+        <div className={`p-2.5 rounded-xl ${t.iconBg} mb-2`}>
+          <div className={t.text}>{icon}</div>
         </div>
-        <div className="flex justify-between w-full items-start">
-          <div>
-            <h3 className="text-base font-bold">{title}</h3>
+        <div className="flex justify-between w-full items-start gap-2">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold tracking-tight">{title}</h3>
             <p className="text-xs text-default-400">{description}</p>
           </div>
-          <span className={`text-lg font-mono font-extrabold ${c.text}`}>
-            ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          <span className={`text-lg tnum font-extrabold shrink-0 ${t.text}`}>
+            {moneyExact(total)}
           </span>
         </div>
       </CardHeader>
 
       <CardBody className="px-5 py-4 flex flex-col gap-3">
-        {/* Items list */}
         <div className="flex-grow space-y-2 min-h-[80px]">
           {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-100 rounded-xl text-default-300">
-              <p className="text-xs">Sin registros</p>
+            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
+              <p className="text-xs font-medium">Sin registros aún</p>
+              <p className="text-[11px] text-default-300">Agrega el primero aquí abajo ↓</p>
             </div>
           ) : (
-            items.map((item: FinanceItem) => (
+            items.map((item) => (
               <div
                 key={item.id}
-                className={`group flex justify-between items-center p-3 rounded-xl ${c.badge} hover:opacity-90 transition-all duration-200 border border-transparent hover:border-default-200 animate-slide-in-left`}
+                className={`group flex justify-between items-center p-3 rounded-xl ${t.bgBadge} transition-all duration-200 border border-transparent hover:border-default-200 animate-slide-in-left`}
               >
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-semibold text-default-700 truncate">{item.label}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     {item.category && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${c.bg} ${c.text} font-medium`}>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${t.bg} ${t.text} font-medium`}>
                         {item.category}
                       </span>
                     )}
-                    {item.date && (
-                      <span className="text-[10px] text-default-400">{item.date}</span>
-                    )}
+                    {item.date && <span className="text-[10px] text-default-400">{item.date}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className={`font-mono font-bold text-sm ${c.text}`}>
-                    ${item.amount.toLocaleString()}
+                  <span className={`tnum font-bold text-sm text-right ${t.text}`}>
+                    {money(item.amount)}
                   </span>
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="opacity-0 group-hover:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1 rounded-lg hover:bg-rose-500/10"
-                    aria-label="Eliminar"
+                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
+                    aria-label={`Eliminar ${item.label}`}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -264,7 +294,6 @@ function Section({ title, description, icon, items, total, color, categories, on
 
         <Divider className="my-1" />
 
-        {/* Input Form */}
         <div className="space-y-2.5">
           <Input
             placeholder="Descripción"
@@ -278,17 +307,20 @@ function Section({ title, description, icon, items, total, color, categories, on
             placeholder="Categoría"
             size="sm"
             variant="bordered"
+            aria-label="Categoría"
             classNames={{ trigger: "bg-default-50 hover:bg-default-100 border-default-200" }}
             selectedKeys={[category]}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => setCategory(e.target.value || categories[0])}
           >
-            {categories.map((cat: string) => (
+            {categories.map((cat) => (
               <SelectItem key={cat}>{cat}</SelectItem>
             ))}
           </Select>
           <div className="flex gap-2">
             <Input
               type="number"
+              min="0"
+              inputMode="decimal"
               placeholder="0.00"
               size="sm"
               variant="bordered"
@@ -302,6 +334,7 @@ function Section({ title, description, icon, items, total, color, categories, on
               type="date"
               size="sm"
               variant="bordered"
+              aria-label="Fecha"
               classNames={{ inputWrapper: "bg-default-50 hover:bg-default-100 border-default-200" }}
               className="w-[130px]"
               value={date}
@@ -310,12 +343,12 @@ function Section({ title, description, icon, items, total, color, categories, on
           </div>
           <Button
             fullWidth
-            color={color as any}
+            color={color}
             variant="shadow"
             onPress={handleAdd}
             className="font-bold text-sm"
             size="sm"
-            isDisabled={!label || !amount}
+            isDisabled={!label.trim() || !amountValid}
             startContent={<Plus size={15} />}
           >
             Agregar
@@ -327,37 +360,41 @@ function Section({ title, description, icon, items, total, color, categories, on
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUBSCRIPTIONS SECTION COMPONENT
+// SUBSCRIPTIONS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
-  const [label, setLabel]       = useState("");
-  const [amount, setAmount]     = useState("");
+function SubscriptionsSection({ items, total, onAdd, onRemove }: {
+  items: SubscriptionItem[]; total: number;
+  onAdd: (label: string, amount: string, cycle: "mensual" | "anual", category: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [label, setLabel]   = useState("");
+  const [amount, setAmount] = useState("");
   const [billingCycle, setBillingCycle] = useState<"mensual" | "anual">("mensual");
-  const [category, setCategory] = useState("Suscripción");
 
-  const categories = ["Suscripción", "Servicios", "Renta", "Gimnasio", "Seguro", "Otro"];
+  const t = TONE.indigo;
+  const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
 
   const handleAdd = () => {
-    if (!label || !amount) return;
-    onAdd(label, amount, billingCycle, category);
+    if (!label.trim() || !amountValid) return;
+    onAdd(label.trim(), amount, billingCycle, "Suscripción");
     setLabel("");
     setAmount("");
   };
 
   return (
-    <Card className="glass card-hover border border-indigo-500/20 h-full">
+    <Card className={`glass card-hover border ${t.border} h-full`}>
       <CardHeader className="flex flex-col items-start px-5 pt-5 pb-0 gap-1">
-        <div className="p-2.5 rounded-xl bg-indigo-500/10 mb-2">
-          <div className="text-indigo-500"><Calendar size={18} /></div>
+        <div className={`p-2.5 rounded-xl ${t.iconBg} mb-2`}>
+          <div className={t.text}><Calendar size={18} /></div>
         </div>
-        <div className="flex justify-between w-full items-start">
-          <div>
-            <h3 className="text-base font-bold">Gastos Fijos</h3>
+        <div className="flex justify-between w-full items-start gap-2">
+          <div className="min-w-0">
+            <h3 className="text-base font-bold tracking-tight">Gastos Fijos</h3>
             <p className="text-xs text-default-400">Suscripciones y cobros recurrentes</p>
           </div>
-          <div className="text-right">
-            <span className="text-lg font-mono font-extrabold text-indigo-500">
-              ${total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          <div className="text-right shrink-0">
+            <span className={`text-lg tnum font-extrabold ${t.text}`}>
+              {moneyExact(total)}
             </span>
             <p className="text-[10px] text-default-400">/ mes (eqv.)</p>
           </div>
@@ -367,20 +404,21 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
       <CardBody className="px-5 py-4 flex flex-col gap-3">
         <div className="flex-grow space-y-2 min-h-[80px]">
           {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-100 rounded-xl text-default-300">
-              <p className="text-xs">Sin gastos fijos</p>
+            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
+              <p className="text-xs font-medium">Sin gastos fijos</p>
+              <p className="text-[11px] text-default-300">Netflix, renta, gimnasio…</p>
             </div>
           ) : (
-            items.map((item: SubscriptionItem) => (
+            items.map((item) => (
               <div
                 key={item.id}
-                className="group flex justify-between items-center p-3 rounded-xl bg-indigo-500/15 hover:opacity-90 transition-all duration-200 border border-transparent hover:border-default-200 animate-slide-in-left"
+                className={`group flex justify-between items-center p-3 rounded-xl ${t.bgBadge} transition-all duration-200 border border-transparent hover:border-default-200 animate-slide-in-left`}
               >
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-semibold text-default-700 truncate">{item.label}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     {item.category && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-500 font-medium">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${t.bg} ${t.text} font-medium`}>
                         {item.category}
                       </span>
                     )}
@@ -388,12 +426,13 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="font-mono font-bold text-sm text-indigo-500">
-                    ${item.amount.toLocaleString()}
+                  <span className={`tnum font-bold text-sm ${t.text}`}>
+                    {money(item.amount)}
                   </span>
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="opacity-0 group-hover:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1 rounded-lg hover:bg-rose-500/10"
+                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
+                    aria-label={`Eliminar ${item.label}`}
                   >
                     <Trash2 size={14} />
                   </button>
@@ -412,8 +451,10 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
             onValueChange={setLabel}
           />
           <div className="flex gap-2">
-             <Input
+            <Input
               type="number"
+              min="0"
+              inputMode="decimal"
               placeholder="0.00"
               size="sm"
               variant="bordered"
@@ -425,9 +466,13 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
             <Select
               size="sm"
               variant="bordered"
+              aria-label="Ciclo de cobro"
               className="w-[120px]"
               selectedKeys={[billingCycle]}
-              onSelectionChange={(keys) => setBillingCycle(Array.from(keys)[0] as "mensual"|"anual")}
+              onSelectionChange={(keys) => {
+                const k = Array.from(keys)[0];
+                if (k === "mensual" || k === "anual") setBillingCycle(k);
+              }}
             >
               <SelectItem key="mensual">Mensual</SelectItem>
               <SelectItem key="anual">Anual</SelectItem>
@@ -435,12 +480,11 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
           </div>
           <Button
             fullWidth
-            color="primary"
             variant="shadow"
             onPress={handleAdd}
-            className="font-bold text-sm bg-indigo-500"
+            className="font-bold text-sm bg-indigo-500 text-white"
             size="sm"
-            isDisabled={!label || !amount}
+            isDisabled={!label.trim() || !amountValid}
             startContent={<Plus size={15} />}
           >
             Agregar Fijo
@@ -452,80 +496,100 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: any) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GOALS SECTION COMPONENT
+// GOALS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: any) {
+function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
+  items: GoalItem[];
+  onAdd: (label: string, target: string, deadline: string) => void;
+  onRemove: (id: string) => void;
+  onUpdateProgress: (id: string, newAmount: string) => void;
+}) {
   const [label, setLabel] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
   const [deadline, setDeadline] = useState("");
 
+  const t = TONE.purple;
+
   const handleAdd = () => {
-    if (!label || !targetAmount || !deadline) return;
-    onAdd(label, targetAmount, deadline);
+    if (!label.trim() || !targetAmount || !deadline) return;
+    onAdd(label.trim(), targetAmount, deadline);
     setLabel("");
     setTargetAmount("");
     setDeadline("");
   };
 
   return (
-    <Card className="glass card-hover border border-purple-500/20 col-span-1 sm:col-span-2 lg:col-span-3">
+    <Card className={`glass card-hover border ${t.border} col-span-1 sm:col-span-2 lg:col-span-3`}>
       <CardHeader className="flex flex-col items-start px-5 pt-5 pb-0 gap-1">
-        <div className="p-2.5 rounded-xl bg-purple-500/10 mb-2">
-          <div className="text-purple-500"><Target size={18} /></div>
+        <div className={`p-2.5 rounded-xl ${t.iconBg} mb-2`}>
+          <div className={t.text}><Target size={18} /></div>
         </div>
         <div>
-          <h3 className="text-base font-bold">Metas de Ahorro</h3>
+          <h3 className="text-base font-bold tracking-tight">Metas de Ahorro</h3>
           <p className="text-xs text-default-400">Rastrea tu progreso hacia objetivos específicos</p>
         </div>
       </CardHeader>
 
       <CardBody className="px-5 py-4 flex flex-col gap-4">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-100 rounded-xl text-default-300">
-            <p className="text-xs">Sin metas activas</p>
+          <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
+            <p className="text-xs font-medium">Sin metas activas</p>
+            <p className="text-[11px] text-default-300">Un viaje, un auto, tu fondo de emergencia…</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {items.map((item: GoalItem) => {
-              const progress = Math.min(100, (item.currentAmount / item.targetAmount) * 100) || 0;
+            {items.map((item) => {
+              const progress = item.targetAmount > 0
+                ? Math.min(100, (item.currentAmount / item.targetAmount) * 100)
+                : 0;
+              const done = progress >= 100;
               return (
-                <div key={item.id} className="relative group p-4 rounded-xl bg-purple-500/5 border border-purple-500/20 animate-fade-in-up hover:bg-purple-500/10 transition-colors">
+                <div key={item.id} className={`relative group p-4 rounded-xl ${t.bg} border ${t.border} animate-fade-in-up hover:bg-purple-500/15 transition-colors`}>
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-bold text-default-800">{item.label}</span>
+                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5">
+                      {item.label}
+                      {done && <Check size={14} className="text-emerald-500" />}
+                    </span>
                     <button
                       onClick={() => onRemove(item.id)}
-                      className="opacity-0 group-hover:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                      aria-label={`Eliminar meta ${item.label}`}
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
-                  <div className="flex justify-between text-xs text-default-500 font-mono mb-1">
-                    <span className="text-emerald-500 font-bold">${item.currentAmount.toLocaleString()}</span>
-                    <span>${item.targetAmount.toLocaleString()}</span>
+                  <div className="flex justify-between text-xs text-default-500 tnum mb-1">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{money(item.currentAmount)}</span>
+                    <span>{money(item.targetAmount)}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-default-200/50 mb-2 overflow-hidden">
+                  <div className="h-2 rounded-full bg-default-200/60 mb-2 overflow-hidden" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-500"
+                      className={`h-full rounded-full transition-all duration-500 ${done ? "bg-emerald-500" : "bg-gradient-to-r from-purple-500 to-indigo-500"}`}
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                   <div className="flex justify-between items-center mt-3">
                     <span className="text-[10px] text-default-400">Meta: {item.deadline}</span>
-                    <div className="flex items-center gap-1">
-                      <Input 
-                        size="sm" 
-                        variant="faded" 
-                        placeholder="Abonar $" 
-                        className="w-20"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const val = (e.target as HTMLInputElement).value;
-                            if (val) onUpdateProgress(item.id, (item.currentAmount + parseFloat(val)).toString());
-                            (e.target as HTMLInputElement).value = "";
+                    <Input
+                      size="sm"
+                      variant="faded"
+                      placeholder="Abonar $"
+                      aria-label={`Abonar a ${item.label}`}
+                      className="w-24"
+                      type="number"
+                      min="0"
+                      inputMode="decimal"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const el = e.target as HTMLInputElement;
+                          const val = parseFloat(el.value);
+                          if (Number.isFinite(val) && val > 0) {
+                            onUpdateProgress(item.id, round2(item.currentAmount + val).toString());
                           }
-                        }}
-                      />
-                    </div>
+                          el.value = "";
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               );
@@ -535,9 +599,9 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: any) {
 
         <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-default-200/50 mt-2">
           <Input placeholder="Ej. Viaje, Auto" size="sm" variant="bordered" value={label} onValueChange={setLabel} className="flex-1" />
-          <Input type="number" placeholder="Monto Meta ($)" size="sm" variant="bordered" value={targetAmount} onValueChange={setTargetAmount} className="w-full sm:w-32" />
-          <Input type="date" size="sm" variant="bordered" value={deadline} onValueChange={setDeadline} className="w-full sm:w-32" />
-          <Button color="secondary" variant="shadow" onPress={handleAdd} isDisabled={!label || !targetAmount || !deadline} className="font-bold bg-purple-500">
+          <Input type="number" min="0" inputMode="decimal" placeholder="Monto Meta ($)" size="sm" variant="bordered" value={targetAmount} onValueChange={setTargetAmount} className="w-full sm:w-36" />
+          <Input type="date" size="sm" variant="bordered" aria-label="Fecha límite" value={deadline} onValueChange={setDeadline} className="w-full sm:w-36" />
+          <Button variant="shadow" onPress={handleAdd} isDisabled={!label.trim() || !targetAmount || !deadline} className="font-bold bg-purple-500 text-white">
             Crear Meta
           </Button>
         </div>
@@ -547,142 +611,281 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: any) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SAVE STATUS — indicador honesto de sincronización
+// ─────────────────────────────────────────────────────────────────────────────
+type SaveStatus = "idle" | "saving" | "saved" | "error" | "conflict";
+
+function SaveIndicator({ status }: { status: SaveStatus }) {
+  if (status === "idle") return null;
+  const map: Record<Exclude<SaveStatus, "idle">, { icon: React.ReactNode; label: string; cls: string }> = {
+    saving:   { icon: <CloudUpload size={13} className="animate-pulse" />, label: "Guardando…", cls: "text-default-400" },
+    saved:    { icon: <Check size={13} />, label: "Guardado", cls: "text-emerald-500" },
+    error:    { icon: <AlertTriangle size={13} />, label: "Sin conexión", cls: "text-amber-500" },
+    conflict: { icon: <AlertTriangle size={13} />, label: "Conflicto", cls: "text-rose-500" },
+  };
+  const m = map[status];
+  return (
+    <span className={`hidden sm:flex items-center gap-1.5 text-[11px] font-semibold ${m.cls}`} aria-live="polite">
+      {m.icon}
+      {m.label}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
-export default function Dashboard() {
-  const [assets,      setAssets]      = useState<FinanceItem[]>([]);
-  const [liabilities, setLiabilities] = useState<FinanceItem[]>([]);
-  const [buckets,     setBuckets]     = useState<FinanceItem[]>([]);
-  const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
-  const [goals,       setGoals]       = useState<GoalItem[]>([]);
-  const [history,     setHistory]     = useState<HistorySnapshot[]>([]);
-  const [mounted,     setMounted]     = useState(false);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [activeTab,   setActiveTab]   = useState<NavTab>("dashboard");
-  const [fabOpen,     setFabOpen]     = useState(false);
+type QuickAddType = "asset" | "liability" | "bucket";
 
-  const { theme, resolvedTheme } = useTheme();
+const QUICK_CATEGORIES: Record<QuickAddType, string[]> = {
+  asset:     ["Efectivo", "Banco", "Inversión", "Propiedad", "Otros"],
+  liability: ["Tarjeta de Crédito", "Préstamo", "Servicios", "Hogar", "Comida", "Transporte", "Otros"],
+  bucket:    ["Emergencia", "Viaje", "Auto", "Regalos", "Ahorro", "Otros"],
+};
+
+export default function Dashboard() {
+  const [assets,        setAssets]        = useState<FinanceItem[]>([]);
+  const [liabilities,   setLiabilities]   = useState<FinanceItem[]>([]);
+  const [buckets,       setBuckets]       = useState<FinanceItem[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
+  const [goals,         setGoals]         = useState<GoalItem[]>([]);
+  const [history,       setHistory]       = useState<HistorySnapshot[]>([]);
+  const [mounted,       setMounted]       = useState(false);
+  const [isLoading,     setIsLoading]     = useState(true);
+  const [loadError,     setLoadError]     = useState(false);
+  const [activeTab,     setActiveTab]     = useState<NavTab>("dashboard");
+  const [saveStatus,    setSaveStatus]    = useState<SaveStatus>("idle");
+
+  // Concurrencia optimista: rev del documento en servidor
+  const revRef = useRef<number>(0);
+  const [conflictData, setConflictData] = useState<any | null>(null);
+
+  // Deshacer borrado
+  const [pendingUndo, setPendingUndo] = useState<{
+    label: string;
+    restore: () => void;
+  } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
-  // ── Load from API ──────────────────────────────────────────────
+  // ── Carga inicial ─────────────────────────────────────────────
+  const applyServerData = useCallback((data: any) => {
+    setAssets(data.assets || []);
+    setLiabilities(data.liabilities || []);
+    setBuckets(data.buckets || []);
+    setSubscriptions(data.subscriptions || []);
+    setGoals(data.goals || []);
+    setHistory(data.history || []);
+    revRef.current = typeof data.rev === "number" ? data.rev : 0;
+  }, []);
+
   useEffect(() => {
     setMounted(true);
     const fetchData = async () => {
       try {
         const res = await fetch("/api/finance");
-        if (res.ok) {
-          const data = await res.json();
-          setAssets(data.assets || []);
-          setLiabilities(data.liabilities || []);
-          setBuckets(data.buckets || []);
-          setSubscriptions(data.subscriptions || []);
-          setGoals(data.goals || []);
-          setHistory(data.history || []);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        applyServerData(data);
+        setLoadError(false);
       } catch (error) {
         console.error("Failed to fetch data:", error);
+        setLoadError(true);
       } finally {
         setIsLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [applyServerData]);
 
-  // ── Auto-save ─────────────────────────────────────────────────
-  const saveData = async (a: any, l: any, b: any, h: any, sub: any, g: any) => {
+  // ── Guardado con control de conflictos ───────────────────────
+  const saveData = useCallback(async (
+    a: FinanceItem[], l: FinanceItem[], b: FinanceItem[],
+    h: HistorySnapshot[], sub: SubscriptionItem[], g: GoalItem[],
+  ) => {
+    setSaveStatus("saving");
     try {
-      await fetch("/api/finance", {
+      const res = await fetch("/api/finance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assets: a, liabilities: l, buckets: b, history: h, subscriptions: sub, goals: g }),
+        body: JSON.stringify({
+          assets: a, liabilities: l, buckets: b,
+          history: h, subscriptions: sub, goals: g,
+          baseRev: revRef.current,
+        }),
       });
+
+      if (res.status === 409) {
+        // Otro dispositivo/pestaña guardó primero. No pisar sus datos.
+        const payload = await res.json();
+        setConflictData(payload.server || null);
+        setSaveStatus("conflict");
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      revRef.current = typeof data.rev === "number" ? data.rev : revRef.current + 1;
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus((s) => (s === "saved" ? "idle" : s)), 2000);
     } catch (error) {
       console.error("Failed to save data:", error);
+      setSaveStatus("error");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!mounted || isLoading) return;
-    const timer = setTimeout(() => saveData(assets, liabilities, buckets, history, subscriptions, goals), 1000);
+    if (!mounted || isLoading || loadError) return;
+    const timer = setTimeout(
+      () => saveData(assets, liabilities, buckets, history, subscriptions, goals),
+      900,
+    );
     return () => clearTimeout(timer);
-  }, [assets, liabilities, buckets, history, subscriptions, goals, mounted, isLoading]);
+  }, [assets, liabilities, buckets, history, subscriptions, goals, mounted, isLoading, loadError, saveData]);
 
-  // ── Computed values ───────────────────────────────────────────
-  const totalAssets      = assets.reduce((s, i) => s + i.amount, 0);
-  const totalLiabilities = liabilities.reduce((s, i) => s + i.amount, 0);
-  const totalBuckets     = buckets.reduce((s, i) => s + i.amount, 0);
-  const totalFixedCosts  = subscriptions.reduce((s, i) => {
-    // Convert yearly to monthly equivalent for the fixed cost metric
-    return s + (i.billingCycle === "anual" ? i.amount / 12 : i.amount);
-  }, 0);
-  const available        = totalAssets - totalLiabilities - totalBuckets;
+  // ── Totales ──────────────────────────────────────────────────
+  const totalAssets      = round2(assets.reduce((s, i) => s + i.amount, 0));
+  const totalLiabilities = round2(liabilities.reduce((s, i) => s + i.amount, 0));
+  const totalBuckets     = round2(buckets.reduce((s, i) => s + i.amount, 0));
+  const totalFixedCosts  = round2(subscriptions.reduce(
+    (s, i) => s + (i.billingCycle === "anual" ? i.amount / 12 : i.amount), 0,
+  ));
+  const available        = round2(totalAssets - totalLiabilities - totalBuckets);
+  const afterFixed       = round2(available - totalFixedCosts);
 
-  // ── Animated counter — must be before any early return (Rules of Hooks) ──
   const animatedAvailable = useAnimatedCounter(available);
   const isPositive        = available >= 0;
   const balanceProgress   = totalAssets > 0
     ? Math.max(0, Math.min(100, (available / totalAssets) * 100))
     : 0;
 
-  // ── Handlers ──────────────────────────────────────────────────
-  const handleAddItem = (type: "asset" | "liability" | "bucket", label: string, amount: string, date: string, category: string) => {
+  // ── Deshacer borrados ────────────────────────────────────────
+  const scheduleUndo = (label: string, restore: () => void) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setPendingUndo({ label, restore });
+    undoTimerRef.current = setTimeout(() => setPendingUndo(null), 5000);
+  };
+
+  const handleUndo = () => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    pendingUndo?.restore();
+    setPendingUndo(null);
+  };
+
+  // ── Handlers ─────────────────────────────────────────────────
+  const handleAddItem = (type: QuickAddType, label: string, amount: string, date: string, category: string) => {
+    const parsed = parseFloat(amount);
+    if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
     const item: FinanceItem = {
-      id:       crypto.randomUUID(),
+      id: crypto.randomUUID(),
       label,
-      amount:   parseFloat(amount),
-      date:     date || new Date().toISOString().split("T")[0],
+      amount: round2(parsed),
+      date: date || new Date().toISOString().split("T")[0],
       type,
       category,
     };
-    if (type === "asset")     setAssets([...assets, item]);
-    if (type === "liability") setLiabilities([...liabilities, item]);
-    if (type === "bucket")    setBuckets([...buckets, item]);
+    if (type === "asset")     setAssets((prev) => [...prev, item]);
+    if (type === "liability") setLiabilities((prev) => [...prev, item]);
+    if (type === "bucket")    setBuckets((prev) => [...prev, item]);
   };
 
-  const removeItem = (id: string, type: "asset" | "liability" | "bucket") => {
-    if (type === "asset")     setAssets(assets.filter((i) => i.id !== id));
-    if (type === "liability") setLiabilities(liabilities.filter((i) => i.id !== id));
-    if (type === "bucket")    setBuckets(buckets.filter((i) => i.id !== id));
+  const removeItem = (id: string, type: QuickAddType) => {
+    const lists = { asset: assets, liability: liabilities, bucket: buckets };
+    const setters = { asset: setAssets, liability: setLiabilities, bucket: setBuckets };
+    const list = lists[type];
+    const idx = list.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = list[idx];
+    setters[type](list.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setters[type]((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
   };
 
   const handleAddSubscription = (label: string, amount: string, billingCycle: "mensual" | "anual", category: string) => {
-    const item: SubscriptionItem = {
-      id: crypto.randomUUID(),
-      label,
-      amount: parseFloat(amount),
-      billingCycle,
-      category,
-    };
-    setSubscriptions([...subscriptions, item]);
+    const parsed = parseFloat(amount);
+    if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
+    setSubscriptions((prev) => [...prev, {
+      id: crypto.randomUUID(), label, amount: round2(parsed), billingCycle, category,
+    }]);
   };
 
   const removeSubscription = (id: string) => {
+    const idx = subscriptions.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = subscriptions[idx];
     setSubscriptions(subscriptions.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setSubscriptions((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
   };
 
   const handleAddGoal = (label: string, targetAmount: string, deadline: string) => {
-    const item: GoalItem = {
-      id: crypto.randomUUID(),
-      label,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: 0,
-      deadline,
-    };
-    setGoals([...goals, item]);
+    const parsed = parseFloat(targetAmount);
+    if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
+    setGoals((prev) => [...prev, {
+      id: crypto.randomUUID(), label, targetAmount: round2(parsed), currentAmount: 0, deadline,
+    }]);
   };
 
   const removeGoal = (id: string) => {
+    const idx = goals.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = goals[idx];
     setGoals(goals.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setGoals((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
   };
 
   const updateGoalProgress = (id: string, currentAmount: string) => {
-    setGoals(goals.map(g => g.id === id ? { ...g, currentAmount: parseFloat(currentAmount) } : g));
+    const parsed = parseFloat(currentAmount);
+    if (!Number.isFinite(parsed) || parsed < 0) return;
+    setGoals(goals.map((g) => (g.id === id ? { ...g, currentAmount: round2(parsed) } : g)));
   };
 
+  // ── Modales ──────────────────────────────────────────────────
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { isOpen: isDataModalOpen, onOpen: onDataModalOpen, onOpenChange: onDataModalChange } = useDisclosure();
-  const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
+  const { isOpen: isQuickAddOpen, onOpen: onQuickAddOpen, onOpenChange: onQuickAddChange } = useDisclosure();
+  const { isOpen: isClearOpen, onOpen: onClearOpen, onOpenChange: onClearChange } = useDisclosure();
+  const { isOpen: isImportOpen, onOpen: onImportOpen, onOpenChange: onImportChange } = useDisclosure();
 
+  const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
+  const [importPreview, setImportPreview] = useState<{ data: any; counts: string } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Quick add (FAB)
+  const [quickType, setQuickType]         = useState<QuickAddType>("liability");
+  const [quickLabel, setQuickLabel]       = useState("");
+  const [quickAmount, setQuickAmount]     = useState("");
+  const [quickCategory, setQuickCategory] = useState(QUICK_CATEGORIES.liability[0]);
+
+  const quickAmountValid = quickAmount !== "" && Number.isFinite(parseFloat(quickAmount)) && parseFloat(quickAmount) > 0;
+
+  const submitQuickAdd = (close: () => void) => {
+    if (!quickLabel.trim() || !quickAmountValid) return;
+    handleAddItem(quickType, quickLabel.trim(), quickAmount, "", quickCategory);
+    setQuickLabel("");
+    setQuickAmount("");
+    close();
+  };
+
+  // ── Export / Import ──────────────────────────────────────────
   const exportData = () => {
     const data = { assets, liabilities, buckets, subscriptions, goals, history };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -696,39 +899,49 @@ export default function Dashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
-        const text = e.target?.result as string;
-        const data = JSON.parse(text);
-        if (confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) {
-          setAssets(data.assets || []);
-          setLiabilities(data.liabilities || []);
-          setBuckets(data.buckets || []);
-          setSubscriptions(data.subscriptions || []);
-          setGoals(data.goals || []);
-          setHistory(data.history || []);
-          // Save immediately to DB
-          await saveData(
-            data.assets || [],
-            data.liabilities || [],
-            data.buckets || [],
-            data.history || [],
-            data.subscriptions || [],
-            data.goals || []
-          );
-        }
-      } catch (err) {
-        alert("Archivo inválido o corrupto.");
+        const data = JSON.parse(e.target?.result as string);
+        if (typeof data !== "object" || data === null) throw new Error("bad");
+        const counts = [
+          `${(data.assets || []).length} activos`,
+          `${(data.liabilities || []).length} gastos`,
+          `${(data.buckets || []).length} apartados`,
+          `${(data.subscriptions || []).length} fijos`,
+          `${(data.goals || []).length} metas`,
+          `${(data.history || []).length} snapshots`,
+        ].join(" · ");
+        setImportError(null);
+        setImportPreview({ data, counts });
+        onImportOpen();
+      } catch {
+        setImportPreview(null);
+        setImportError("El archivo no es un respaldo válido de Finance Control.");
+        onImportOpen();
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // reset input
   };
 
+  const confirmImport = (close: () => void) => {
+    if (!importPreview) return;
+    const d = importPreview.data;
+    setAssets(d.assets || []);
+    setLiabilities(d.liabilities || []);
+    setBuckets(d.buckets || []);
+    setSubscriptions(d.subscriptions || []);
+    setGoals(d.goals || []);
+    setHistory(d.history || []);
+    setImportPreview(null);
+    close();
+  };
+
+  // ── Snapshots ────────────────────────────────────────────────
   const saveSnapshot = () => {
     const snapshot: HistorySnapshot = {
       id: crypto.randomUUID(),
@@ -739,17 +952,18 @@ export default function Dashboard() {
       totalFixedCosts,
       available,
       deficit: available < 0 ? Math.abs(available) : 0,
-      assets:      [...assets],
-      liabilities: [...liabilities],
-      buckets:     [...buckets],
+      assets:        [...assets],
+      liabilities:   [...liabilities],
+      buckets:       [...buckets],
       subscriptions: [...subscriptions],
-      goals:       [...goals],
+      goals:         [...goals],
     };
     setHistory([snapshot, ...history]);
   };
 
-  const clearHistory = () => {
-    if (confirm("¿Deseas limpiar todo el historial?")) setHistory([]);
+  const confirmClearHistory = (close: () => void) => {
+    setHistory([]);
+    close();
   };
 
   const openHistoryDetails = (snapshot: HistorySnapshot) => {
@@ -759,30 +973,40 @@ export default function Dashboard() {
 
   const handleStartTour = () => startTour(isDark);
 
-  // ── Tab change — Inicio sube al top, los demás bajan al contenido
+  const resolveConflict = () => {
+    if (conflictData) {
+      applyServerData(conflictData);
+      setConflictData(null);
+      setSaveStatus("idle");
+    }
+  };
+
+  // ── Navegación entre tabs ────────────────────────────────────
   const changeTab = (tab: NavTab) => {
     setActiveTab(tab);
     setTimeout(() => {
       if (tab === "dashboard") {
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        document.getElementById("tab-content")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+        document.getElementById("tab-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }, 50);
   };
 
-  if (!mounted) return null;
+  if (!mounted) return <DashboardSkeleton />;
+
+  const historyTone = [
+    { label: "Activos",   tone: TONE.emerald, icon: <DollarSign size={20} /> },
+    { label: "Deudas",    tone: TONE.rose,    icon: <ShieldAlert size={20} /> },
+    { label: "Apartados", tone: TONE.amber,   icon: <Wallet size={20} /> },
+  ];
 
   return (
-    <div className="min-h-screen text-foreground font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="min-h-screen text-foreground font-sans">
 
       {/* ── TOP NAV ──────────────────────────────────────────── */}
       <nav className="glass-nav w-full sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex justify-between items-center">
-          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-md shadow-emerald-500/25">
               <Wallet className="text-white w-5 h-5" />
@@ -797,7 +1021,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Desktop Nav tabs */}
           <div className="hidden md:flex items-center gap-1 bg-default-100/70 rounded-xl p-1">
             {([
               { id: "dashboard", icon: <LayoutDashboard size={15} />, label: "Inicio" },
@@ -810,7 +1033,7 @@ export default function Dashboard() {
                 onClick={() => changeTab(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   activeTab === tab.id
-                    ? "bg-white dark:bg-default-800 text-emerald-600 shadow-sm"
+                    ? "bg-white dark:bg-default-100 text-emerald-600 dark:text-emerald-400 shadow-sm"
                     : "text-default-500 hover:text-default-700"
                 }`}
               >
@@ -820,8 +1043,8 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Right actions */}
           <div className="flex items-center gap-2">
+            <SaveIndicator status={saveStatus} />
             <Button
               isIconOnly variant="light" size="sm"
               onPress={handleStartTour}
@@ -845,7 +1068,7 @@ export default function Dashboard() {
             <div className="inline-flex p-4 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-2xl shadow-emerald-500/40 mb-8">
               <Wallet className="text-white w-14 h-14" />
             </div>
-            <h1 className="text-4xl sm:text-6xl font-black mb-4 gradient-text-emerald">
+            <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-tight gradient-text-emerald">
               Finance Control
             </h1>
             <p className="text-lg text-default-500 mb-2 max-w-md mx-auto">
@@ -866,7 +1089,6 @@ export default function Dashboard() {
             </SignInButton>
           </div>
 
-          {/* Feature pills */}
           <div className="flex flex-wrap gap-2 justify-center mt-12 animate-fade-in-up delay-300">
             {["📊 Analíticas avanzadas", "🧠 Red Neuronal IA", "📱 Móvil amigable", "🔒 Datos seguros"].map((f) => (
               <span key={f} className="glass px-4 py-2 rounded-full text-xs font-medium text-default-600">{f}</span>
@@ -877,29 +1099,44 @@ export default function Dashboard() {
 
       {/* ── SIGNED IN ─────────────────────────────────────────── */}
       <SignedIn>
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8">
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : loadError ? (
+          <main className="max-w-lg mx-auto px-6 py-24 text-center">
+            <div className="glass p-8 animate-fade-in-scale">
+              <AlertTriangle className="w-10 h-10 mx-auto mb-4 text-amber-500" />
+              <h2 className="text-lg font-bold mb-2">No pudimos cargar tus datos</h2>
+              <p className="text-sm text-default-500 mb-6">
+                Revisa tu conexión a internet. Tus datos siguen seguros en el servidor.
+              </p>
+              <Button
+                color="primary"
+                variant="shadow"
+                startContent={<RefreshCw size={16} />}
+                onPress={() => window.location.reload()}
+              >
+                Reintentar
+              </Button>
+            </div>
+          </main>
+        ) : (
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8 pb-28 md:pb-8">
 
-          {/* ── HERO SECTION ────────────────────────────────── */}
-          {/* Hero siempre visible — muestra el balance sin importar el tab */}
+          {/* ── HERO ─────────────────────────────────────────── */}
           <section className="animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
-              {/* Main Balance Card */}
               <Card
                 id="balance-card"
                 className={`col-span-1 md:col-span-8 border-0 overflow-hidden relative ${
-                  isPositive
-                    ? "glow-emerald"
-                    : "glow-rose"
+                  isPositive ? "glow-emerald" : "glow-rose"
                 }`}
               >
-                {/* Gradient background */}
                 <div className={`absolute inset-0 ${
                   isPositive
-                    ? "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600"
-                    : "bg-gradient-to-br from-rose-500 via-red-500 to-orange-600"
+                    ? "bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700"
+                    : "bg-gradient-to-br from-rose-600 via-red-600 to-orange-700"
                 }`} />
-                {/* Decorative circles */}
                 <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10" />
                 <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
 
@@ -910,18 +1147,21 @@ export default function Dashboard() {
                       {isPositive ? "Balance Disponible" : "Déficit Acumulado"}
                     </p>
                   </div>
-                  <h2 className="text-5xl sm:text-6xl font-black text-white tracking-tight mb-1">
-                    {!isPositive && "-"}${Math.abs(animatedAvailable).toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  <h2 className="text-5xl sm:text-6xl font-black text-white tracking-tight mb-1 tnum">
+                    {!isPositive && "−"}{money(Math.abs(animatedAvailable))}
                   </h2>
-                  <p className="text-white/60 text-sm mb-5">
-                    Actualizado ahora
-                  </p>
+                  {subscriptions.length > 0 && (
+                    <p className="text-white/75 text-sm mb-1 tnum">
+                      Después de gastos fijos: <span className="font-bold">{money(afterFixed)}</span>
+                      <span className="text-white/50"> · {money(totalFixedCosts)}/mes en fijos</span>
+                    </p>
+                  )}
+                  <p className="text-white/60 text-sm mb-5">Actualizado ahora</p>
 
-                  {/* Progress bar */}
                   <div className="mb-6">
                     <div className="flex justify-between text-xs text-white/60 mb-1.5">
                       <span>Balance vs Activos totales</span>
-                      <span>{balanceProgress.toFixed(1)}%</span>
+                      <span className="tnum">{balanceProgress.toFixed(1)}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-white/20">
                       <div
@@ -931,7 +1171,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-3 flex-wrap">
                     <Button
                       id="save-snapshot-btn"
@@ -965,44 +1204,18 @@ export default function Dashboard() {
                 </CardBody>
               </Card>
 
-              {/* Stat Cards */}
               <div className="col-span-1 md:col-span-4 flex flex-col gap-3">
-                <StatCard
-                  label="Total Activos"
-                  value={totalAssets}
-                  icon={<TrendingUp size={20} />}
-                  colorClass="text-emerald-500"
-                  bgClass="bg-emerald-500/15"
-                  delay={100}
-                />
-                <StatCard
-                  label="Gastos / Deudas"
-                  value={totalLiabilities}
-                  icon={<TrendingDown size={20} />}
-                  colorClass="text-rose-500"
-                  bgClass="bg-rose-500/15"
-                  delay={200}
-                />
-                <StatCard
-                  label="Apartados"
-                  value={totalBuckets}
-                  icon={<Wallet size={20} />}
-                  colorClass="text-amber-500"
-                  bgClass="bg-amber-500/15"
-                  delay={300}
-                />
+                <StatCard label="Total Activos"  value={totalAssets}      icon={<TrendingUp size={20} />}   tone="emerald" delay={100} />
+                <StatCard label="Gastos / Deudas" value={totalLiabilities} icon={<TrendingDown size={20} />} tone="rose"    delay={200} />
+                <StatCard label="Apartados"       value={totalBuckets}     icon={<Wallet size={20} />}       tone="amber"   delay={300} />
               </div>
             </div>
           </section>
 
-          {/* Anchor: scroll target so tab content is the first thing visible */}
           <div id="tab-content" style={{ scrollMarginTop: "72px" }} />
 
-          {/* ── MANAGEMENT SECTIONS ── */}
-          <section
-            className={activeTab !== "dashboard" ? "hidden" : ""}
-            id="management-sections"
-          >
+          {/* ── MIS FINANZAS ──────────────────────────────────── */}
+          <section className={activeTab !== "dashboard" ? "hidden" : ""} id="management-sections">
             <div className="flex items-center gap-2 mb-4">
               <h2 className="text-xl font-bold section-title">Mis Finanzas</h2>
             </div>
@@ -1014,9 +1227,9 @@ export default function Dashboard() {
                 items={assets}
                 total={totalAssets}
                 color="success"
-                categories={["Efectivo", "Banco", "Inversión", "Propiedad", "Otros"]}
-                onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("asset", l, a, d, c)}
-                onRemove={(id: string) => removeItem(id, "asset")}
+                categories={QUICK_CATEGORIES.asset}
+                onAdd={(l, a, d, c) => handleAddItem("asset", l, a, d, c)}
+                onRemove={(id) => removeItem(id, "asset")}
               />
               <Section
                 title="Gastos & Deudas"
@@ -1025,9 +1238,9 @@ export default function Dashboard() {
                 items={liabilities}
                 total={totalLiabilities}
                 color="danger"
-                categories={["Tarjeta de Crédito", "Préstamo", "Servicios", "Hogar", "Comida", "Transporte", "Otros"]}
-                onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("liability", l, a, d, c)}
-                onRemove={(id: string) => removeItem(id, "liability")}
+                categories={QUICK_CATEGORIES.liability}
+                onAdd={(l, a, d, c) => handleAddItem("liability", l, a, d, c)}
+                onRemove={(id) => removeItem(id, "liability")}
               />
               <Section
                 title="Apartados & Ahorro"
@@ -1036,9 +1249,9 @@ export default function Dashboard() {
                 items={buckets}
                 total={totalBuckets}
                 color="warning"
-                categories={["Emergencia", "Viaje", "Auto", "Regalos", "Ahorro", "Otros"]}
-                onAdd={(l: string, a: string, d: string, c: string) => handleAddItem("bucket", l, a, d, c)}
-                onRemove={(id: string) => removeItem(id, "bucket")}
+                categories={QUICK_CATEGORIES.bucket}
+                onAdd={(l, a, d, c) => handleAddItem("bucket", l, a, d, c)}
+                onRemove={(id) => removeItem(id, "bucket")}
               />
               <SubscriptionsSection
                 items={subscriptions}
@@ -1055,33 +1268,20 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* ── ANALYTICS TAB ─────────────────────────────────── */}
+          {/* ── ANALYTICS ─────────────────────────────────────── */}
           <section className={activeTab !== "analytics" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <Analytics
-              history={history}
-              assets={assets}
-              liabilities={liabilities}
-              isDark={isDark}
-            />
+            <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
           </section>
 
-          {/* ── FINANCE AI TAB ────────────────────────────────── */}
+          {/* ── FINANCE AI ────────────────────────────────────── */}
           <section className={activeTab !== "ai" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <FinanceAI
-              history={history}
-              assets={assets}
-              liabilities={liabilities}
-              isDark={isDark}
-            />
+            <FinanceAI history={history} assets={assets} liabilities={liabilities} buckets={buckets} isDark={isDark} />
           </section>
 
-          {/* ── HISTORY TAB ───────────────────────────────────── */}
-          <section
-            id="history-section"
-            className={activeTab !== "history" ? "hidden" : ""}
-          >
+          {/* ── HISTORIAL ─────────────────────────────────────── */}
+          <section id="history-section" className={activeTab !== "history" ? "hidden" : ""}>
             <Divider className="my-2" />
             <div className="flex justify-between items-end mb-4">
               <div>
@@ -1092,7 +1292,7 @@ export default function Dashboard() {
                 <Button
                   size="sm" color="danger" variant="light"
                   startContent={<Trash2 size={14} />}
-                  onPress={clearHistory}
+                  onPress={onClearOpen}
                 >
                   Limpiar
                 </Button>
@@ -1105,21 +1305,20 @@ export default function Dashboard() {
                   aria-label="Historial de balances"
                   removeWrapper
                   className="min-w-[500px]"
-                  color="primary"
                   selectionMode="none"
                 >
                   <TableHeader>
                     <TableColumn className="text-xs font-bold uppercase tracking-wide">Fecha</TableColumn>
-                    <TableColumn className="text-xs font-bold uppercase tracking-wide">Activos</TableColumn>
-                    <TableColumn className="text-xs font-bold uppercase tracking-wide">Gastos</TableColumn>
-                    <TableColumn className="text-xs font-bold uppercase tracking-wide">Apartados</TableColumn>
-                    <TableColumn className="text-xs font-bold uppercase tracking-wide">Disponible</TableColumn>
+                    <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Activos</TableColumn>
+                    <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Gastos</TableColumn>
+                    <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Apartados</TableColumn>
+                    <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Disponible</TableColumn>
                   </TableHeader>
                   <TableBody emptyContent={
-                    <div className="py-12 text-center text-default-300">
+                    <div className="py-12 text-center text-default-400">
                       <History size={32} className="mx-auto mb-2 opacity-30" />
                       <p className="text-sm">Aún no hay historial guardado</p>
-                      <p className="text-xs mt-1">Presiona "Guardar Snapshot" para registrar tu balance actual</p>
+                      <p className="text-xs mt-1">Presiona &quot;Guardar Snapshot&quot; para registrar tu balance actual</p>
                     </div>
                   }>
                     {history.map((h) => (
@@ -1129,27 +1328,25 @@ export default function Dashboard() {
                         onClick={() => openHistoryDetails(h)}
                       >
                         <TableCell className="font-medium text-xs py-3">
-                          {new Date(h.date).toLocaleDateString("es-MX", {
-                            year: "numeric", month: "short", day: "numeric",
-                          })}
+                          {new Date(h.date).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" })}
                         </TableCell>
-                        <TableCell className="font-mono text-emerald-500 text-sm font-bold">
-                          ${h.totalAssets.toLocaleString()}
+                        <TableCell className="tnum text-emerald-600 dark:text-emerald-400 text-sm font-bold text-right">
+                          {money(h.totalAssets)}
                         </TableCell>
-                        <TableCell className="font-mono text-rose-500 text-sm font-bold">
-                          -${h.totalLiabilities.toLocaleString()}
+                        <TableCell className="tnum text-rose-600 dark:text-rose-400 text-sm font-bold text-right">
+                          −{money(h.totalLiabilities)}
                         </TableCell>
-                        <TableCell className="font-mono text-amber-500 text-sm font-bold">
-                          -${h.totalBuckets.toLocaleString()}
+                        <TableCell className="tnum text-amber-600 dark:text-amber-400 text-sm font-bold text-right">
+                          −{money(h.totalBuckets)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <Chip
                             color={h.available >= 0 ? "success" : "danger"}
                             variant="flat"
                             size="sm"
-                            className="font-bold font-mono"
+                            className="font-bold tnum"
                           >
-                            ${h.available.toLocaleString()}
+                            {money(h.available)}
                           </Chip>
                         </TableCell>
                       </TableRow>
@@ -1159,44 +1356,122 @@ export default function Dashboard() {
               </div>
             </Card>
           </section>
-
         </main>
+        )}
 
-        {/* ── MOBILE FAB ──────────────────────────────────────── */}
-        <div className="md:hidden">
+        {/* ── FAB → captura rápida ────────────────────────────── */}
+        {!isLoading && !loadError && (
           <button
-            className={`fab ${fabOpen ? "fab-open" : ""}`}
-            onClick={() => setFabOpen(!fabOpen)}
-            aria-label={fabOpen ? "Cerrar menú" : "Agregar registro"}
+            className="fab md:hidden"
+            onClick={onQuickAddOpen}
+            aria-label="Agregar registro rápido"
           >
-            {fabOpen ? <X size={24} /> : <Plus size={24} />}
+            <Plus size={24} />
           </button>
+        )}
 
-          {fabOpen && (
-            <div className="fixed bottom-[148px] right-4 z-50 flex flex-col gap-2 items-end animate-fade-in-up">
-              {[
-                { label: "Activo",   color: "#10b981", action: () => { changeTab("dashboard"); setFabOpen(false); } },
-                { label: "Gasto",    color: "#f43f5e", action: () => { changeTab("dashboard"); setFabOpen(false); } },
-                { label: "Apartado", color: "#f59e0b", action: () => { changeTab("dashboard"); setFabOpen(false); } },
-              ].map(({ label, color, action }) => (
-                <button
-                  key={label}
-                  onClick={action}
-                  className="glass flex items-center gap-2 px-4 py-2.5 rounded-full font-semibold text-sm shadow-lg border border-white/20 hover:scale-105 transition-transform"
-                  style={{ color }}
-                >
-                  <Plus size={14} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── MOBILE BOTTOM NAV ───────────────────────────────── */}
+        {/* ── BOTTOM NAV ──────────────────────────────────────── */}
         <BottomNav active={activeTab} onChange={changeTab} />
 
-        {/* ── HISTORY MODAL ───────────────────────────────────── */}
+        {/* ── TOAST DESHACER ──────────────────────────────────── */}
+        {pendingUndo && (
+          <div className="undo-toast" role="status">
+            <span className="text-xs text-default-600 max-w-[180px] truncate">
+              Se eliminó <span className="font-bold">{pendingUndo.label}</span>
+            </span>
+            <Button
+              size="sm"
+              variant="flat"
+              color="primary"
+              className="font-bold"
+              startContent={<Undo2 size={14} />}
+              onPress={handleUndo}
+            >
+              Deshacer
+            </Button>
+          </div>
+        )}
+
+        {/* ── MODAL: captura rápida (FAB) ─────────────────────── */}
+        <Modal isOpen={isQuickAddOpen} onOpenChange={onQuickAddChange} placement="bottom-center" backdrop="blur">
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader className="flex flex-col gap-1">Registro rápido</ModalHeader>
+                <ModalBody className="pb-2">
+                  <div className="flex gap-2">
+                    {([
+                      { id: "asset",     label: "Activo",   cls: "bg-emerald-500" },
+                      { id: "liability", label: "Gasto",    cls: "bg-rose-500" },
+                      { id: "bucket",    label: "Apartado", cls: "bg-amber-500" },
+                    ] as { id: QuickAddType; label: string; cls: string }[]).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => {
+                          setQuickType(opt.id);
+                          setQuickCategory(QUICK_CATEGORIES[opt.id][0]);
+                        }}
+                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+                          quickType === opt.id
+                            ? `${opt.cls} text-white shadow-md`
+                            : "bg-default-100 text-default-500 hover:bg-default-200"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    autoFocus
+                    placeholder="Descripción"
+                    variant="bordered"
+                    value={quickLabel}
+                    onValueChange={setQuickLabel}
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      variant="bordered"
+                      startContent={<span className="text-default-400 text-sm font-bold">$</span>}
+                      className="flex-1"
+                      value={quickAmount}
+                      onValueChange={setQuickAmount}
+                    />
+                    <Select
+                      variant="bordered"
+                      aria-label="Categoría"
+                      className="w-[150px]"
+                      selectedKeys={[quickCategory]}
+                      onChange={(e) => setQuickCategory(e.target.value || QUICK_CATEGORIES[quickType][0])}
+                    >
+                      {QUICK_CATEGORIES[quickType].map((cat) => (
+                        <SelectItem key={cat}>{cat}</SelectItem>
+                      ))}
+                    </Select>
+                  </div>
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" onPress={onClose}>Cancelar</Button>
+                  <Button
+                    color="primary"
+                    variant="shadow"
+                    className="font-bold"
+                    isDisabled={!quickLabel.trim() || !quickAmountValid}
+                    onPress={() => submitQuickAdd(onClose)}
+                    startContent={<Plus size={16} />}
+                  >
+                    Agregar
+                  </Button>
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: detalles de snapshot ─────────────────────── */}
         <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside" backdrop="blur">
           <ModalContent>
             {(onClose) => (
@@ -1224,19 +1499,19 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-grow grid grid-cols-1 gap-3 content-center">
                           {[
-                            { label: "Activos",   value: selectedSnapshot.totalAssets,      color: "emerald", icon: <DollarSign size={20} /> },
-                            { label: "Deudas",    value: selectedSnapshot.totalLiabilities, color: "rose",    icon: <ShieldAlert size={20} /> },
-                            { label: "Apartados", value: selectedSnapshot.totalBuckets,     color: "amber",   icon: <Wallet size={20} /> },
-                          ].map(({ label, value, color, icon }) => (
-                            <Card key={label} className={`bg-${color}-500/10 border border-${color}-500/20`}>
+                            { ...historyTone[0], value: selectedSnapshot.totalAssets },
+                            { ...historyTone[1], value: selectedSnapshot.totalLiabilities },
+                            { ...historyTone[2], value: selectedSnapshot.totalBuckets },
+                          ].map(({ label, value, tone, icon }) => (
+                            <Card key={label} className={`${tone.bg} border ${tone.border} shadow-none`}>
                               <CardBody className="py-3 px-4 flex flex-row items-center justify-between">
                                 <div>
-                                  <p className={`text-xs text-${color}-600 dark:text-${color}-400 font-bold uppercase`}>{label}</p>
-                                  <p className={`text-xl font-extrabold text-${color}-700 dark:text-${color}-300 font-mono`}>
-                                    ${value.toLocaleString()}
+                                  <p className={`text-xs font-bold uppercase ${tone.text}`}>{label}</p>
+                                  <p className={`text-xl font-extrabold tnum ${tone.textStrong}`}>
+                                    {money(value)}
                                   </p>
                                 </div>
-                                <div className={`p-2 bg-${color}-100 dark:bg-${color}-900/40 rounded-xl text-${color}-600`}>{icon}</div>
+                                <div className={`p-2 ${tone.iconBg} rounded-xl ${tone.text}`}>{icon}</div>
                               </CardBody>
                             </Card>
                           ))}
@@ -1247,21 +1522,21 @@ export default function Dashboard() {
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
-                          { label: "Activos",   items: selectedSnapshot.assets,      color: "emerald" },
-                          { label: "Deudas",    items: selectedSnapshot.liabilities, color: "rose" },
-                          { label: "Apartados", items: selectedSnapshot.buckets,     color: "amber" },
-                        ].map(({ label, items, color }) => (
+                          { label: "Activos",   items: selectedSnapshot.assets,      tone: TONE.emerald },
+                          { label: "Deudas",    items: selectedSnapshot.liabilities, tone: TONE.rose },
+                          { label: "Apartados", items: selectedSnapshot.buckets,     tone: TONE.amber },
+                        ].map(({ label, items, tone }) => (
                           <div key={label}>
-                            <h4 className={`font-bold text-sm mb-2 text-${color}-600 dark:text-${color}-400`}>{label}</h4>
+                            <h4 className={`font-bold text-sm mb-2 ${tone.text}`}>{label}</h4>
                             <div className="space-y-1.5">
                               {items?.length ? items.map((item: FinanceItem, idx: number) => (
-                                <div key={idx} className={`flex items-center gap-2 p-2 rounded-xl bg-${color}-500/10 border border-${color}-500/15`}>
-                                  <div>
-                                    <p className="text-xs font-bold text-default-700">{item.label}</p>
+                                <div key={idx} className={`flex items-center gap-2 p-2 rounded-xl ${tone.bg} border ${tone.border}`}>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-bold text-default-700 truncate">{item.label}</p>
                                     <p className="text-[10px] text-default-400">{item.category}</p>
                                   </div>
-                                  <span className={`ml-auto font-mono text-xs font-bold text-${color}-600`}>
-                                    ${item.amount.toLocaleString()}
+                                  <span className={`ml-auto tnum text-xs font-bold ${tone.text}`}>
+                                    {money(item.amount)}
                                   </span>
                                 </div>
                               )) : <p className="text-xs text-default-400 italic">No disponible</p>}
@@ -1273,18 +1548,16 @@ export default function Dashboard() {
                   )}
                 </ModalBody>
                 <ModalFooter>
-                  <Button color="danger" variant="light" onPress={onClose}>
-                    Cerrar
-                  </Button>
+                  <Button color="danger" variant="light" onPress={onClose}>Cerrar</Button>
                 </ModalFooter>
               </>
             )}
           </ModalContent>
         </Modal>
 
-        {/* DATA SETTINGS MODAL */}
+        {/* ── MODAL: ajustes de datos ─────────────────────────── */}
         <Modal isOpen={isDataModalOpen} onOpenChange={onDataModalChange} backdrop="blur">
-          <ModalContent className="glass border border-default-200">
+          <ModalContent>
             {(onClose) => (
               <>
                 <ModalHeader className="flex flex-col gap-1">Ajustes de Datos</ModalHeader>
@@ -1293,35 +1566,36 @@ export default function Dashboard() {
                     Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
                   </p>
                   <div className="flex flex-col gap-3">
-                    <Button 
-                      color="primary" 
-                      variant="flat" 
-                      startContent={<Download size={18} />} 
+                    <Button
+                      color="primary"
+                      variant="flat"
+                      startContent={<Download size={18} />}
                       onPress={() => { exportData(); onClose(); }}
                     >
                       Exportar Respaldo (.json)
                     </Button>
                     <div className="relative">
-                      <Input 
-                        type="file" 
-                        accept=".json" 
+                      <input
+                        type="file"
+                        accept=".json,application/json"
+                        aria-label="Importar respaldo"
                         className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
-                        onChange={(e) => { importData(e); onClose(); }}
+                        onChange={(e) => { onImportFile(e); onClose(); }}
                       />
-                      <Button 
-                        color="secondary" 
-                        variant="flat" 
-                        startContent={<Upload size={18} />} 
+                      <Button
+                        color="secondary"
+                        variant="flat"
+                        startContent={<Upload size={18} />}
                         className="w-full pointer-events-none"
                       >
                         Importar Respaldo
                       </Button>
                     </div>
-                    <Button 
-                      color="danger" 
-                      variant="flat" 
-                      startContent={<Trash2 size={18} />} 
-                      onPress={() => { clearHistory(); onClose(); }}
+                    <Button
+                      color="danger"
+                      variant="flat"
+                      startContent={<Trash2 size={18} />}
+                      onPress={() => { onClose(); onClearOpen(); }}
                     >
                       Limpiar Historial
                     </Button>
@@ -1329,6 +1603,90 @@ export default function Dashboard() {
                 </ModalBody>
               </>
             )}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: confirmar limpiar historial ──────────────── */}
+        <Modal isOpen={isClearOpen} onOpenChange={onClearChange} backdrop="blur" size="sm">
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader className="flex items-center gap-2">
+                  <AlertTriangle size={18} className="text-amber-500" />
+                  Limpiar historial
+                </ModalHeader>
+                <ModalBody>
+                  <p className="text-sm text-default-500">
+                    Se eliminarán <span className="font-bold">{history.length}</span> snapshots guardados.
+                    Esta acción no se puede deshacer.
+                  </p>
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" onPress={onClose}>Cancelar</Button>
+                  <Button color="danger" variant="shadow" className="font-bold" onPress={() => confirmClearHistory(onClose)}>
+                    Sí, limpiar
+                  </Button>
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: confirmar importación ────────────────────── */}
+        <Modal isOpen={isImportOpen} onOpenChange={onImportChange} backdrop="blur" size="sm">
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader className="flex items-center gap-2">
+                  {importError
+                    ? <><AlertTriangle size={18} className="text-rose-500" /> Archivo inválido</>
+                    : <><Upload size={18} className="text-indigo-500" /> Importar respaldo</>}
+                </ModalHeader>
+                <ModalBody>
+                  {importError ? (
+                    <p className="text-sm text-default-500">{importError}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-default-500">
+                        El respaldo contiene: <span className="font-semibold text-default-700">{importPreview?.counts}</span>
+                      </p>
+                      <p className="text-sm text-rose-500 font-semibold">
+                        Esto reemplazará todos tus datos actuales.
+                      </p>
+                    </>
+                  )}
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" onPress={onClose}>{importError ? "Entendido" : "Cancelar"}</Button>
+                  {!importError && (
+                    <Button color="secondary" variant="shadow" className="font-bold" onPress={() => confirmImport(onClose)}>
+                      Sí, importar
+                    </Button>
+                  )}
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: conflicto de sincronización ──────────────── */}
+        <Modal isOpen={conflictData !== null} onOpenChange={() => {}} backdrop="blur" size="sm" hideCloseButton isDismissable={false}>
+          <ModalContent>
+            <ModalHeader className="flex items-center gap-2">
+              <RefreshCw size={18} className="text-indigo-500" />
+              Datos actualizados en otro lugar
+            </ModalHeader>
+            <ModalBody>
+              <p className="text-sm text-default-500">
+                Guardaste cambios desde otro dispositivo o pestaña. Para no perder nada,
+                cargaremos la versión más reciente.
+              </p>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="primary" variant="shadow" className="font-bold w-full" onPress={resolveConflict}>
+                Cargar datos más recientes
+              </Button>
+            </ModalFooter>
           </ModalContent>
         </Modal>
       </SignedIn>

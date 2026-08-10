@@ -3,363 +3,335 @@
 
 @theme {
   --font-sans: var(--font-inter);
-  --font-mono: var(--font-roboto-mono);
 }
 
 /* ─────────────────────────────────────────────
-   CUSTOM PROPERTIES — THEME TOKENS
+   DESIGN TOKENS — "calm fintech"
+   El verde/rojo quedan reservados para dinero.
+   Las superficies son sólidas: la app se ve cara
+   por precisión y contraste, no por blur.
 ───────────────────────────────────────────── */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6f8fb;
+  --foreground: #0b1220;
 
-  /* Glassmorphism */
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 23, 42, 0.08);
+  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.10);
+  --card-shadow-hover: 0 2px 4px rgba(15, 23, 42, 0.05), 0 16px 32px -12px rgba(15, 23, 42, 0.16);
 
-  /* Gradient mesh positions */
-  --mesh-x1: 20%;
-  --mesh-y1: 30%;
-  --mesh-x2: 80%;
-  --mesh-y2: 70%;
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --nav-border: rgba(15, 23, 42, 0.06);
 
-  /* AI Module colors */
+  /* Semántico — dinero */
+  --money-in: #059669;
+  --money-out: #e11d48;
+  --money-hold: #d97706;
+
   --neural-primary: #6366f1;
-  --neural-secondary: #8b5cf6;
-  --neural-accent: #06b6d4;
 }
 
 :root[class~="dark"],
 .dark {
-  --background: #070b14;
-  --foreground: #e2e8f0;
+  --background: #070b13;
+  --foreground: #e7ecf4;
 
-  --glass-bg: rgba(15, 23, 42, 0.75);
-  --glass-border: rgba(99, 102, 241, 0.18);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --card-bg: #0e1522;
+  --card-border: rgba(148, 163, 184, 0.10);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
+  --card-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.4), 0 20px 40px -14px rgba(0, 0, 0, 0.65);
+
+  --nav-bg: rgba(9, 13, 22, 0.85);
+  --nav-border: rgba(148, 163, 184, 0.08);
 }
 
 /* ─────────────────────────────────────────────
-   ANIMATED MESH GRADIENT BACKGROUND
+   BASE
 ───────────────────────────────────────────── */
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
-  transition: background-color 0.4s ease, color 0.3s ease;
+  font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  /* Cifras tabulares: los montos se alinean y se comparan de un vistazo */
+  font-feature-settings: "tnum" 1, "cv11" 1;
+  transition: background-color 0.3s ease, color 0.3s ease;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Fondo con profundidad sutil y ESTÁTICA (nada de loops infinitos de GPU) */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 60% 50% at var(--mesh-x1) var(--mesh-y1),
-      rgba(16, 185, 129, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 55% 45% at var(--mesh-x2) var(--mesh-y2),
-      rgba(99, 102, 241, 0.10) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 50% 50%,
-      rgba(6, 182, 212, 0.06) 0%, transparent 70%);
-  animation: meshDrift 18s ease-in-out infinite alternate;
+    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(16, 185, 129, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 60%);
   pointer-events: none;
 }
 
 .dark body::before,
 :root[class~="dark"] body::before {
   background:
-    radial-gradient(ellipse 60% 50% at var(--mesh-x1) var(--mesh-y1),
-      rgba(16, 185, 129, 0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 55% 45% at var(--mesh-x2) var(--mesh-y2),
-      rgba(99, 102, 241, 0.15) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 50% 50%,
-      rgba(6, 182, 212, 0.08) 0%, transparent 70%);
+    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(99, 102, 241, 0.09) 0%, transparent 60%);
 }
 
-@keyframes meshDrift {
-  0%   { --mesh-x1: 20%; --mesh-y1: 30%; --mesh-x2: 80%; --mesh-y2: 70%; }
-  33%  { --mesh-x1: 40%; --mesh-y1: 20%; --mesh-x2: 60%; --mesh-y2: 80%; }
-  66%  { --mesh-x1: 15%; --mesh-y1: 60%; --mesh-x2: 85%; --mesh-y2: 40%; }
-  100% { --mesh-x1: 30%; --mesh-y1: 10%; --mesh-x2: 70%; --mesh-y2: 90%; }
+::selection {
+  background: rgba(16, 185, 129, 0.22);
 }
 
-/* ─────────────────────────────────────────────
-   GLASSMORPHISM UTILITY
-───────────────────────────────────────────── */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+@layer components {
+
+  /* ───────────────────────────────────────────
+     SUPERFICIES
+     .glass conserva su nombre (lo usan los
+     componentes) pero ahora es una card sólida:
+     contraste AA garantizado y cero costo de GPU.
+  ─────────────────────────────────────────── */
+  .glass {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    border-radius: 16px;
+  }
+
+  .card-hover {
+    transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .card-hover:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
+  }
+
+  /* El blur queda SOLO donde hay contenido real detrás: la barra de navegación */
+  .glass-nav {
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-bottom: 1px solid var(--nav-border);
+  }
+
+  /* ───────────────────────────────────────────
+     TEXTO
+  ─────────────────────────────────────────── */
+  .section-title {
+    letter-spacing: -0.02em;
+  }
+
+  .gradient-text-emerald {
+    background: linear-gradient(120deg, #059669 0%, #0891b2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-text-purple {
+    background: linear-gradient(120deg, #6366f1 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ───────────────────────────────────────────
+     GLOWS — ahora sombras discretas de acento,
+     no neón. Un solo elemento saturado por vista.
+  ─────────────────────────────────────────── */
+  .glow-emerald {
+    box-shadow: 0 12px 40px -12px rgba(16, 185, 129, 0.45);
+  }
+
+  .glow-rose {
+    box-shadow: 0 12px 40px -12px rgba(244, 63, 94, 0.45);
+  }
+
+  .glow-purple {
+    box-shadow: 0 12px 40px -12px rgba(139, 92, 246, 0.40);
+  }
+
+  /* ───────────────────────────────────────────
+     NAVEGACIÓN MÓVIL
+  ─────────────────────────────────────────── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--nav-bg);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    border-top: 1px solid var(--nav-border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .fab {
+    position: fixed;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    right: 16px;
+    z-index: 50;
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: linear-gradient(135deg, #10b981 0%, #0891b2 100%);
+    box-shadow: 0 8px 24px -6px rgba(16, 185, 129, 0.5);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s;
+  }
+
+  .fab:active {
+    transform: scale(0.94);
+  }
+
+  .fab-open {
+    transform: rotate(45deg);
+  }
+
+  /* ───────────────────────────────────────────
+     SKELETONS — carga con forma, nunca pantalla
+     en blanco ni spinners
+  ─────────────────────────────────────────── */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: rgba(148, 163, 184, 0.14);
+    border-radius: 12px;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    animation: shimmer 1.4s infinite;
+  }
+
+  .dark .skeleton::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  }
+
+  /* ───────────────────────────────────────────
+     TOAST DE DESHACER
+  ─────────────────────────────────────────── */
+  .undo-toast {
+    position: fixed;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow-hover);
+    border-radius: 9999px;
+    padding: 10px 14px 10px 18px;
+    animation: fadeInUp 0.25s cubic-bezier(0.2, 0, 0, 1) both;
+  }
+
+  @media (min-width: 768px) {
+    .undo-toast {
+      bottom: 24px;
+    }
+  }
+
+  /* ───────────────────────────────────────────
+     RED NEURONAL
+  ─────────────────────────────────────────── */
+  .neural-node {
+    animation: nodePulse 2.4s ease-in-out infinite;
+  }
+
+  /* ───────────────────────────────────────────
+     ANIMACIONES DE ENTRADA — cortas, una vez
+  ─────────────────────────────────────────── */
+  .animate-fade-in-up {
+    animation: fadeInUp 0.4s cubic-bezier(0.2, 0, 0, 1) both;
+  }
+
+  .animate-fade-in-scale {
+    animation: fadeInScale 0.3s cubic-bezier(0.2, 0, 0, 1) both;
+  }
+
+  .animate-slide-in-left {
+    animation: slideInLeft 0.25s cubic-bezier(0.2, 0, 0, 1) both;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
 }
 
-.glass-nav {
-  background: rgba(255, 255, 255, 0.80);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 1px 24px rgba(0, 0, 0, 0.06);
-}
-
-.dark .glass-nav,
-:root[class~="dark"] .glass-nav {
-  background: rgba(7, 11, 20, 0.85);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
-}
-
-/* ─────────────────────────────────────────────
-   MICRO-ANIMATIONS
-───────────────────────────────────────────── */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(16px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInScale {
-  from { opacity: 0; transform: scale(0.94); }
+  from { opacity: 0; transform: scale(0.97); }
   to   { opacity: 1; transform: scale(1); }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-20px); }
+  from { opacity: 0; transform: translateX(-8px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70%  { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
-
 @keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  100% { transform: translateX(100%); }
 }
 
-@keyframes countUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes neuralPulse {
-  0%, 100% { opacity: 0.6; r: 6; }
-  50%       { opacity: 1; r: 8; }
-}
-
-@keyframes neuralFlow {
-  0%   { stroke-dashoffset: 100; opacity: 0.3; }
-  50%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0.3; }
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-.animate-fade-in-up    { animation: fadeInUp 0.5s ease-out both; }
-.animate-fade-in-scale { animation: fadeInScale 0.4s ease-out both; }
-.animate-slide-in-left { animation: slideInLeft 0.4s ease-out both; }
-.animate-count-up      { animation: countUp 0.6s ease-out both; }
-.animate-spin-slow     { animation: spin-slow 12s linear infinite; }
-
-/* Stagger delays */
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.2s; }
-.delay-300 { animation-delay: 0.3s; }
-.delay-400 { animation-delay: 0.4s; }
-.delay-500 { animation-delay: 0.5s; }
-
-/* Shimmer loading */
-.shimmer {
-  background: linear-gradient(90deg,
-    transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.8s infinite;
-}
-
-/* Pulse ring for main balance */
-.pulse-ring {
-  animation: pulse-ring 2.5s ease-out infinite;
+@keyframes nodePulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
 }
 
 /* ─────────────────────────────────────────────
-   GRADIENT TEXT UTILITY
+   ACCESIBILIDAD
 ───────────────────────────────────────────── */
-.gradient-text-emerald {
-  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-.gradient-text-purple {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.gradient-text-rose {
-  background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ─────────────────────────────────────────────
-   PREMIUM CARD HOVER EFFECTS
-───────────────────────────────────────────── */
-.card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.card-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
-}
-.dark .card-hover:hover {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-}
-
-/* ─────────────────────────────────────────────
-   CUSTOM SCROLLBAR
-───────────────────────────────────────────── */
+/* Scrollbar discreto */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
 ::-webkit-scrollbar-track {
   background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.35);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
-}
-
-/* ─────────────────────────────────────────────
-   NEURAL NETWORK SVG ANIMATIONS
-───────────────────────────────────────────── */
-.neural-node {
-  animation: neuralPulse 2.5s ease-in-out infinite;
-}
-.neural-edge {
-  stroke-dasharray: 100;
-  animation: neuralFlow 2s linear infinite;
-}
-
-/* Offset each node's animation */
-.neural-node:nth-child(2)  { animation-delay: 0.3s; }
-.neural-node:nth-child(3)  { animation-delay: 0.6s; }
-.neural-node:nth-child(4)  { animation-delay: 0.9s; }
-.neural-node:nth-child(5)  { animation-delay: 1.2s; }
-.neural-edge:nth-child(2)  { animation-delay: 0.2s; }
-.neural-edge:nth-child(3)  { animation-delay: 0.4s; }
-.neural-edge:nth-child(4)  { animation-delay: 0.6s; }
-.neural-edge:nth-child(5)  { animation-delay: 0.8s; }
-.neural-edge:nth-child(6)  { animation-delay: 1.0s; }
-
-/* ─────────────────────────────────────────────
-   MOBILE BOTTOM NAV
-───────────────────────────────────────────── */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  background: rgba(255, 255, 255, 0.90);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(226, 232, 240, 0.8);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.dark .bottom-nav,
-:root[class~="dark"] .bottom-nav {
-  background: rgba(7, 11, 20, 0.92);
-  border-top: 1px solid rgba(99, 102, 241, 0.2);
-}
-
-/* FAB (Floating Action Button) */
-.fab {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  z-index: 60;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
-  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  border: none;
-  color: white;
-}
-.fab:hover, .fab:active {
-  transform: scale(1.08);
-  box-shadow: 0 12px 32px rgba(16, 185, 129, 0.55);
-}
-.fab.fab-open {
-  transform: rotate(45deg);
-  background: linear-gradient(135deg, #f43f5e 0%, #fb7185 100%);
-  box-shadow: 0 8px 24px rgba(244, 63, 94, 0.45);
-}
-
-/* Extra bottom padding on mobile when nav is visible */
-@media (max-width: 767px) {
-  main {
-    padding-bottom: 80px !important;
-  }
-}
-
-/* ─────────────────────────────────────────────
-   SECTION TITLE DECORATION
-───────────────────────────────────────────── */
-.section-title {
-  position: relative;
-  display: inline-block;
-}
-.section-title::after {
-  content: "";
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, #10b981, #06b6d4);
-}
-
-/* ─────────────────────────────────────────────
-   INPUT TOUCH TARGETS (mobile a11y)
-───────────────────────────────────────────── */
-@media (max-width: 640px) {
-  input, select, button {
-    min-height: 44px;
-  }
-}
-
-/* ─────────────────────────────────────────────
-   GLOW EFFECTS
-───────────────────────────────────────────── */
-.glow-emerald {
-  box-shadow: 0 0 24px rgba(16, 185, 129, 0.35), 0 8px 32px rgba(0, 0, 0, 0.12);
-}
-.glow-rose {
-  box-shadow: 0 0 24px rgba(244, 63, 94, 0.35), 0 8px 32px rgba(0, 0, 0, 0.12);
-}
-.glow-purple {
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.35), 0 8px 32px rgba(0, 0, 0, 0.12);
 }

@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from 'mongoose';
+import { Schema, model, models } from 'mongoose';
 
 const FinanceItemSchema = new Schema({
     id: String,
@@ -7,7 +7,7 @@ const FinanceItemSchema = new Schema({
     date: String,
     type: String,
     category: String
-});
+}, { _id: false });
 
 const SubscriptionItemSchema = new Schema({
     id: String,
@@ -15,7 +15,7 @@ const SubscriptionItemSchema = new Schema({
     amount: Number,
     billingCycle: String,
     category: String
-});
+}, { _id: false });
 
 const GoalItemSchema = new Schema({
     id: String,
@@ -23,7 +23,7 @@ const GoalItemSchema = new Schema({
     targetAmount: Number,
     currentAmount: Number,
     deadline: String
-});
+}, { _id: false });
 
 const HistorySnapshotSchema = new Schema({
     id: String,
@@ -31,6 +31,7 @@ const HistorySnapshotSchema = new Schema({
     totalAssets: Number,
     totalLiabilities: Number,
     totalBuckets: Number,
+    totalFixedCosts: Number,
     available: Number,
     deficit: Number,
     assets: [FinanceItemSchema],
@@ -38,10 +39,14 @@ const HistorySnapshotSchema = new Schema({
     buckets: [FinanceItemSchema],
     subscriptions: [SubscriptionItemSchema],
     goals: [GoalItemSchema],
-});
+}, { _id: false });
 
 const FinanceSchema = new Schema({
-    userId: { type: String, required: true, unique: true, default: 'default_user' }, // Simple Singleton for now
+    userId: { type: String, required: true, unique: true, index: true },
+    // Optimistic concurrency: increments on every save. A stale client
+    // (another open tab/device) is rejected with 409 instead of silently
+    // overwriting newer data.
+    rev: { type: Number, default: 0 },
     assets: [FinanceItemSchema],
     liabilities: [FinanceItemSchema],
     buckets: [FinanceItemSchema],

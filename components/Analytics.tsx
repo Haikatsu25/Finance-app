@@ -49,7 +49,7 @@ function CustomTooltip({ active, payload, label, isDark }: any) {
                 <div key={p.name} className="flex items-center gap-2 mb-1">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color }} />
                     <span className="text-default-500">{p.name}:</span>
-                    <span className="font-mono font-bold" style={{ color: p.color }}>
+                    <span className="tnum font-bold" style={{ color: p.color }}>
                         ${Number(p.value).toLocaleString("en-US", { maximumFractionDigits: 0 })}
                     </span>
                 </div>
@@ -71,7 +71,7 @@ function PieTooltip({ active, payload, isDark }: any) {
             }}
         >
             <p className="font-bold" style={{ color: d.payload.fill }}>{d.name}</p>
-            <p className="font-mono font-bold mt-1">${Number(d.value).toLocaleString()}</p>
+            <p className="tnum font-bold mt-1">${Number(d.value).toLocaleString()}</p>
         </div>
     );
 }

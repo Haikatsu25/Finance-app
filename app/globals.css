@@ -33,16 +33,24 @@
 
 :root[class~="dark"],
 .dark {
-  --background: #070b13;
-  --foreground: #e7ecf4;
+  /* Premium dark: casi negro, tarjetas grafito con highlight superior,
+     neón solo como acento puntual */
+  --background: #05070c;
+  --foreground: #eef2f8;
 
-  --card-bg: #0e1522;
-  --card-border: rgba(148, 163, 184, 0.10);
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 12px 28px -14px rgba(0, 0, 0, 0.55);
-  --card-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.4), 0 20px 40px -14px rgba(0, 0, 0, 0.65);
+  --card-bg: linear-gradient(180deg, #0d121c 0%, #0a0e16 100%);
+  --card-border: rgba(255, 255, 255, 0.065);
+  --card-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 16px 40px -18px rgba(0, 0, 0, 0.8);
+  --card-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 24px 56px -18px rgba(0, 0, 0, 0.9);
 
-  --nav-bg: rgba(9, 13, 22, 0.85);
-  --nav-border: rgba(148, 163, 184, 0.08);
+  --nav-bg: rgba(5, 7, 12, 0.82);
+  --nav-border: rgba(255, 255, 255, 0.06);
 }
 
 /* ─────────────────────────────────────────────
@@ -76,8 +84,9 @@ body::before {
 .dark body::before,
 :root[class~="dark"] body::before {
   background:
-    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(16, 185, 129, 0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(99, 102, 241, 0.09) 0%, transparent 60%);
+    radial-gradient(ellipse 60% 45% at 20% -12%, rgba(16, 185, 129, 0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 95% -5%, rgba(124, 92, 255, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 100% 60% at 50% 115%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
 }
 
 ::selection {
@@ -114,6 +123,61 @@ body::before {
     backdrop-filter: blur(14px) saturate(160%);
     -webkit-backdrop-filter: blur(14px) saturate(160%);
     border-bottom: 1px solid var(--nav-border);
+  }
+
+  /* ───────────────────────────────────────────
+     HERO — tarjeta negra estilo "credit card"
+     con destello iridiscente. Oscura SIEMPRE
+     (también en modo claro): el clásico
+     "black card" premium.
+  ─────────────────────────────────────────── */
+  .hero-card {
+    background:
+      radial-gradient(130% 170% at 100% 0%, rgba(0, 227, 156, 0.22) 0%, transparent 48%),
+      radial-gradient(120% 160% at 0% 110%, rgba(124, 92, 255, 0.17) 0%, transparent 52%),
+      radial-gradient(90% 120% at 55% 45%, rgba(34, 211, 238, 0.07) 0%, transparent 60%),
+      linear-gradient(135deg, #0c1118 0%, #05070c 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  .hero-card-negative {
+    background:
+      radial-gradient(130% 170% at 100% 0%, rgba(255, 77, 103, 0.26) 0%, transparent 48%),
+      radial-gradient(120% 160% at 0% 110%, rgba(249, 115, 22, 0.14) 0%, transparent 52%),
+      linear-gradient(135deg, #150b0e 0%, #0a0507 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  /* Línea de brillo superior, como el canto de una tarjeta metálica */
+  .hero-card::after,
+  .hero-card-negative::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    pointer-events: none;
+  }
+
+  .glow-hero-positive {
+    box-shadow: 0 24px 64px -20px rgba(0, 227, 156, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  .glow-hero-negative {
+    box-shadow: 0 24px 64px -20px rgba(255, 77, 103, 0.38), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  /* Texto-neón para el gran número del héroe */
+  .neon-number {
+    color: #ffffff;
+    text-shadow: 0 0 32px rgba(0, 227, 156, 0.35);
+  }
+
+  .neon-number-negative {
+    color: #ffffff;
+    text-shadow: 0 0 32px rgba(255, 77, 103, 0.4);
   }
 
   /* ───────────────────────────────────────────

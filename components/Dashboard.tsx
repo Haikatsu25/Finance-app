@@ -133,7 +133,8 @@ function StatCard({
       <CardBody className="flex flex-row justify-between items-center p-5">
         <div className="min-w-0">
           <p className="text-default-500 text-[11px] font-bold uppercase tracking-wider mb-1">{label}</p>
-          <p className={`text-2xl font-extrabold tnum tracking-tight ${t.text}`}>
+          {/* Número en blanco/tinta; el color queda en el icono (estilo Revolut) */}
+          <p className="text-2xl font-extrabold tnum tracking-tight text-foreground">
             {money(Math.abs(animated))}
           </p>
         </div>
@@ -701,10 +702,15 @@ export default function Dashboard() {
   }, [applyServerData]);
 
   // ── Guardado con control de conflictos ───────────────────────
-  const saveData = useCallback(async (
+  // Los guardados se serializan: nunca hay dos POST en vuelo a la vez
+  // (dos peticiones con el mismo baseRev se auto-conflictuarían).
+  const inFlightRef = useRef(false);
+  const pendingSaveRef = useRef<Parameters<typeof doSave> | null>(null);
+
+  async function doSave(
     a: FinanceItem[], l: FinanceItem[], b: FinanceItem[],
     h: HistorySnapshot[], sub: SubscriptionItem[], g: GoalItem[],
-  ) => {
+  ) {
     setSaveStatus("saving");
     try {
       const res = await fetch("/api/finance", {
@@ -734,6 +740,29 @@ export default function Dashboard() {
       console.error("Failed to save data:", error);
       setSaveStatus("error");
     }
+  }
+
+  const saveData = useCallback(async (
+    ...args: Parameters<typeof doSave>
+  ) => {
+    if (inFlightRef.current) {
+      // Ya hay un guardado en curso: recordar el más reciente y salir
+      pendingSaveRef.current = args;
+      return;
+    }
+    inFlightRef.current = true;
+    try {
+      await doSave(...args);
+      // Si mientras guardábamos llegó otro cambio, guardarlo ahora
+      while (pendingSaveRef.current) {
+        const next = pendingSaveRef.current;
+        pendingSaveRef.current = null;
+        await doSave(...next);
+      }
+    } finally {
+      inFlightRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -1129,43 +1158,53 @@ export default function Dashboard() {
               <Card
                 id="balance-card"
                 className={`col-span-1 md:col-span-8 border-0 overflow-hidden relative ${
-                  isPositive ? "glow-emerald" : "glow-rose"
+                  isPositive
+                    ? "hero-card glow-hero-positive"
+                    : "hero-card-negative glow-hero-negative"
                 }`}
               >
-                <div className={`absolute inset-0 ${
-                  isPositive
-                    ? "bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700"
-                    : "bg-gradient-to-br from-rose-600 via-red-600 to-orange-700"
-                }`} />
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10" />
-                <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5" />
+                {/* Anillos decorativos, como el grabado de una tarjeta metálica */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full border border-white/10" />
+                <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full border border-white/5" />
+                <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full border border-white/5" />
 
                 <CardBody className="relative z-10 py-8 px-7">
-                  <div className="flex items-center gap-2 mb-2">
-                    <PiggyBank size={16} className="text-white/70" />
-                    <p className="text-white/70 font-semibold text-xs tracking-widest uppercase">
-                      {isPositive ? "Balance Disponible" : "Déficit Acumulado"}
-                    </p>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <PiggyBank size={16} className={isPositive ? "text-emerald-400" : "text-rose-400"} />
+                      <p className="text-white/60 font-semibold text-xs tracking-[0.2em] uppercase">
+                        {isPositive ? "Balance Disponible" : "Déficit Acumulado"}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold tracking-widest text-white/40 border border-white/15 rounded-md px-2 py-0.5">
+                      MXN
+                    </span>
                   </div>
-                  <h2 className="text-5xl sm:text-6xl font-black text-white tracking-tight mb-1 tnum">
+                  <h2 className={`text-6xl sm:text-7xl font-black tracking-tighter mb-2 tnum ${
+                    isPositive ? "neon-number" : "neon-number-negative"
+                  }`}>
                     {!isPositive && "−"}{money(Math.abs(animatedAvailable))}
                   </h2>
                   {subscriptions.length > 0 && (
-                    <p className="text-white/75 text-sm mb-1 tnum">
-                      Después de gastos fijos: <span className="font-bold">{money(afterFixed)}</span>
-                      <span className="text-white/50"> · {money(totalFixedCosts)}/mes en fijos</span>
+                    <p className="text-white/70 text-sm mb-1 tnum">
+                      Después de gastos fijos: <span className={`font-bold ${afterFixed >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{money(afterFixed)}</span>
+                      <span className="text-white/40"> · {money(totalFixedCosts)}/mes en fijos</span>
                     </p>
                   )}
-                  <p className="text-white/60 text-sm mb-5">Actualizado ahora</p>
+                  <p className="text-white/40 text-sm mb-5">Actualizado ahora</p>
 
                   <div className="mb-6">
-                    <div className="flex justify-between text-xs text-white/60 mb-1.5">
+                    <div className="flex justify-between text-xs text-white/50 mb-1.5">
                       <span>Balance vs Activos totales</span>
-                      <span className="tnum">{balanceProgress.toFixed(1)}%</span>
+                      <span className="tnum text-white/70">{balanceProgress.toFixed(1)}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/20">
+                    <div className="h-1.5 rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-white/70 transition-all duration-1000"
+                        className={`h-full rounded-full transition-all duration-1000 ${
+                          isPositive
+                            ? "bg-gradient-to-r from-emerald-400 to-cyan-400"
+                            : "bg-gradient-to-r from-rose-400 to-orange-400"
+                        }`}
                         style={{ width: `${balanceProgress}%` }}
                       />
                     </div>
@@ -1174,8 +1213,7 @@ export default function Dashboard() {
                   <div className="flex gap-3 flex-wrap">
                     <Button
                       id="save-snapshot-btn"
-                      className="bg-white/20 text-white border border-white/30 font-bold hover:bg-white/30 backdrop-blur-md"
-                      variant="bordered"
+                      className="bg-white text-black font-bold hover:bg-white/90 shadow-lg shadow-black/30"
                       startContent={<Save size={16} />}
                       onPress={saveSnapshot}
                       size="sm"
@@ -1184,7 +1222,7 @@ export default function Dashboard() {
                     </Button>
                     <Button
                       variant="light"
-                      className="text-white/70 hover:text-white hover:bg-white/10"
+                      className="text-white/60 hover:text-white hover:bg-white/10"
                       size="sm"
                       startContent={<History size={16} />}
                       onPress={() => changeTab("history")}
@@ -1193,7 +1231,7 @@ export default function Dashboard() {
                     </Button>
                     <Button
                       variant="light"
-                      className="text-white/70 hover:text-white hover:bg-white/10"
+                      className="text-white/60 hover:text-white hover:bg-white/10"
                       size="sm"
                       startContent={<Database size={16} />}
                       onPress={onDataModalOpen}

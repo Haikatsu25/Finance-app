@@ -130,6 +130,14 @@ export async function GET() {
 
     try {
         await dbConnect();
+
+        // Documentos creados por versiones anteriores no tienen `rev`.
+        // Normalizarlo aquí evita falsos conflictos al guardar.
+        await Finance.updateOne(
+            { userId, $or: [{ rev: { $exists: false } }, { rev: null }] },
+            { $set: { rev: 0 } }
+        );
+
         const data = await Finance.findOneAndUpdate(
             { userId },
             {
@@ -187,10 +195,15 @@ export async function POST(request: Request) {
         await dbConnect();
 
         if (baseRev !== null) {
-            // Guardado con control de concurrencia optimista
+            // Guardado con control de concurrencia optimista.
+            // `rev` ausente (documento de una versión anterior) cuenta como
+            // coincidencia con baseRev 0 para no generar falsos conflictos.
+            const revMatch = baseRev === 0
+                ? { $or: [{ rev: 0 }, { rev: { $exists: false } }, { rev: null }] }
+                : { rev: baseRev };
             const updated = await Finance.findOneAndUpdate(
-                { userId, rev: baseRev },
-                { $set: clean, $inc: { rev: 1 } },
+                { userId, ...revMatch },
+                { $set: { ...clean, rev: baseRev + 1 } },
                 { new: true }
             );
             if (updated) return NextResponse.json(updated);

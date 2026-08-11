@@ -1,4 +1,28 @@
 // Formato de dinero centralizado — es-MX, sin sorpresas de punto flotante en UI.
+// Incluye el "modo privacidad": cuando está activo, todos los montos que pasan
+// por money()/moneyExact() se enmascaran. Como el Dashboard no memoiza hijos,
+// alternar el estado en la raíz re-renderiza todo con la máscara aplicada.
+
+let privacyOn = false;
+const PRIVACY_KEY = "fc_privacy";
+
+export function setPrivacyMode(on: boolean) {
+    privacyOn = on;
+    try {
+        if (typeof window !== "undefined") localStorage.setItem(PRIVACY_KEY, on ? "1" : "0");
+    } catch { /* storage no disponible */ }
+}
+
+export function loadPrivacyMode(): boolean {
+    try {
+        if (typeof window !== "undefined") {
+            privacyOn = localStorage.getItem(PRIVACY_KEY) === "1";
+        }
+    } catch { /* storage no disponible */ }
+    return privacyOn;
+}
+
+const MASK = "$ ••••";
 
 const MXN0 = new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -15,12 +39,14 @@ const MXN2 = new Intl.NumberFormat("es-MX", {
 
 /** $12,345 — para números grandes (héroe, stats, tablas) */
 export function money(n: number): string {
+    if (privacyOn) return MASK;
     if (!Number.isFinite(n)) n = 0;
     return MXN0.format(n);
 }
 
 /** $12,345.67 — para totales de sección y comprobantes */
 export function moneyExact(n: number): string {
+    if (privacyOn) return MASK;
     if (!Number.isFinite(n)) n = 0;
     return MXN2.format(n);
 }

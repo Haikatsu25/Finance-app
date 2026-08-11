@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ClerkProvider } from '@clerk/nextjs'
+import { PWARegister } from '@/components/PWARegister'
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,7 @@ export default function RootLayout({
           <Providers>
             {children}
           </Providers>
+          <PWARegister />
         </body>
       </html>
     </ClerkProvider>

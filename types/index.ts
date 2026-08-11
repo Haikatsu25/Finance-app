@@ -19,8 +19,42 @@ export interface GoalItem {
     id: string;
     label: string;
     targetAmount: number;
-    currentAmount: number; // can be manually tracked or linked conceptually
+    currentAmount: number;
     deadline: string;      // YYYY-MM-DD
+}
+
+// ── Ledger de movimientos ────────────────────────────────────────
+export interface TransactionItem {
+    id: string;
+    label: string;
+    amount: number;             // siempre positivo; el signo lo da `type`
+    date: string;               // YYYY-MM-DD
+    type: "expense" | "income";
+    category?: string;
+    source?: "manual" | "scan"; // scan = capturado con el escáner de tickets
+}
+
+// ── Tarjetas de crédito ──────────────────────────────────────────
+export interface CreditCardItem {
+    id: string;
+    label: string;              // "BBVA Azul", "Nu"
+    balance: number;            // deuda actual
+    creditLimit: number;
+    cutoffDay: number;          // día del mes (1-31)
+    dueDay: number;             // día del mes (1-31)
+    apr?: number;               // tasa anual %, para el simulador
+    minPayment?: number;
+}
+
+// ── Presupuestos mensuales por categoría ─────────────────────────
+export interface BudgetItem {
+    id: string;
+    category: string;
+    monthlyLimit: number;
+}
+
+export interface AppSettings {
+    autoSnapshotDays?: number;  // cada cuántos días auto-guardar (default 7)
 }
 
 export interface FinanceState {
@@ -29,7 +63,11 @@ export interface FinanceState {
     buckets: FinanceItem[];
     subscriptions: SubscriptionItem[];
     goals: GoalItem[];
+    transactions: TransactionItem[];
+    creditCards: CreditCardItem[];
+    budgets: BudgetItem[];
     history: HistorySnapshot[];
+    settings?: AppSettings;
 }
 
 export interface HistorySnapshot {
@@ -38,9 +76,10 @@ export interface HistorySnapshot {
     totalAssets: number;
     totalLiabilities: number;
     totalBuckets: number;
-    totalFixedCosts?: number; // Added for tracking fixed costs history
+    totalFixedCosts?: number;
     available: number;
     deficit: number;
+    auto?: boolean;             // true si lo guardó el auto-snapshot semanal
     assets?: FinanceItem[];
     liabilities?: FinanceItem[];
     buckets?: FinanceItem[];

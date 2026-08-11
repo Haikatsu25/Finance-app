@@ -93,6 +93,79 @@ function cleanGoals(v: unknown): any[] {
     });
 }
 
+const TX_TYPES = new Set(['expense', 'income']);
+const TX_SOURCES = new Set(['manual', 'scan']);
+const MAX_TRANSACTIONS = 5000;
+
+function cleanTransactions(v: unknown): any[] {
+    if (!Array.isArray(v)) return [];
+    return v.slice(0, MAX_TRANSACTIONS).flatMap((raw) => {
+        if (!raw || typeof raw !== 'object') return [];
+        const r = raw as any;
+        const label = cleanString(r.label);
+        const date = cleanDate(r.date);
+        if (!label || !date) return [];
+        return [{
+            id: cleanId(r.id),
+            label,
+            amount: cleanAmount(r.amount),
+            date,
+            type: TX_TYPES.has(r.type) ? r.type : 'expense',
+            category: cleanString(r.category, 60),
+            source: TX_SOURCES.has(r.source) ? r.source : 'manual',
+        }];
+    });
+}
+
+function cleanDay(v: unknown): number {
+    const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+    if (!Number.isFinite(n)) return 1;
+    return Math.max(1, Math.min(31, Math.round(n)));
+}
+
+function cleanCreditCards(v: unknown): any[] {
+    if (!Array.isArray(v)) return [];
+    return v.slice(0, 50).flatMap((raw) => {
+        if (!raw || typeof raw !== 'object') return [];
+        const r = raw as any;
+        const label = cleanString(r.label);
+        if (!label) return [];
+        return [{
+            id: cleanId(r.id),
+            label,
+            balance: cleanAmount(r.balance),
+            creditLimit: cleanAmount(r.creditLimit),
+            cutoffDay: cleanDay(r.cutoffDay),
+            dueDay: cleanDay(r.dueDay),
+            apr: Math.max(0, Math.min(200, cleanAmount(r.apr))),
+            minPayment: cleanAmount(r.minPayment),
+        }];
+    });
+}
+
+function cleanBudgets(v: unknown): any[] {
+    if (!Array.isArray(v)) return [];
+    return v.slice(0, 100).flatMap((raw) => {
+        if (!raw || typeof raw !== 'object') return [];
+        const r = raw as any;
+        const category = cleanString(r.category, 60);
+        if (!category) return [];
+        return [{
+            id: cleanId(r.id),
+            category,
+            monthlyLimit: cleanAmount(r.monthlyLimit),
+        }];
+    });
+}
+
+function cleanSettings(v: unknown): any {
+    const r = (v && typeof v === 'object') ? v as any : {};
+    const days = typeof r.autoSnapshotDays === 'number' ? r.autoSnapshotDays : 7;
+    return {
+        autoSnapshotDays: Math.max(1, Math.min(90, Math.round(days))),
+    };
+}
+
 function cleanHistory(v: unknown): any[] {
     if (!Array.isArray(v)) return [];
     return v.slice(0, MAX_HISTORY).flatMap((raw) => {
@@ -109,6 +182,7 @@ function cleanHistory(v: unknown): any[] {
             totalFixedCosts: cleanAmount(r.totalFixedCosts),
             available: cleanAmount(r.available, true),
             deficit: cleanAmount(r.deficit),
+            auto: r.auto === true,
             assets: cleanFinanceItems(r.assets, 'asset'),
             liabilities: cleanFinanceItems(r.liabilities, 'liability'),
             buckets: cleanFinanceItems(r.buckets, 'bucket'),
@@ -149,6 +223,9 @@ export async function GET() {
                     buckets: [],
                     subscriptions: [],
                     goals: [],
+                    transactions: [],
+                    creditCards: [],
+                    budgets: [],
                     history: [],
                 },
             },
@@ -186,6 +263,10 @@ export async function POST(request: Request) {
         buckets: cleanFinanceItems(body?.buckets, 'bucket'),
         subscriptions: cleanSubscriptions(body?.subscriptions),
         goals: cleanGoals(body?.goals),
+        transactions: cleanTransactions(body?.transactions),
+        creditCards: cleanCreditCards(body?.creditCards),
+        budgets: cleanBudgets(body?.budgets),
+        settings: cleanSettings(body?.settings),
         history: cleanHistory(body?.history),
     };
 

@@ -53,14 +53,24 @@ import {
   CloudUpload,
   AlertTriangle,
   RefreshCw,
+  ReceiptText,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
-import { FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem } from "@/types";
+import {
+  FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem,
+  TransactionItem, CreditCardItem, BudgetItem,
+} from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
-import { money, moneyExact, round2 } from "@/lib/format";
+import { money, moneyExact, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import Analytics from "./Analytics";
 import FinanceAI from "./FinanceAI";
+import Transactions from "./Transactions";
+import CreditCards from "./CreditCards";
+import Budgets from "./Budgets";
+import UpcomingPayments from "./UpcomingPayments";
 import { startTour } from "./Tutorial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -172,14 +182,15 @@ function DashboardSkeleton() {
 // ─────────────────────────────────────────────────────────────────────────────
 // MOBILE BOTTOM NAV
 // ─────────────────────────────────────────────────────────────────────────────
-type NavTab = "dashboard" | "analytics" | "ai" | "history";
+type NavTab = "dashboard" | "transactions" | "analytics" | "ai" | "history";
 
 function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab) => void }) {
   const tabs: { id: NavTab; icon: React.ReactNode; label: string }[] = [
-    { id: "dashboard", icon: <LayoutDashboard size={20} />, label: "Inicio" },
-    { id: "analytics", icon: <BarChart2 size={20} />,       label: "Análisis" },
-    { id: "ai",        icon: <Brain size={20} />,            label: "IA" },
-    { id: "history",   icon: <History size={20} />,          label: "Historial" },
+    { id: "dashboard",    icon: <LayoutDashboard size={20} />, label: "Inicio" },
+    { id: "transactions", icon: <ReceiptText size={20} />,     label: "Movs" },
+    { id: "analytics",    icon: <BarChart2 size={20} />,       label: "Análisis" },
+    { id: "ai",           icon: <Brain size={20} />,            label: "IA" },
+    { id: "history",      icon: <History size={20} />,          label: "Historial" },
   ];
 
   return (
@@ -191,7 +202,7 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
             <button
               key={t.id}
               onClick={() => onChange(t.id)}
-              className={`relative flex flex-col items-center gap-1 px-4 py-1.5 min-w-[64px] rounded-xl transition-all duration-200 ${
+              className={`relative flex flex-col items-center gap-1 px-3 py-1.5 min-w-[56px] rounded-xl transition-all duration-200 ${
                 isActive ? "text-emerald-600 dark:text-emerald-400" : "text-default-400 hover:text-default-600"
               }`}
               aria-label={t.label}
@@ -650,7 +661,11 @@ export default function Dashboard() {
   const [buckets,       setBuckets]       = useState<FinanceItem[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionItem[]>([]);
   const [goals,         setGoals]         = useState<GoalItem[]>([]);
+  const [transactions,  setTransactions]  = useState<TransactionItem[]>([]);
+  const [creditCards,   setCreditCards]   = useState<CreditCardItem[]>([]);
+  const [budgets,       setBudgets]       = useState<BudgetItem[]>([]);
   const [history,       setHistory]       = useState<HistorySnapshot[]>([]);
+  const [privacy,       setPrivacy]       = useState(false);
   const [mounted,       setMounted]       = useState(false);
   const [isLoading,     setIsLoading]     = useState(true);
   const [loadError,     setLoadError]     = useState(false);
@@ -678,12 +693,16 @@ export default function Dashboard() {
     setBuckets(data.buckets || []);
     setSubscriptions(data.subscriptions || []);
     setGoals(data.goals || []);
+    setTransactions(data.transactions || []);
+    setCreditCards(data.creditCards || []);
+    setBudgets(data.budgets || []);
     setHistory(data.history || []);
     revRef.current = typeof data.rev === "number" ? data.rev : 0;
   }, []);
 
   useEffect(() => {
     setMounted(true);
+    setPrivacy(loadPrivacyMode());
     const fetchData = async () => {
       try {
         const res = await fetch("/api/finance");
@@ -691,6 +710,39 @@ export default function Dashboard() {
         const data = await res.json();
         applyServerData(data);
         setLoadError(false);
+
+        // ── Auto-snapshot: si hay datos y el último snapshot tiene más de
+        //    N días (default 7), guardar uno automáticamente ──────────────
+        const hasData = (data.assets?.length || 0) + (data.liabilities?.length || 0) > 0;
+        if (hasData) {
+          const days = data.settings?.autoSnapshotDays || 7;
+          const last = (data.history || [])[0];
+          const lastAge = last ? (Date.now() - new Date(last.date).getTime()) / 86_400_000 : Infinity;
+          if (lastAge >= days) {
+            const sum = (arr: any[]) => (arr || []).reduce((s: number, i: any) => s + (i.amount || 0), 0);
+            const tA = sum(data.assets), tL = sum(data.liabilities), tB = sum(data.buckets);
+            const tF = (data.subscriptions || []).reduce(
+              (s: number, i: any) => s + (i.billingCycle === "anual" ? i.amount / 12 : i.amount), 0);
+            const avail = tA - tL - tB;
+            const snap: HistorySnapshot = {
+              id: crypto.randomUUID(),
+              date: new Date().toISOString(),
+              totalAssets: round2(tA),
+              totalLiabilities: round2(tL),
+              totalBuckets: round2(tB),
+              totalFixedCosts: round2(tF),
+              available: round2(avail),
+              deficit: avail < 0 ? round2(Math.abs(avail)) : 0,
+              auto: true,
+              assets: data.assets || [],
+              liabilities: data.liabilities || [],
+              buckets: data.buckets || [],
+              subscriptions: data.subscriptions || [],
+              goals: data.goals || [],
+            };
+            setHistory((prev) => [snap, ...prev]);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         setLoadError(true);
@@ -701,26 +753,31 @@ export default function Dashboard() {
     fetchData();
   }, [applyServerData]);
 
+  const togglePrivacy = () => {
+    const next = !privacy;
+    setPrivacyMode(next);
+    setPrivacy(next);
+  };
+
   // ── Guardado con control de conflictos ───────────────────────
   // Los guardados se serializan: nunca hay dos POST en vuelo a la vez
   // (dos peticiones con el mismo baseRev se auto-conflictuarían).
   const inFlightRef = useRef(false);
   const pendingSaveRef = useRef<Parameters<typeof doSave> | null>(null);
 
-  async function doSave(
-    a: FinanceItem[], l: FinanceItem[], b: FinanceItem[],
-    h: HistorySnapshot[], sub: SubscriptionItem[], g: GoalItem[],
-  ) {
+  type SavePayload = {
+    assets: FinanceItem[]; liabilities: FinanceItem[]; buckets: FinanceItem[];
+    history: HistorySnapshot[]; subscriptions: SubscriptionItem[]; goals: GoalItem[];
+    transactions: TransactionItem[]; creditCards: CreditCardItem[]; budgets: BudgetItem[];
+  };
+
+  async function doSave(payload: SavePayload) {
     setSaveStatus("saving");
     try {
       const res = await fetch("/api/finance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assets: a, liabilities: l, buckets: b,
-          history: h, subscriptions: sub, goals: g,
-          baseRev: revRef.current,
-        }),
+        body: JSON.stringify({ ...payload, baseRev: revRef.current }),
       });
 
       if (res.status === 409) {
@@ -768,11 +825,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!mounted || isLoading || loadError) return;
     const timer = setTimeout(
-      () => saveData(assets, liabilities, buckets, history, subscriptions, goals),
+      () => saveData({ assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets }),
       900,
     );
     return () => clearTimeout(timer);
-  }, [assets, liabilities, buckets, history, subscriptions, goals, mounted, isLoading, loadError, saveData]);
+  }, [assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, mounted, isLoading, loadError, saveData]);
 
   // ── Totales ──────────────────────────────────────────────────
   const totalAssets      = round2(assets.reduce((s, i) => s + i.amount, 0));
@@ -885,6 +942,57 @@ export default function Dashboard() {
     const parsed = parseFloat(currentAmount);
     if (!Number.isFinite(parsed) || parsed < 0) return;
     setGoals(goals.map((g) => (g.id === id ? { ...g, currentAmount: round2(parsed) } : g)));
+  };
+
+  // ── Movimientos (ledger) ─────────────────────────────────────
+  const addTransaction = (t: Omit<TransactionItem, "id">) => {
+    setTransactions((prev) => [...prev, { ...t, id: crypto.randomUUID() }]);
+  };
+
+  const removeTransaction = (id: string) => {
+    const idx = transactions.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = transactions[idx];
+    setTransactions(transactions.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setTransactions((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
+  };
+
+  // ── Tarjetas de crédito ──────────────────────────────────────
+  const addCreditCard = (c: Omit<CreditCardItem, "id">) => {
+    setCreditCards((prev) => [...prev, { ...c, id: crypto.randomUUID() }]);
+  };
+
+  const removeCreditCard = (id: string) => {
+    const idx = creditCards.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = creditCards[idx];
+    setCreditCards(creditCards.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setCreditCards((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
+  };
+
+  const updateCardBalance = (id: string, balance: number) => {
+    setCreditCards(creditCards.map((c) => (c.id === id ? { ...c, balance } : c)));
+  };
+
+  // ── Presupuestos ─────────────────────────────────────────────
+  const addBudget = (b: Omit<BudgetItem, "id">) => {
+    setBudgets((prev) => [...prev, { ...b, id: crypto.randomUUID() }]);
+  };
+
+  const removeBudget = (id: string) => {
+    setBudgets(budgets.filter((i) => i.id !== id));
   };
 
   // ── Modales ──────────────────────────────────────────────────
@@ -1052,10 +1160,11 @@ export default function Dashboard() {
 
           <div className="hidden md:flex items-center gap-1 bg-default-100/70 rounded-xl p-1">
             {([
-              { id: "dashboard", icon: <LayoutDashboard size={15} />, label: "Inicio" },
-              { id: "analytics", icon: <BarChart2 size={15} />,       label: "Análisis" },
-              { id: "ai",        icon: <Brain size={15} />,            label: "FinanceAI" },
-              { id: "history",   icon: <History size={15} />,          label: "Historial" },
+              { id: "dashboard",    icon: <LayoutDashboard size={15} />, label: "Inicio" },
+              { id: "transactions", icon: <ReceiptText size={15} />,     label: "Movimientos" },
+              { id: "analytics",    icon: <BarChart2 size={15} />,       label: "Análisis" },
+              { id: "ai",           icon: <Brain size={15} />,            label: "FinanceAI" },
+              { id: "history",      icon: <History size={15} />,          label: "Historial" },
             ] as { id: NavTab; icon: React.ReactNode; label: string }[]).map((tab) => (
               <button
                 key={tab.id}
@@ -1074,6 +1183,16 @@ export default function Dashboard() {
 
           <div className="flex items-center gap-2">
             <SaveIndicator status={saveStatus} />
+            <SignedIn>
+              <Button
+                isIconOnly variant="light" size="sm"
+                onPress={togglePrivacy}
+                className="text-default-400 hover:text-emerald-500"
+                aria-label={privacy ? "Mostrar montos" : "Ocultar montos"}
+              >
+                {privacy ? <EyeOff size={18} /> : <Eye size={18} />}
+              </Button>
+            </SignedIn>
             <Button
               isIconOnly variant="light" size="sm"
               onPress={handleStartTour}
@@ -1252,6 +1371,11 @@ export default function Dashboard() {
 
           <div id="tab-content" style={{ scrollMarginTop: "72px" }} />
 
+          {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}
+          {activeTab === "dashboard" && (
+            <UpcomingPayments cards={creditCards} subscriptions={subscriptions} />
+          )}
+
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
           <section className={activeTab !== "dashboard" ? "hidden" : ""} id="management-sections">
             <div className="flex items-center gap-2 mb-4">
@@ -1297,6 +1421,18 @@ export default function Dashboard() {
                 onAdd={handleAddSubscription}
                 onRemove={removeSubscription}
               />
+              <CreditCards
+                cards={creditCards}
+                onAdd={addCreditCard}
+                onRemove={removeCreditCard}
+                onUpdateBalance={updateCardBalance}
+              />
+              <Budgets
+                budgets={budgets}
+                transactions={transactions}
+                onAdd={addBudget}
+                onRemove={removeBudget}
+              />
               <GoalsSection
                 items={goals}
                 onAdd={handleAddGoal}
@@ -1304,6 +1440,16 @@ export default function Dashboard() {
                 onUpdateProgress={updateGoalProgress}
               />
             </div>
+          </section>
+
+          {/* ── MOVIMIENTOS ───────────────────────────────────── */}
+          <section className={activeTab !== "transactions" ? "hidden" : ""}>
+            <Divider className="my-2" />
+            <Transactions
+              transactions={transactions}
+              onAdd={addTransaction}
+              onRemove={removeTransaction}
+            />
           </section>
 
           {/* ── ANALYTICS ─────────────────────────────────────── */}
@@ -1367,6 +1513,11 @@ export default function Dashboard() {
                       >
                         <TableCell className="font-medium text-xs py-3">
                           {new Date(h.date).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" })}
+                          {h.auto && (
+                            <span className="ml-1.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-default-100 text-default-400">
+                              auto
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="tnum text-emerald-600 dark:text-emerald-400 text-sm font-bold text-right">
                           {money(h.totalAssets)}

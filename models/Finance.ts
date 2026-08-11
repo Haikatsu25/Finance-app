@@ -25,6 +25,33 @@ const GoalItemSchema = new Schema({
     deadline: String
 }, { _id: false });
 
+const TransactionItemSchema = new Schema({
+    id: String,
+    label: String,
+    amount: Number,
+    date: String,
+    type: String,       // expense | income
+    category: String,
+    source: String,     // manual | scan
+}, { _id: false });
+
+const CreditCardItemSchema = new Schema({
+    id: String,
+    label: String,
+    balance: Number,
+    creditLimit: Number,
+    cutoffDay: Number,
+    dueDay: Number,
+    apr: Number,
+    minPayment: Number,
+}, { _id: false });
+
+const BudgetItemSchema = new Schema({
+    id: String,
+    category: String,
+    monthlyLimit: Number,
+}, { _id: false });
+
 const HistorySnapshotSchema = new Schema({
     id: String,
     date: String,
@@ -34,6 +61,7 @@ const HistorySnapshotSchema = new Schema({
     totalFixedCosts: Number,
     available: Number,
     deficit: Number,
+    auto: Boolean,
     assets: [FinanceItemSchema],
     liabilities: [FinanceItemSchema],
     buckets: [FinanceItemSchema],
@@ -52,6 +80,12 @@ const FinanceSchema = new Schema({
     buckets: [FinanceItemSchema],
     subscriptions: [SubscriptionItemSchema],
     goals: [GoalItemSchema],
+    transactions: [TransactionItemSchema],
+    creditCards: [CreditCardItemSchema],
+    budgets: [BudgetItemSchema],
+    settings: {
+        autoSnapshotDays: { type: Number, default: 7 },
+    },
     history: [HistorySnapshotSchema],
 }, { timestamps: true });
 

@@ -1019,10 +1019,20 @@ export default function Dashboard() {
   ));
   const available        = round2(totalAssets - totalLiabilities - totalBuckets);
 
-  const animatedAvailable = useAnimatedCounter(available);
-  const isPositive        = available >= 0;
+  // Mensualidad MSI activa por tarjeta (para el descuento al capturar
+  // totales y para el disponible real del héroe)
+  const msiMonthlyByCard: Record<string, number> = Object.fromEntries(
+    creditCards.map((c) => [c.id, cardDebtBreakdown(c, installments).monthlyInstallment]),
+  );
+  const totalMsiMonthly = round2(Object.values(msiMonthlyByCard).reduce((s, v) => s + v, 0));
+
+  // EL número: lo que de verdad queda tras deudas, gastos fijos y MSI del mes
+  const afterThisMonth = round2(available - totalFixedCosts - totalMsiMonthly);
+
+  const animatedAvailable = useAnimatedCounter(afterThisMonth);
+  const isPositive        = afterThisMonth >= 0;
   const balanceProgress   = totalAssets > 0
-    ? Math.max(0, Math.min(100, (available / totalAssets) * 100))
+    ? Math.max(0, Math.min(100, (afterThisMonth / totalAssets) * 100))
     : 0;
 
   // ── Deshacer borrados ────────────────────────────────────────
@@ -1039,16 +1049,6 @@ export default function Dashboard() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────
-  // Mensualidad MSI activa por tarjeta (para el descuento al capturar totales)
-  const msiMonthlyByCard: Record<string, number> = Object.fromEntries(
-    creditCards.map((c) => [c.id, cardDebtBreakdown(c, installments).monthlyInstallment]),
-  );
-
-  // Total de mensualidades MSI del mes y balance REAL tras todos los
-  // pagos del mes (gastos fijos + mensualidades de meses sin intereses)
-  const totalMsiMonthly = round2(Object.values(msiMonthlyByCard).reduce((s, v) => s + v, 0));
-  const afterThisMonth = round2(available - totalFixedCosts - totalMsiMonthly);
-
   /**
    * Botón "Pagado": la deuda de contado queda en $0 y los gastos
    * vinculados a esa tarjeta salen de la lista (ya se pagaron).
@@ -1575,7 +1575,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <PiggyBank size={16} className={isPositive ? "text-emerald-400" : "text-rose-400"} />
                       <p className="text-white/60 font-semibold text-xs tracking-[0.2em] uppercase">
-                        {isPositive ? "Balance Disponible" : "Déficit Acumulado"}
+                        {isPositive ? "Disponible Real Este Mes" : "Déficit Este Mes"}
                       </p>
                     </div>
                     <span className="text-[10px] font-bold tracking-widest text-white/40 border border-white/15 rounded-md px-2 py-0.5">
@@ -1587,21 +1587,19 @@ export default function Dashboard() {
                   }`}>
                     {!isPositive && "−"}{money(Math.abs(animatedAvailable))}
                   </h2>
-                  {(subscriptions.length > 0 || totalMsiMonthly > 0) && (
+                  {(totalFixedCosts > 0 || totalMsiMonthly > 0) && (
                     <p className="text-white/70 text-sm mb-1 tnum">
-                      Real después de pagar este mes:{" "}
-                      <span className={`font-bold ${afterThisMonth >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{money(afterThisMonth)}</span>
-                      <span className="text-white/40">
-                        {totalFixedCosts > 0 && ` · ${money(totalFixedCosts)} fijos`}
-                        {totalMsiMonthly > 0 && ` · ${money(totalMsiMonthly)} de MSI`}
-                      </span>
+                      Ya descontado: <span className="text-white/50">{money(totalLiabilities)} deudas</span>
+                      {totalFixedCosts > 0 && <span className="text-white/50"> · {money(totalFixedCosts)} fijos</span>}
+                      {totalMsiMonthly > 0 && <span className="text-white/50"> · {money(totalMsiMonthly)} de MSI</span>}
+                      <span className="text-white/40"> — de {money(totalAssets)} en activos</span>
                     </p>
                   )}
                   <p className="text-white/40 text-sm mb-5">Actualizado ahora</p>
 
                   <div className="mb-6">
                     <div className="flex justify-between text-xs text-white/50 mb-1.5">
-                      <span>Balance vs Activos totales</span>
+                      <span>Disponible real vs Activos totales</span>
                       <span className="tnum text-white/70">{balanceProgress.toFixed(1)}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-white/10">

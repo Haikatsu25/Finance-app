@@ -72,6 +72,7 @@ import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/n
 import { useTheme } from "next-themes";
 import { money, moneyExact, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
+import { cardDebtBreakdown } from "@/lib/finance-utils";
 import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import FinanceAI from "./FinanceAI";
@@ -231,42 +232,44 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION — captura de activos / gastos / apartados
 // ─────────────────────────────────────────────────────────────────────────────
-function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, onAddToCard }: {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, msiMonthly }: {
   title: string; description: string; icon: React.ReactNode;
   items: FinanceItem[]; total: number;
   color: "success" | "danger" | "warning"; categories: string[];
-  onAdd: (label: string, amount: string, date: string, category: string) => void;
+  onAdd: (label: string, amount: string, date: string, category: string, cardId?: string) => void;
   onRemove: (id: string) => void;
   /** Solo para la sección de gastos: permite cargar el gasto a una tarjeta */
   cards?: CreditCardItem[];
-  onAddToCard?: (cardId: string, label: string, amount: number, date: string, category: string) => void;
+  /** Mensualidad de MSI activa por tarjeta (cardId → $/mes) */
+  msiMonthly?: Record<string, number>;
 }) {
   const [label, setLabel]       = useState("");
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState("");
   const [category, setCategory] = useState(categories[0]);
   const [payWith, setPayWith]   = useState("cash"); // "cash" | id de tarjeta
-  const [lastCharge, setLastCharge] = useState<string | null>(null);
+  const [includeMsi, setIncludeMsi] = useState(true);
 
   const t = TONE[SECTION_TONE[color]];
-  const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
+  const parsed = parseFloat(amount);
+  const amountValid = amount !== "" && Number.isFinite(parsed) && parsed > 0;
 
-  const hasCards = !!cards?.length && !!onAddToCard;
+  const hasCards = !!cards?.length;
   const selectedCard = hasCards && payWith !== "cash" ? cards!.find((c) => c.id === payWith) : undefined;
+  const cardName = (id?: string) => cards?.find((c) => c.id === id)?.label;
+
+  // Descuento de mensualidades MSI: si el monto que copias del banco ya
+  // incluye las mensualidades de este mes, se restan para obtener el contado real
+  const cardMsi = selectedCard ? (msiMonthly?.[selectedCard.id] || 0) : 0;
+  const msiApplies = cardMsi > 0 && includeMsi;
+  const effectiveAmount = amountValid
+    ? round2(msiApplies ? parsed - cardMsi : parsed)
+    : 0;
+  const msiTooBig = amountValid && msiApplies && effectiveAmount <= 0;
 
   const handleAdd = () => {
-    if (!label.trim() || !amountValid) return;
-    const parsed = round2(parseFloat(amount));
-
-    if (selectedCard && onAddToCard) {
-      // Va directo a la deuda de la tarjeta (y queda en Movimientos)
-      onAddToCard(selectedCard.id, label.trim(), parsed, date, category);
-      setLastCharge(`${moneyExact(parsed)} → ${selectedCard.label}`);
-      setTimeout(() => setLastCharge(null), 3500);
-    } else {
-      onAdd(label.trim(), amount, date, category);
-    }
-
+    if (!label.trim() || !amountValid || msiTooBig) return;
+    onAdd(label.trim(), String(effectiveAmount), date, category, selectedCard?.id);
     setLabel("");
     setAmount("");
     setDate("");
@@ -305,7 +308,13 @@ function Section({ title, description, icon, items, total, color, categories, on
               >
                 <div className="flex flex-col min-w-0">
                   <span className="text-sm font-semibold text-default-700 truncate">{item.label}</span>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                    {item.cardId && cardName(item.cardId) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-bold flex items-center gap-1">
+                        <CreditCard size={9} />
+                        {cardName(item.cardId)}
+                      </span>
+                    )}
                     {item.category && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${t.bg} ${t.text} font-medium`}>
                         {item.category}
@@ -401,6 +410,35 @@ function Section({ title, description, icon, items, total, color, categories, on
               onValueChange={setDate}
             />
           </div>
+          {/* El total del banco suele incluir las mensualidades MSI ya facturadas */}
+          {selectedCard && cardMsi > 0 && (
+            <label className="flex items-start gap-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeMsi}
+                onChange={(e) => setIncludeMsi(e.target.checked)}
+                className="mt-0.5 accent-indigo-500"
+              />
+              <span className="text-[11px] text-default-600 leading-snug">
+                El monto ya incluye mis mensualidades de meses
+                (<span className="font-bold tnum">{moneyExact(cardMsi)}</span>) — restarlas
+              </span>
+            </label>
+          )}
+
+          {amountValid && msiApplies && !msiTooBig && (
+            <p className="text-[11px] font-bold text-emerald-500 tnum animate-fade-in-up">
+              Se registrarán {moneyExact(effectiveAmount)} de contado
+              <span className="font-normal text-default-400"> ({moneyExact(parsed)} − {moneyExact(cardMsi)} de MSI)</span>
+            </p>
+          )}
+
+          {msiTooBig && (
+            <p className="text-[11px] font-bold text-rose-500">
+              El monto es menor o igual a tus mensualidades — no quedaría nada de contado. Desmarca la casilla si el monto no incluye MSI.
+            </p>
+          )}
+
           <Button
             fullWidth
             color={color}
@@ -408,7 +446,7 @@ function Section({ title, description, icon, items, total, color, categories, on
             onPress={handleAdd}
             className="font-bold text-sm"
             size="sm"
-            isDisabled={!label.trim() || !amountValid}
+            isDisabled={!label.trim() || !amountValid || msiTooBig}
             startContent={<Plus size={15} />}
           >
             {selectedCard ? `Cargar a ${selectedCard.label}` : "Agregar"}
@@ -416,14 +454,8 @@ function Section({ title, description, icon, items, total, color, categories, on
 
           {selectedCard && (
             <p className="text-[10px] text-default-400 leading-snug">
-              Se sumará a la deuda de contado de <span className="font-bold">{selectedCard.label}</span> y quedará
-              registrado en Movimientos.
-            </p>
-          )}
-
-          {lastCharge && (
-            <p className="text-[11px] font-bold text-emerald-500 flex items-center gap-1 animate-fade-in-up">
-              <Check size={12} /> {lastCharge}
+              Se sumará a la deuda de <span className="font-bold">{selectedCard.label}</span>. Cuando lo pagues,
+              elimínalo de esta lista (o usa el botón Pagado de la tarjeta) y se descontará.
             </p>
           )}
         </div>
@@ -1008,20 +1040,58 @@ export default function Dashboard() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────
-  const handleAddItem = (type: QuickAddType, label: string, amount: string, date: string, category: string) => {
+  // Mensualidad MSI activa por tarjeta (para el descuento al capturar totales)
+  const msiMonthlyByCard: Record<string, number> = Object.fromEntries(
+    creditCards.map((c) => [c.id, cardDebtBreakdown(c, installments).monthlyInstallment]),
+  );
+
+  /**
+   * Botón "Pagado": la deuda de contado queda en $0 y los gastos
+   * vinculados a esa tarjeta salen de la lista (ya se pagaron).
+   * Todo reversible con Deshacer.
+   */
+  const markCardPaid = (cardId: string) => {
+    const card = creditCards.find((c) => c.id === cardId);
+    if (!card) return;
+    const prevBalance = card.balance || 0;
+    const linked = liabilities.filter((l) => l.cardId === cardId);
+
+    setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: 0 } : c)));
+    if (linked.length) setLiabilities((prev) => prev.filter((l) => l.cardId !== cardId));
+
+    scheduleUndo(`Pago de ${card.label}`, () => {
+      setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: prevBalance } : c)));
+      if (linked.length) setLiabilities((prev) => [...prev, ...linked]);
+    });
+  };
+
+  /** Suma (o resta con signo negativo) a la deuda de contado de una tarjeta */
+  const bumpCardBalance = (cardId: string, delta: number) => {
+    setCreditCards((prev) => prev.map((c) =>
+      c.id === cardId ? { ...c, balance: Math.max(0, round2((c.balance || 0) + delta)) } : c,
+    ));
+  };
+
+  const handleAddItem = (type: QuickAddType, label: string, amount: string, date: string, category: string, cardId?: string) => {
     const parsed = parseFloat(amount);
     if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
+    const rounded = round2(parsed);
     const item: FinanceItem = {
       id: crypto.randomUUID(),
       label,
-      amount: round2(parsed),
+      amount: rounded,
       date: date || new Date().toISOString().split("T")[0],
       type,
       category,
+      ...(type === "liability" && cardId ? { cardId } : {}),
     };
     if (type === "asset")     setAssets((prev) => [...prev, item]);
-    if (type === "liability") setLiabilities((prev) => [...prev, item]);
     if (type === "bucket")    setBuckets((prev) => [...prev, item]);
+    if (type === "liability") {
+      setLiabilities((prev) => [...prev, item]);
+      // El gasto también engorda la deuda de la tarjeta
+      if (cardId) bumpCardBalance(cardId, rounded);
+    }
   };
 
   const removeItem = (id: string, type: QuickAddType) => {
@@ -1032,12 +1102,17 @@ export default function Dashboard() {
     if (idx === -1) return;
     const item = list[idx];
     setters[type](list.filter((i) => i.id !== id));
+
+    // Quitar un gasto de tarjeta = ya lo pagaste → baja la deuda
+    if (type === "liability" && item.cardId) bumpCardBalance(item.cardId, -item.amount);
+
     scheduleUndo(item.label, () => {
       setters[type]((prev) => {
         const next = [...prev];
         next.splice(Math.min(idx, next.length), 0, item);
         return next;
       });
+      if (type === "liability" && item.cardId) bumpCardBalance(item.cardId, item.amount);
     });
   };
 
@@ -1135,26 +1210,6 @@ export default function Dashboard() {
 
   const updateCardBalance = (id: string, balance: number) => {
     setCreditCards((prev) => prev.map((c) => (c.id === id ? { ...c, balance } : c)));
-  };
-
-  /**
-   * Compra cargada a una tarjeta: suma a su deuda de contado y deja
-   * el registro en Movimientos (para presupuestos y analíticas).
-   */
-  const chargeToCard = (cardId: string, label: string, amount: number, date: string, category: string) => {
-    setCreditCards((prev) => prev.map((c) =>
-      c.id === cardId ? { ...c, balance: round2((c.balance || 0) + amount) } : c,
-    ));
-    const card = creditCards.find((c) => c.id === cardId);
-    setTransactions((prev) => [...prev, {
-      id: crypto.randomUUID(),
-      label: card ? `${label} · ${card.label}` : label,
-      amount,
-      date: date || new Date().toISOString().split("T")[0],
-      type: "expense",
-      category,
-      source: "manual",
-    }]);
   };
 
   // ── Compras a meses sin intereses ────────────────────────────
@@ -1625,10 +1680,10 @@ export default function Dashboard() {
                 total={totalLiabilities}
                 color="danger"
                 categories={QUICK_CATEGORIES.liability}
-                onAdd={(l, a, d, c) => handleAddItem("liability", l, a, d, c)}
+                onAdd={(l, a, d, c, cardId) => handleAddItem("liability", l, a, d, c, cardId)}
                 onRemove={(id) => removeItem(id, "liability")}
                 cards={creditCards}
-                onAddToCard={chargeToCard}
+                msiMonthly={msiMonthlyByCard}
               />
               <Section
                 title="Apartados & Ahorro"
@@ -1650,11 +1705,13 @@ export default function Dashboard() {
               <CreditCards
                 cards={creditCards}
                 installments={installments}
+                liabilities={liabilities}
                 onAdd={addCreditCard}
                 onRemove={removeCreditCard}
                 onUpdateBalance={updateCardBalance}
                 onAddInstallment={addInstallment}
                 onRemoveInstallment={removeInstallment}
+                onMarkPaid={markCardPaid}
               />
               <Budgets
                 budgets={budgets}

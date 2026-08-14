@@ -7,9 +7,9 @@ import {
 } from "@heroui/react";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
-  Check, CalendarClock, Layers, ChevronDown, ChevronUp,
+  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck,
 } from "lucide-react";
-import { CreditCardItem, InstallmentPlan } from "@/types";
+import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
   nextOccurrence, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
@@ -121,21 +121,24 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
 export default function CreditCards({
-  cards, installments, onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment,
+  cards, installments, liabilities = [], onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment, onMarkPaid,
 }: {
   cards: CreditCardItem[];
   installments: InstallmentPlan[];
+  liabilities?: FinanceItem[];
   onAdd: (card: Omit<CreditCardItem, "id">) => void;
   onRemove: (id: string) => void;
   onUpdateBalance: (id: string, balance: number) => void;
   onAddInstallment: (plan: Omit<InstallmentPlan, "id">) => void;
   onRemoveInstallment: (id: string) => void;
+  onMarkPaid?: (id: string) => void;
 }) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { isOpen: isMsiOpen, onOpen: onMsiOpen, onOpenChange: onMsiChange } = useDisclosure();
   const [simCard, setSimCard] = useState<CreditCardItem | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [cardToDelete, setCardToDelete] = useState<CreditCardItem | null>(null);
+  const [cardToPay, setCardToPay] = useState<CreditCardItem | null>(null);
 
   // Alta de tarjeta
   const [label, setLabel] = useState("");
@@ -316,7 +319,16 @@ export default function CreditCards({
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    {bd.cash > 0 && onMarkPaid ? (
+                      <button
+                        onClick={() => setCardToPay(c)}
+                        className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition-colors"
+                      >
+                        <BadgeCheck size={12} />
+                        Pagado
+                      </button>
+                    ) : <span />}
                     <div className="flex gap-1.5">
                       {bd.activePlans.length > 0 && (
                         <button
@@ -466,6 +478,56 @@ export default function CreditCards({
                   <Button color="secondary" variant="shadow" className="font-bold bg-indigo-500"
                     isDisabled={!validMsi} onPress={() => submitMsi(onClose)}>
                     Agregar a meses
+                  </Button>
+                </ModalFooter>
+              </>
+            );
+          }}
+        </ModalContent>
+      </Modal>
+
+      {/* ── Modal: marcar deuda de contado como pagada ─────────── */}
+      <Modal isOpen={cardToPay !== null} onOpenChange={(o) => { if (!o) setCardToPay(null); }} backdrop="blur" size="sm">
+        <ModalContent>
+          {(onClose) => {
+            const linked = cardToPay ? liabilities.filter((l) => l.cardId === cardToPay.id) : [];
+            const bd = cardToPay ? cardDebtBreakdown(cardToPay, installments) : null;
+            return (
+              <>
+                <ModalHeader className="flex items-center gap-2">
+                  <BadgeCheck size={18} className="text-emerald-500" />
+                  Marcar como pagada
+                </ModalHeader>
+                <ModalBody>
+                  <p className="text-sm text-default-600">
+                    La deuda de contado de <span className="font-bold">{cardToPay?.label}</span>{" "}
+                    (<span className="font-bold tnum">{money(bd?.cash || 0)}</span>) quedará en <span className="font-bold">$0</span>.
+                  </p>
+                  {linked.length > 0 && (
+                    <p className="text-xs text-default-500">
+                      También se quitarán sus <span className="font-bold">{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</span> de
+                      Gastos &amp; Deudas — tu balance disponible se libera.
+                    </p>
+                  )}
+                  {bd && bd.installmentRemaining > 0 && (
+                    <p className="text-xs text-indigo-500">
+                      Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
+                    </p>
+                  )}
+                  <p className="text-[11px] text-default-400">Tendrás 5 segundos para deshacerlo.</p>
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" onPress={onClose}>Cancelar</Button>
+                  <Button
+                    color="success" variant="shadow" className="font-bold text-white"
+                    startContent={<BadgeCheck size={15} />}
+                    onPress={() => {
+                      if (cardToPay && onMarkPaid) onMarkPaid(cardToPay.id);
+                      setCardToPay(null);
+                      onClose();
+                    }}
+                  >
+                    Sí, ya pagué
                   </Button>
                 </ModalFooter>
               </>

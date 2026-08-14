@@ -5,6 +5,9 @@ export interface FinanceItem {
     date?: string;
     type: "asset" | "liability" | "bucket";
     category?: string;
+    /** Si el gasto se cargó a una tarjeta, su id. Al borrarlo se
+     *  descuenta de la deuda de esa tarjeta (significa que ya se pagó). */
+    cardId?: string;
 }
 
 export interface SubscriptionItem {

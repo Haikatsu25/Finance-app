@@ -57,6 +57,7 @@ function cleanFinanceItems(v: unknown, fallbackType: string): any[] {
             date: cleanDate((raw as any).date),
             type,
             category: cleanString((raw as any).category, 60),
+            cardId: cleanString((raw as any).cardId, 64),
         }];
     });
 }

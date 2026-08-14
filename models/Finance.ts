@@ -6,7 +6,8 @@ const FinanceItemSchema = new Schema({
     amount: Number,
     date: String,
     type: String,
-    category: String
+    category: String,
+    cardId: String,
 }, { _id: false });
 
 const SubscriptionItemSchema = new Schema({

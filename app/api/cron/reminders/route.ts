@@ -38,38 +38,70 @@ interface Reminder {
     body: string;
 }
 
-function buildReminders(cards: any[], now: Date): Reminder[] {
+/** Mensualidad de MSI activa para una tarjeta en la fecha dada. */
+function monthlyInstallmentFor(cardId: string, installments: any[], now: Date): number {
+    let total = 0;
+    for (const p of installments || []) {
+        if (p?.cardId !== cardId || !p?.months || !p?.startDate) continue;
+        const start = new Date(p.startDate + 'T12:00:00');
+        if (isNaN(start.getTime())) continue;
+        let elapsed = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+        if (now.getDate() < start.getDate()) elapsed -= 1;
+        elapsed = Math.max(0, elapsed);
+        if (elapsed >= p.months) continue; // ya liquidada
+        total += (p.totalAmount || 0) / p.months;
+    }
+    return Math.round(total * 100) / 100;
+}
+
+function buildReminders(cards: any[], installments: any[], now: Date): Reminder[] {
     const out: Reminder[] = [];
     for (const c of cards || []) {
         if (!c?.label) continue;
 
-        // Fecha límite de pago — solo si hay deuda
-        if ((c.balance || 0) > 0 && c.dueDay) {
+        const msi = monthlyInstallmentFor(c.id, installments, now);
+        const dueAmount = (c.balance || 0) + msi;
+        const msiNote = msi > 0 ? ` (incluye ${fmtMXN(msi)} de meses sin intereses)` : '';
+
+        // ── Fecha límite de PAGO ──
+        if (dueAmount > 0 && c.dueDay) {
             const d = daysUntil(nextOccurrence(c.dueDay, now), now);
+            if (d === 5) out.push({
+                title: `💳 ${c.label}: pago en 5 días`,
+                body: `Te tocan ${fmtMXN(dueAmount)} el día ${c.dueDay}${msiNote}.`,
+            });
             if (d === 3) out.push({
                 title: `💳 ${c.label}: pago en 3 días`,
-                body: `Paga ${fmtMXN(c.balance)} antes del día ${c.dueDay} para no generar intereses.`,
+                body: `Paga ${fmtMXN(dueAmount)} antes del día ${c.dueDay} para no generar intereses${msiNote}.`,
             });
             if (d === 1) out.push({
                 title: `⚠️ ${c.label}: pago MAÑANA`,
-                body: `Último día para pagar ${fmtMXN(c.balance)} sin intereses es mañana.`,
+                body: `Último día para pagar ${fmtMXN(dueAmount)} sin intereses es mañana.`,
             });
             if (d === 0) out.push({
                 title: `🚨 ${c.label}: el pago vence HOY`,
-                body: `Paga ${fmtMXN(c.balance)} hoy mismo para evitar intereses y cargos.`,
+                body: `Paga ${fmtMXN(dueAmount)} hoy mismo para evitar intereses y cargos.`,
             });
         }
 
-        // Fecha de corte — informativa
+        // ── Fecha de CORTE — con cuenta regresiva ──
         if (c.cutoffDay) {
             const d = daysUntil(nextOccurrence(c.cutoffDay, now), now);
+            if (d === 5) out.push({
+                title: `📅 ${c.label}: corte en 5 días`,
+                body: `Cierra tu estado de cuenta el día ${c.cutoffDay}. Compras después del corte se pagan hasta el siguiente ciclo.`,
+            });
+            if (d === 3) out.push({
+                title: `📅 ${c.label}: corte en 3 días`,
+                body: `Si puedes esperar al día ${c.cutoffDay + 1}, ganas casi un mes extra de financiamiento.`,
+            });
             if (d === 1) out.push({
-                title: `📅 ${c.label}: corte mañana`,
+                title: `📅 ${c.label}: corte MAÑANA`,
                 body: `Lo que compres desde pasado mañana se irá al siguiente estado de cuenta.`,
             });
             if (d === 0) out.push({
                 title: `📅 ${c.label}: hoy es tu corte`,
-                body: `Compras a partir de mañana = más días de financiamiento.`,
+                body: `A partir de mañana empieza tu nuevo ciclo — máximo financiamiento.`,
             });
         }
     }
@@ -98,14 +130,14 @@ export async function GET(request: Request) {
         await dbConnect();
         const users = await Finance.find(
             { 'pushSubscriptions.0': { $exists: true }, 'creditCards.0': { $exists: true } },
-            { userId: 1, creditCards: 1, pushSubscriptions: 1 },
+            { userId: 1, creditCards: 1, installments: 1, pushSubscriptions: 1 },
         ).lean();
 
         const now = new Date();
         let sent = 0, pruned = 0;
 
         for (const user of users as any[]) {
-            const reminders = buildReminders(user.creditCards, now);
+            const reminders = buildReminders(user.creditCards, user.installments || [], now);
             if (reminders.length === 0) continue;
 
             const dead: string[] = [];

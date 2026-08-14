@@ -61,6 +61,7 @@ import {
   Bell,
   BellOff,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
@@ -230,24 +231,42 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION — captura de activos / gastos / apartados
 // ─────────────────────────────────────────────────────────────────────────────
-function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove }: {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, onAddToCard }: {
   title: string; description: string; icon: React.ReactNode;
   items: FinanceItem[]; total: number;
   color: "success" | "danger" | "warning"; categories: string[];
   onAdd: (label: string, amount: string, date: string, category: string) => void;
   onRemove: (id: string) => void;
+  /** Solo para la sección de gastos: permite cargar el gasto a una tarjeta */
+  cards?: CreditCardItem[];
+  onAddToCard?: (cardId: string, label: string, amount: number, date: string, category: string) => void;
 }) {
   const [label, setLabel]       = useState("");
   const [amount, setAmount]     = useState("");
   const [date, setDate]         = useState("");
   const [category, setCategory] = useState(categories[0]);
+  const [payWith, setPayWith]   = useState("cash"); // "cash" | id de tarjeta
+  const [lastCharge, setLastCharge] = useState<string | null>(null);
 
   const t = TONE[SECTION_TONE[color]];
   const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
 
+  const hasCards = !!cards?.length && !!onAddToCard;
+  const selectedCard = hasCards && payWith !== "cash" ? cards!.find((c) => c.id === payWith) : undefined;
+
   const handleAdd = () => {
     if (!label.trim() || !amountValid) return;
-    onAdd(label.trim(), amount, date, category);
+    const parsed = round2(parseFloat(amount));
+
+    if (selectedCard && onAddToCard) {
+      // Va directo a la deuda de la tarjeta (y queda en Movimientos)
+      onAddToCard(selectedCard.id, label.trim(), parsed, date, category);
+      setLastCharge(`${moneyExact(parsed)} → ${selectedCard.label}`);
+      setTimeout(() => setLastCharge(null), 3500);
+    } else {
+      onAdd(label.trim(), amount, date, category);
+    }
+
     setLabel("");
     setAmount("");
     setDate("");
@@ -323,6 +342,27 @@ function Section({ title, description, icon, items, total, color, categories, on
             value={label}
             onValueChange={setLabel}
           />
+
+          {/* Selector de tarjeta: el gasto se suma a la deuda de esa tarjeta */}
+          {hasCards && (
+            <Select
+              size="sm"
+              variant="bordered"
+              aria-label="¿Con qué pagaste?"
+              startContent={<CreditCard size={14} className="text-default-400 shrink-0" />}
+              classNames={{ trigger: "bg-default-50 hover:bg-default-100 border-default-200" }}
+              selectedKeys={[payWith]}
+              onChange={(e) => setPayWith(e.target.value || "cash")}
+            >
+              <>
+                <SelectItem key="cash" textValue="Efectivo / débito">Efectivo / débito</SelectItem>
+                <>{cards!.map((c) => (
+                  <SelectItem key={c.id} textValue={c.label}>{c.label}</SelectItem>
+                ))}</>
+              </>
+            </Select>
+          )}
+
           <Select
             placeholder="Categoría"
             size="sm"
@@ -371,8 +411,21 @@ function Section({ title, description, icon, items, total, color, categories, on
             isDisabled={!label.trim() || !amountValid}
             startContent={<Plus size={15} />}
           >
-            Agregar
+            {selectedCard ? `Cargar a ${selectedCard.label}` : "Agregar"}
           </Button>
+
+          {selectedCard && (
+            <p className="text-[10px] text-default-400 leading-snug">
+              Se sumará a la deuda de contado de <span className="font-bold">{selectedCard.label}</span> y quedará
+              registrado en Movimientos.
+            </p>
+          )}
+
+          {lastCharge && (
+            <p className="text-[11px] font-bold text-emerald-500 flex items-center gap-1 animate-fade-in-up">
+              <Check size={12} /> {lastCharge}
+            </p>
+          )}
         </div>
       </CardBody>
     </Card>
@@ -1084,6 +1137,26 @@ export default function Dashboard() {
     setCreditCards((prev) => prev.map((c) => (c.id === id ? { ...c, balance } : c)));
   };
 
+  /**
+   * Compra cargada a una tarjeta: suma a su deuda de contado y deja
+   * el registro en Movimientos (para presupuestos y analíticas).
+   */
+  const chargeToCard = (cardId: string, label: string, amount: number, date: string, category: string) => {
+    setCreditCards((prev) => prev.map((c) =>
+      c.id === cardId ? { ...c, balance: round2((c.balance || 0) + amount) } : c,
+    ));
+    const card = creditCards.find((c) => c.id === cardId);
+    setTransactions((prev) => [...prev, {
+      id: crypto.randomUUID(),
+      label: card ? `${label} · ${card.label}` : label,
+      amount,
+      date: date || new Date().toISOString().split("T")[0],
+      type: "expense",
+      category,
+      source: "manual",
+    }]);
+  };
+
   // ── Compras a meses sin intereses ────────────────────────────
   const addInstallment = (p: Omit<InstallmentPlan, "id">) => {
     setInstallments((prev) => [...prev, { ...p, id: crypto.randomUUID() }]);
@@ -1554,6 +1627,8 @@ export default function Dashboard() {
                 categories={QUICK_CATEGORIES.liability}
                 onAdd={(l, a, d, c) => handleAddItem("liability", l, a, d, c)}
                 onRemove={(id) => removeItem(id, "liability")}
+                cards={creditCards}
+                onAddToCard={chargeToCard}
               />
               <Section
                 title="Apartados & Ahorro"

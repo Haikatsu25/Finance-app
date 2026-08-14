@@ -33,11 +33,27 @@ function utilizationColor(pct: number): string {
   return "bg-emerald-500";
 }
 
-function dueBadge(daysLeft: number): { text: string; cls: string } {
-  if (daysLeft < 0)  return { text: `Vencida hace ${Math.abs(daysLeft)}d`, cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
-  if (daysLeft === 0) return { text: "Vence HOY", cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
-  if (daysLeft <= 3) return { text: `Vence en ${daysLeft}d`, cls: "bg-amber-500/20 text-amber-300 border-amber-500/40" };
-  return { text: `Vence en ${daysLeft}d`, cls: "bg-white/10 text-white/70 border-white/20" };
+const fmtShort = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
+/** "hoy" · "mañana" · "en 4 días" · "hace 2 días" */
+function whenText(days: number): string {
+  if (days < 0) return `hace ${Math.abs(days)} ${Math.abs(days) === 1 ? "día" : "días"}`;
+  if (days === 0) return "hoy";
+  if (days === 1) return "mañana";
+  return `en ${days} días`;
+}
+
+function payBadge(days: number, date: Date): { text: string; cls: string } {
+  const base = `Pagas ${fmtShort(date)} · ${whenText(days)}`;
+  if (days < 0)  return { text: `Pago vencido ${whenText(days)}`, cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
+  if (days === 0) return { text: `Pagas HOY (${fmtShort(date)})`, cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
+  if (days <= 3) return { text: base, cls: "bg-amber-500/20 text-amber-300 border-amber-500/40" };
+  return { text: base, cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+}
+
+function cutBadge(days: number, date: Date): { text: string; cls: string } {
+  if (days === 0) return { text: `Corta HOY (${fmtShort(date)})`, cls: "bg-indigo-500/25 text-indigo-200 border-indigo-400/40" };
+  return { text: `Corta ${fmtShort(date)} · ${whenText(days)}`, cls: "bg-white/10 text-white/60 border-white/15" };
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -59,15 +75,19 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
   };
 
   return (
-    <div className="flex items-center gap-1.5 mt-3">
+    <div className="mt-3 pt-3 border-t border-white/10">
+      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1.5">
+        Reemplazar deuda de contado
+      </p>
+      <div className="flex items-center gap-1.5">
       <Input
         size="sm"
         variant="flat"
         type="number"
         min="0"
         inputMode="decimal"
-        placeholder={`Nueva deuda (hoy: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })})`}
-        aria-label="Actualizar deuda de contado"
+        placeholder={`Saldo actual: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
+        aria-label="Reemplazar deuda de contado"
         value={value}
         onValueChange={setValue}
         onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
@@ -89,6 +109,10 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
       >
         <Check size={16} />
       </Button>
+      </div>
+      <p className="text-[9px] text-white/30 mt-1">
+        {saved ? "✓ Actualizado" : "Escribe el saldo que ves en tu app del banco"}
+      </p>
     </div>
   );
 }
@@ -223,7 +247,10 @@ export default function CreditCards({
               const util = c.creditLimit > 0 ? Math.min(100, (bd.totalOwed / c.creditLimit) * 100) : 0;
               const due = nextOccurrence(c.dueDay);
               const daysLeft = daysUntil(due);
-              const badge = dueBadge(daysLeft);
+              const cut = nextOccurrence(c.cutoffDay);
+              const cutDays = daysUntil(cut);
+              const pay = payBadge(daysLeft, due);
+              const cutB = cutBadge(cutDays, cut);
               const isExpanded = expanded === c.id;
 
               return (
@@ -279,10 +306,17 @@ export default function CreditCards({
                     <div className={`h-full rounded-full ${utilizationColor(util)} transition-all duration-500`} style={{ width: `${util}%` }} />
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${badge.cls}`}>
-                      {badge.text}
+                  {/* Fechas clave: corte y pago, cada una con su cuenta regresiva */}
+                  <div className="flex gap-1.5 flex-wrap mb-2.5">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${pay.cls}`}>
+                      {pay.text}
                     </span>
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${cutB.cls}`}>
+                      {cutB.text}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
                     <div className="flex gap-1.5">
                       {bd.activePlans.length > 0 && (
                         <button

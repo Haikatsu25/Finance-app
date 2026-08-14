@@ -1,3 +1,9 @@
+/** Quién agregó el registro (relevante en cuentas compartidas) */
+export interface AddedBy {
+    userId: string;
+    name: string;
+}
+
 export interface FinanceItem {
     id: string;
     label: string;
@@ -8,6 +14,7 @@ export interface FinanceItem {
     /** Si el gasto se cargó a una tarjeta, su id. Al borrarlo se
      *  descuenta de la deuda de esa tarjeta (significa que ya se pagó). */
     cardId?: string;
+    addedBy?: AddedBy;
 }
 
 export interface SubscriptionItem {
@@ -16,6 +23,7 @@ export interface SubscriptionItem {
     amount: number;
     billingCycle: "mensual" | "anual";
     category?: string;
+    addedBy?: AddedBy;
 }
 
 export interface GoalItem {
@@ -24,6 +32,7 @@ export interface GoalItem {
     targetAmount: number;
     currentAmount: number;
     deadline: string;      // YYYY-MM-DD
+    addedBy?: AddedBy;
 }
 
 // ── Ledger de movimientos ────────────────────────────────────────
@@ -35,6 +44,7 @@ export interface TransactionItem {
     type: "expense" | "income";
     category?: string;
     source?: "manual" | "scan"; // scan = capturado con el escáner de tickets
+    addedBy?: AddedBy;
 }
 
 // ── Tarjetas de crédito ──────────────────────────────────────────
@@ -47,6 +57,7 @@ export interface CreditCardItem {
     dueDay: number;             // día del mes (1-31)
     apr?: number;               // tasa anual %, para el simulador
     minPayment?: number;
+    addedBy?: AddedBy;
 }
 
 // ── Compras a Meses Sin Intereses ────────────────────────────────
@@ -57,6 +68,7 @@ export interface InstallmentPlan {
     totalAmount: number;     // monto total diferido
     months: number;          // plazo: 3, 6, 9, 12, 18, 24
     startDate: string;       // YYYY-MM-DD, fecha de la compra
+    addedBy?: AddedBy;
 }
 
 // ── Presupuestos mensuales por categoría ─────────────────────────
@@ -64,6 +76,7 @@ export interface BudgetItem {
     id: string;
     category: string;
     monthlyLimit: number;
+    addedBy?: AddedBy;
 }
 
 export interface AppSettings {

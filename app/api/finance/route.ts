@@ -43,6 +43,15 @@ function cleanDate(v: unknown): string {
 const ITEM_TYPES = new Set(['asset', 'liability', 'bucket']);
 const CYCLES = new Set(['mensual', 'anual']);
 
+/** Autoría del registro (control en cuentas compartidas) */
+function cleanAddedBy(v: unknown): { addedBy?: { userId: string; name: string } } {
+    if (!v || typeof v !== 'object') return {};
+    const userId = cleanString((v as any).userId, 64);
+    const name = cleanString((v as any).name, 80);
+    if (!userId || !name) return {};
+    return { addedBy: { userId, name } };
+}
+
 function cleanFinanceItems(v: unknown, fallbackType: string): any[] {
     if (!Array.isArray(v)) return [];
     return v.slice(0, MAX_ITEMS).flatMap((raw) => {
@@ -58,6 +67,7 @@ function cleanFinanceItems(v: unknown, fallbackType: string): any[] {
             type,
             category: cleanString((raw as any).category, 60),
             cardId: cleanString((raw as any).cardId, 64),
+            ...cleanAddedBy((raw as any).addedBy),
         }];
     });
 }
@@ -74,6 +84,7 @@ function cleanSubscriptions(v: unknown): any[] {
             amount: cleanAmount((raw as any).amount),
             billingCycle: CYCLES.has((raw as any).billingCycle) ? (raw as any).billingCycle : 'mensual',
             category: cleanString((raw as any).category, 60),
+            ...cleanAddedBy((raw as any).addedBy),
         }];
     });
 }
@@ -90,6 +101,7 @@ function cleanGoals(v: unknown): any[] {
             targetAmount: cleanAmount((raw as any).targetAmount),
             currentAmount: cleanAmount((raw as any).currentAmount),
             deadline: cleanDate((raw as any).deadline),
+            ...cleanAddedBy((raw as any).addedBy),
         }];
     });
 }
@@ -114,6 +126,7 @@ function cleanTransactions(v: unknown): any[] {
             type: TX_TYPES.has(r.type) ? r.type : 'expense',
             category: cleanString(r.category, 60),
             source: TX_SOURCES.has(r.source) ? r.source : 'manual',
+            ...cleanAddedBy(r.addedBy),
         }];
     });
 }
@@ -140,6 +153,7 @@ function cleanCreditCards(v: unknown): any[] {
             dueDay: cleanDay(r.dueDay),
             apr: Math.max(0, Math.min(200, cleanAmount(r.apr))),
             minPayment: cleanAmount(r.minPayment),
+            ...cleanAddedBy(r.addedBy),
         }];
     });
 }
@@ -163,6 +177,7 @@ function cleanInstallments(v: unknown): any[] {
             totalAmount: cleanAmount(r.totalAmount),
             months: ALLOWED_TERMS.has(months) ? months : 12,
             startDate,
+            ...cleanAddedBy(r.addedBy),
         }];
     });
 }
@@ -178,6 +193,7 @@ function cleanBudgets(v: unknown): any[] {
             id: cleanId(r.id),
             category,
             monthlyLimit: cleanAmount(r.monthlyLimit),
+            ...cleanAddedBy(r.addedBy),
         }];
     });
 }

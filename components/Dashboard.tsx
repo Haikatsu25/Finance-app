@@ -85,6 +85,7 @@ import CreditCards from "./CreditCards";
 import Budgets from "./Budgets";
 import UpcomingPayments from "./UpcomingPayments";
 import VoiceAssistant from "./VoiceAssistant";
+import AddedByBadge from "./AddedByBadge";
 import { startTour } from "./Tutorial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,7 +237,7 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION — captura de activos / gastos / apartados
 // ─────────────────────────────────────────────────────────────────────────────
-function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, msiMonthly }: {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, msiMonthly, viewerId }: {
   title: string; description: string; icon: React.ReactNode;
   items: FinanceItem[]; total: number;
   color: "success" | "danger" | "warning"; categories: string[];
@@ -246,6 +247,7 @@ function Section({ title, description, icon, items, total, color, categories, on
   cards?: CreditCardItem[];
   /** Mensualidad de MSI activa por tarjeta (cardId → $/mes) */
   msiMonthly?: Record<string, number>;
+  viewerId?: string;
 }) {
   const [label, setLabel]       = useState("");
   const [amount, setAmount]     = useState("");
@@ -324,6 +326,7 @@ function Section({ title, description, icon, items, total, color, categories, on
                         {item.category}
                       </span>
                     )}
+                    <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
                     {item.date && <span className="text-[10px] text-default-400">{item.date}</span>}
                   </div>
                 </div>
@@ -471,10 +474,11 @@ function Section({ title, description, icon, items, total, color, categories, on
 // ─────────────────────────────────────────────────────────────────────────────
 // SUBSCRIPTIONS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function SubscriptionsSection({ items, total, onAdd, onRemove }: {
+function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId }: {
   items: SubscriptionItem[]; total: number;
   onAdd: (label: string, amount: string, cycle: "mensual" | "anual", category: string) => void;
   onRemove: (id: string) => void;
+  viewerId?: string;
 }) {
   const [label, setLabel]   = useState("");
   const [amount, setAmount] = useState("");
@@ -532,6 +536,7 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: {
                       </span>
                     )}
                     <span className="text-[10px] text-default-400 font-bold uppercase">{item.billingCycle}</span>
+                    <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -651,11 +656,12 @@ function GoalContribution({ current, label, onContribute }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // GOALS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
+function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId }: {
   items: GoalItem[];
   onAdd: (label: string, target: string, deadline: string) => void;
   onRemove: (id: string) => void;
   onUpdateProgress: (id: string, newAmount: string) => void;
+  viewerId?: string;
 }) {
   const [label, setLabel] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
@@ -699,9 +705,10 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
               return (
                 <div key={item.id} className={`relative group p-4 rounded-xl ${t.bg} border ${t.border} animate-fade-in-up hover:bg-purple-500/15 transition-colors`}>
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5 flex-wrap">
                       {item.label}
                       {done && <Check size={14} className="text-emerald-500" />}
+                      <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
                     </span>
                     <button
                       onClick={() => onRemove(item.id)}
@@ -816,6 +823,11 @@ export default function Dashboard() {
 
   const { user } = useUser();
   const isSharedMember = !!(docOwnerId && user?.id && docOwnerId !== user.id);
+
+  // Autoría: se sella en cada registro nuevo (visible en cuentas compartidas)
+  const author = user?.id
+    ? { userId: user.id, name: user.firstName || user.fullName || user.username || "Alguien" }
+    : undefined;
   const [mounted,       setMounted]       = useState(false);
   const [isLoading,     setIsLoading]     = useState(true);
   const [loadError,     setLoadError]     = useState(false);
@@ -1189,6 +1201,7 @@ export default function Dashboard() {
       type,
       category,
       ...(type === "liability" && cardId ? { cardId } : {}),
+      addedBy: author,
     };
     if (type === "asset")     setAssets((prev) => [...prev, item]);
     if (type === "bucket")    setBuckets((prev) => [...prev, item]);
@@ -1225,7 +1238,7 @@ export default function Dashboard() {
     const parsed = parseFloat(amount);
     if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
     setSubscriptions((prev) => [...prev, {
-      id: crypto.randomUUID(), label, amount: round2(parsed), billingCycle, category,
+      id: crypto.randomUUID(), label, amount: round2(parsed), billingCycle, category, addedBy: author,
     }]);
   };
 
@@ -1247,7 +1260,7 @@ export default function Dashboard() {
     const parsed = parseFloat(targetAmount);
     if (!label || !Number.isFinite(parsed) || parsed <= 0) return;
     setGoals((prev) => [...prev, {
-      id: crypto.randomUUID(), label, targetAmount: round2(parsed), currentAmount: 0, deadline,
+      id: crypto.randomUUID(), label, targetAmount: round2(parsed), currentAmount: 0, deadline, addedBy: author,
     }]);
   };
 
@@ -1273,7 +1286,7 @@ export default function Dashboard() {
 
   // ── Movimientos (ledger) ─────────────────────────────────────
   const addTransaction = (t: Omit<TransactionItem, "id">) => {
-    setTransactions((prev) => [...prev, { ...t, id: crypto.randomUUID() }]);
+    setTransactions((prev) => [...prev, { ...t, id: crypto.randomUUID(), addedBy: author }]);
   };
 
   const removeTransaction = (id: string) => {
@@ -1292,7 +1305,7 @@ export default function Dashboard() {
 
   // ── Tarjetas de crédito ──────────────────────────────────────
   const addCreditCard = (c: Omit<CreditCardItem, "id">) => {
-    setCreditCards((prev) => [...prev, { ...c, id: crypto.randomUUID() }]);
+    setCreditCards((prev) => [...prev, { ...c, id: crypto.randomUUID(), addedBy: author }]);
   };
 
   const removeCreditCard = (id: string) => {
@@ -1319,7 +1332,7 @@ export default function Dashboard() {
 
   // ── Compras a meses sin intereses ────────────────────────────
   const addInstallment = (p: Omit<InstallmentPlan, "id">) => {
-    setInstallments((prev) => [...prev, { ...p, id: crypto.randomUUID() }]);
+    setInstallments((prev) => [...prev, { ...p, id: crypto.randomUUID(), addedBy: author }]);
   };
 
   const removeInstallment = (id: string) => {
@@ -1338,7 +1351,7 @@ export default function Dashboard() {
 
   // ── Presupuestos ─────────────────────────────────────────────
   const addBudget = (b: Omit<BudgetItem, "id">) => {
-    setBudgets((prev) => [...prev, { ...b, id: crypto.randomUUID() }]);
+    setBudgets((prev) => [...prev, { ...b, id: crypto.randomUUID(), addedBy: author }]);
   };
 
   const removeBudget = (id: string) => {
@@ -1778,6 +1791,7 @@ export default function Dashboard() {
                 categories={QUICK_CATEGORIES.asset}
                 onAdd={(l, a, d, c) => handleAddItem("asset", l, a, d, c)}
                 onRemove={(id) => removeItem(id, "asset")}
+                viewerId={user?.id}
               />
               <Section
                 title="Gastos & Deudas"
@@ -1791,6 +1805,7 @@ export default function Dashboard() {
                 onRemove={(id) => removeItem(id, "liability")}
                 cards={creditCards}
                 msiMonthly={msiMonthlyByCard}
+                viewerId={user?.id}
               />
               <Section
                 title="Apartados & Ahorro"
@@ -1802,12 +1817,14 @@ export default function Dashboard() {
                 categories={QUICK_CATEGORIES.bucket}
                 onAdd={(l, a, d, c) => handleAddItem("bucket", l, a, d, c)}
                 onRemove={(id) => removeItem(id, "bucket")}
+                viewerId={user?.id}
               />
               <SubscriptionsSection
                 items={subscriptions}
                 total={totalFixedCosts}
                 onAdd={handleAddSubscription}
                 onRemove={removeSubscription}
+                viewerId={user?.id}
               />
               <CreditCards
                 cards={creditCards}
@@ -1819,18 +1836,21 @@ export default function Dashboard() {
                 onAddInstallment={addInstallment}
                 onRemoveInstallment={removeInstallment}
                 onMarkPaid={markCardPaid}
+                viewerId={user?.id}
               />
               <Budgets
                 budgets={budgets}
                 transactions={transactions}
                 onAdd={addBudget}
                 onRemove={removeBudget}
+                viewerId={user?.id}
               />
               <GoalsSection
                 items={goals}
                 onAdd={handleAddGoal}
                 onRemove={removeGoal}
                 onUpdateProgress={updateGoalProgress}
+                viewerId={user?.id}
               />
             </div>
           </section>
@@ -1842,6 +1862,7 @@ export default function Dashboard() {
               transactions={transactions}
               onAdd={addTransaction}
               onRemove={removeTransaction}
+              viewerId={user?.id}
             />
           </section>
 

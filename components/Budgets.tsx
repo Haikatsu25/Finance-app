@@ -7,12 +7,14 @@ import { BudgetItem, TransactionItem } from "@/types";
 import { money, round2 } from "@/lib/format";
 import { monthKey, spentByCategory } from "@/lib/finance-utils";
 import { EXPENSE_CATEGORIES } from "./Transactions";
+import AddedByBadge from "./AddedByBadge";
 
-export default function Budgets({ budgets, transactions, onAdd, onRemove }: {
+export default function Budgets({ budgets, transactions, onAdd, onRemove, viewerId }: {
   budgets: BudgetItem[];
   transactions: TransactionItem[];
   onAdd: (b: Omit<BudgetItem, "id">) => void;
   onRemove: (id: string) => void;
+  viewerId?: string;
 }) {
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [limit, setLimit] = useState("");
@@ -62,9 +64,10 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove }: {
                   over ? "bg-rose-500/8 border-rose-500/25" : warn ? "bg-amber-500/8 border-amber-500/25" : "bg-blue-500/5 border-blue-500/15"
                 }`}>
                   <div className="flex justify-between items-start mb-1.5">
-                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5 flex-wrap">
                       {b.category}
                       {(over || warn) && <AlertTriangle size={12} className={over ? "text-rose-500" : "text-amber-500"} />}
+                      <AddedByBadge addedBy={b.addedBy} viewerId={viewerId} />
                     </span>
                     <button
                       onClick={() => onRemove(b.id)}

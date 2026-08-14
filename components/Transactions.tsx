@@ -10,6 +10,7 @@ import { TransactionItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import { monthKey, shiftMonth, monthLabel, summarizeMonth } from "@/lib/finance-utils";
 import MonthlySummary from "./MonthlySummary";
+import AddedByBadge from "./AddedByBadge";
 
 export const EXPENSE_CATEGORIES = [
   "Comida", "Súper", "Transporte", "Hogar", "Servicios", "Salud",
@@ -17,10 +18,11 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
 
-export default function Transactions({ transactions, onAdd, onRemove }: {
+export default function Transactions({ transactions, onAdd, onRemove, viewerId }: {
   transactions: TransactionItem[];
   onAdd: (t: Omit<TransactionItem, "id">) => void;
   onRemove: (id: string) => void;
+  viewerId?: string;
 }) {
   const [month, setMonth] = useState<string>(monthKey(new Date()));
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -169,8 +171,9 @@ export default function Transactions({ transactions, onAdd, onRemove }: {
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-default-700 truncate">{t.label}</p>
-                            <p className="text-[10px] text-default-400">
+                            <p className="text-[10px] text-default-400 flex items-center gap-1.5 flex-wrap">
                               {t.category || "Sin categoría"}{t.source === "scan" && " · 📷 escaneado"}
+                              <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
                             </p>
                           </div>
                           <span className={`tnum font-bold text-sm shrink-0 ${t.type === "income" ? "text-emerald-500" : "text-default-700"}`}>

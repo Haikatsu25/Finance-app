@@ -15,6 +15,7 @@ import {
   nextOccurrence, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
 } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
+import AddedByBadge from "./AddedByBadge";
 
 // Gradientes tipo tarjeta física — se asignan cíclicamente
 const CARD_SKINS = [
@@ -121,7 +122,7 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
 export default function CreditCards({
-  cards, installments, liabilities = [], onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment, onMarkPaid,
+  cards, installments, liabilities = [], onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment, onMarkPaid, viewerId,
 }: {
   cards: CreditCardItem[];
   installments: InstallmentPlan[];
@@ -132,6 +133,7 @@ export default function CreditCards({
   onAddInstallment: (plan: Omit<InstallmentPlan, "id">) => void;
   onRemoveInstallment: (id: string) => void;
   onMarkPaid?: (id: string) => void;
+  viewerId?: string;
 }) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { isOpen: isMsiOpen, onOpen: onMsiOpen, onOpenChange: onMsiChange } = useDisclosure();
@@ -265,7 +267,10 @@ export default function CreditCards({
 
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="font-bold text-sm">{c.label}</p>
+                      <p className="font-bold text-sm flex items-center gap-1.5">
+                        {c.label}
+                        <AddedByBadge addedBy={c.addedBy} viewerId={viewerId} dark />
+                      </p>
                       <p className="text-[10px] text-white/50 uppercase tracking-wider">
                         Corte día {c.cutoffDay} · Pago día {c.dueDay}
                       </p>
@@ -363,7 +368,10 @@ export default function CreditCards({
                       {bd.activePlans.map((s) => (
                         <div key={s.plan.id} className="group/msi">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="text-[11px] font-bold text-white/90 truncate max-w-[110px]">{s.plan.label}</span>
+                            <span className="text-[11px] font-bold text-white/90 truncate max-w-[110px] flex items-center gap-1">
+                              {s.plan.label}
+                              <AddedByBadge addedBy={s.plan.addedBy} viewerId={viewerId} dark />
+                            </span>
                             <div className="flex items-center gap-1.5">
                               <span className="text-[11px] tnum font-bold text-indigo-300">
                                 {money(s.monthlyPayment)}<span className="text-white/40 font-normal">/mes</span>

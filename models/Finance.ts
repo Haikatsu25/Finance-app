@@ -1,5 +1,10 @@
 import { Schema, model, models } from 'mongoose';
 
+const AddedBySchema = new Schema({
+    userId: String,
+    name: String,
+}, { _id: false });
+
 const FinanceItemSchema = new Schema({
     id: String,
     label: String,
@@ -8,6 +13,7 @@ const FinanceItemSchema = new Schema({
     type: String,
     category: String,
     cardId: String,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const SubscriptionItemSchema = new Schema({
@@ -15,7 +21,8 @@ const SubscriptionItemSchema = new Schema({
     label: String,
     amount: Number,
     billingCycle: String,
-    category: String
+    category: String,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const GoalItemSchema = new Schema({
@@ -23,7 +30,8 @@ const GoalItemSchema = new Schema({
     label: String,
     targetAmount: Number,
     currentAmount: Number,
-    deadline: String
+    deadline: String,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const TransactionItemSchema = new Schema({
@@ -34,6 +42,7 @@ const TransactionItemSchema = new Schema({
     type: String,       // expense | income
     category: String,
     source: String,     // manual | scan
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const CreditCardItemSchema = new Schema({
@@ -45,6 +54,7 @@ const CreditCardItemSchema = new Schema({
     dueDay: Number,
     apr: Number,
     minPayment: Number,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const InstallmentPlanSchema = new Schema({
@@ -54,12 +64,14 @@ const InstallmentPlanSchema = new Schema({
     totalAmount: Number,
     months: Number,
     startDate: String,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const BudgetItemSchema = new Schema({
     id: String,
     category: String,
     monthlyLimit: Number,
+    addedBy: AddedBySchema,
 }, { _id: false });
 
 const MemberSchema = new Schema({

@@ -46,6 +46,16 @@ export interface CreditCardItem {
     minPayment?: number;
 }
 
+// ── Compras a Meses Sin Intereses ────────────────────────────────
+export interface InstallmentPlan {
+    id: string;
+    cardId: string;          // tarjeta donde se hizo la compra
+    label: string;           // "Laptop", "Refrigerador"
+    totalAmount: number;     // monto total diferido
+    months: number;          // plazo: 3, 6, 9, 12, 18, 24
+    startDate: string;       // YYYY-MM-DD, fecha de la compra
+}
+
 // ── Presupuestos mensuales por categoría ─────────────────────────
 export interface BudgetItem {
     id: string;
@@ -65,6 +75,7 @@ export interface FinanceState {
     goals: GoalItem[];
     transactions: TransactionItem[];
     creditCards: CreditCardItem[];
+    installments: InstallmentPlan[];
     budgets: BudgetItem[];
     history: HistorySnapshot[];
     settings?: AppSettings;

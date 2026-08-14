@@ -68,7 +68,7 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove }: {
                     </span>
                     <button
                       onClick={() => onRemove(b.id)}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-0.5"
+                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-0.5"
                       aria-label={`Eliminar presupuesto de ${b.category}`}
                     >
                       <Trash2 size={13} />

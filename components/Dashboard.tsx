@@ -65,7 +65,7 @@ import {
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem,
-  TransactionItem, CreditCardItem, BudgetItem,
+  TransactionItem, CreditCardItem, BudgetItem, InstallmentPlan,
 } from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
@@ -301,7 +301,7 @@ function Section({ title, description, icon, items, total, color, categories, on
                   </span>
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
+                    className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
                     aria-label={`Eliminar ${item.label}`}
                   >
                     <Trash2 size={13} />
@@ -451,7 +451,7 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: {
                   </span>
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
+                    className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
                     aria-label={`Eliminar ${item.label}`}
                   >
                     <Trash2 size={14} />
@@ -516,6 +516,50 @@ function SubscriptionsSection({ items, total, onAdd, onRemove }: {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ABONO A META — con botón, no solo Enter
+// ─────────────────────────────────────────────────────────────────────────────
+function GoalContribution({ current, label, onContribute }: {
+  current: number; label: string; onContribute: (v: number) => void;
+}) {
+  const [value, setValue] = useState("");
+  const parsed = parseFloat(value);
+  const valid = value !== "" && Number.isFinite(parsed) && parsed > 0;
+
+  const commit = () => {
+    if (!valid) return;
+    onContribute(round2(parsed));
+    setValue("");
+  };
+
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        size="sm"
+        variant="faded"
+        placeholder="Abonar $"
+        aria-label={`Abonar a ${label}`}
+        className="w-24"
+        type="number"
+        min="0"
+        inputMode="decimal"
+        value={value}
+        onValueChange={setValue}
+        onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
+      />
+      <Button
+        isIconOnly size="sm" variant="flat" color="secondary"
+        className="min-w-8 h-8 bg-purple-500/20 text-purple-600 dark:text-purple-300"
+        isDisabled={!valid}
+        onPress={commit}
+        aria-label={`Guardar abono a ${label}`}
+      >
+        <Plus size={14} />
+      </Button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GOALS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
@@ -572,7 +616,7 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
                     </span>
                     <button
                       onClick={() => onRemove(item.id)}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
                       aria-label={`Eliminar meta ${item.label}`}
                     >
                       <Trash2 size={14} />
@@ -588,27 +632,12 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress }: {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <div className="flex justify-between items-center mt-3">
-                    <span className="text-[10px] text-default-400">Meta: {item.deadline}</span>
-                    <Input
-                      size="sm"
-                      variant="faded"
-                      placeholder="Abonar $"
-                      aria-label={`Abonar a ${item.label}`}
-                      className="w-24"
-                      type="number"
-                      min="0"
-                      inputMode="decimal"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const el = e.target as HTMLInputElement;
-                          const val = parseFloat(el.value);
-                          if (Number.isFinite(val) && val > 0) {
-                            onUpdateProgress(item.id, round2(item.currentAmount + val).toString());
-                          }
-                          el.value = "";
-                        }
-                      }}
+                  <div className="flex justify-between items-center mt-3 gap-2">
+                    <span className="text-[10px] text-default-400 shrink-0">Meta: {item.deadline}</span>
+                    <GoalContribution
+                      current={item.currentAmount}
+                      label={item.label}
+                      onContribute={(v) => onUpdateProgress(item.id, round2(item.currentAmount + v).toString())}
                     />
                   </div>
                 </div>
@@ -671,6 +700,7 @@ export default function Dashboard() {
   const [goals,         setGoals]         = useState<GoalItem[]>([]);
   const [transactions,  setTransactions]  = useState<TransactionItem[]>([]);
   const [creditCards,   setCreditCards]   = useState<CreditCardItem[]>([]);
+  const [installments,  setInstallments]  = useState<InstallmentPlan[]>([]);
   const [budgets,       setBudgets]       = useState<BudgetItem[]>([]);
   const [history,       setHistory]       = useState<HistorySnapshot[]>([]);
   const [privacy,       setPrivacy]       = useState(false);
@@ -715,6 +745,7 @@ export default function Dashboard() {
     setGoals(data.goals || []);
     setTransactions(data.transactions || []);
     setCreditCards(data.creditCards || []);
+    setInstallments(data.installments || []);
     setBudgets(data.budgets || []);
     setHistory(data.history || []);
     revRef.current = typeof data.rev === "number" ? data.rev : 0;
@@ -831,6 +862,7 @@ export default function Dashboard() {
     assets: FinanceItem[]; liabilities: FinanceItem[]; buckets: FinanceItem[];
     history: HistorySnapshot[]; subscriptions: SubscriptionItem[]; goals: GoalItem[];
     transactions: TransactionItem[]; creditCards: CreditCardItem[]; budgets: BudgetItem[];
+    installments: InstallmentPlan[];
   };
 
   async function doSave(payload: SavePayload) {
@@ -887,11 +919,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!mounted || isLoading || loadError) return;
     const timer = setTimeout(
-      () => saveData({ assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets }),
+      () => saveData({ assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments }),
       900,
     );
     return () => clearTimeout(timer);
-  }, [assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, mounted, isLoading, loadError, saveData]);
+  }, [assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments, mounted, isLoading, loadError, saveData]);
 
   // ── Totales ──────────────────────────────────────────────────
   const totalAssets      = round2(assets.reduce((s, i) => s + i.amount, 0));
@@ -1034,18 +1066,41 @@ export default function Dashboard() {
     const idx = creditCards.findIndex((i) => i.id === id);
     if (idx === -1) return;
     const item = creditCards[idx];
+    // Al quitar la tarjeta también se van sus compras a meses
+    const orphaned = installments.filter((p) => p.cardId === id);
     setCreditCards(creditCards.filter((i) => i.id !== id));
+    if (orphaned.length) setInstallments(installments.filter((p) => p.cardId !== id));
     scheduleUndo(item.label, () => {
       setCreditCards((prev) => {
         const next = [...prev];
         next.splice(Math.min(idx, next.length), 0, item);
         return next;
       });
+      if (orphaned.length) setInstallments((prev) => [...prev, ...orphaned]);
     });
   };
 
   const updateCardBalance = (id: string, balance: number) => {
-    setCreditCards(creditCards.map((c) => (c.id === id ? { ...c, balance } : c)));
+    setCreditCards((prev) => prev.map((c) => (c.id === id ? { ...c, balance } : c)));
+  };
+
+  // ── Compras a meses sin intereses ────────────────────────────
+  const addInstallment = (p: Omit<InstallmentPlan, "id">) => {
+    setInstallments((prev) => [...prev, { ...p, id: crypto.randomUUID() }]);
+  };
+
+  const removeInstallment = (id: string) => {
+    const idx = installments.findIndex((i) => i.id === id);
+    if (idx === -1) return;
+    const item = installments[idx];
+    setInstallments(installments.filter((i) => i.id !== id));
+    scheduleUndo(item.label, () => {
+      setInstallments((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(idx, next.length), 0, item);
+        return next;
+      });
+    });
   };
 
   // ── Presupuestos ─────────────────────────────────────────────
@@ -1469,7 +1524,7 @@ export default function Dashboard() {
 
           {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}
           {activeTab === "dashboard" && (
-            <UpcomingPayments cards={creditCards} subscriptions={subscriptions} />
+            <UpcomingPayments cards={creditCards} subscriptions={subscriptions} installments={installments} />
           )}
 
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
@@ -1519,9 +1574,12 @@ export default function Dashboard() {
               />
               <CreditCards
                 cards={creditCards}
+                installments={installments}
                 onAdd={addCreditCard}
                 onRemove={removeCreditCard}
                 onUpdateBalance={updateCardBalance}
+                onAddInstallment={addInstallment}
+                onRemoveInstallment={removeInstallment}
               />
               <Budgets
                 budgets={budgets}
@@ -1761,6 +1819,7 @@ export default function Dashboard() {
           isOpen={isVoiceOpen}
           onOpenChange={onVoiceChange}
           cards={creditCards}
+          installments={installments}
           available={available}
           onAddTransaction={(t) => {
             addTransaction(t);

@@ -5,7 +5,7 @@ import {
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button,
 } from "@heroui/react";
 import { Mic, MicOff, Check, CreditCard as CreditCardIcon, Volume2 } from "lucide-react";
-import { CreditCardItem, TransactionItem } from "@/types";
+import { CreditCardItem, TransactionItem, InstallmentPlan } from "@/types";
 import { money, round2 } from "@/lib/format";
 import { bestCardFor, CardRecommendation } from "@/lib/finance-utils";
 
@@ -116,10 +116,11 @@ function speak(text: string) {
 
 const fmtDate = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "long" });
 
-export default function VoiceAssistant({ isOpen, onOpenChange, cards, available, onAddTransaction }: {
+export default function VoiceAssistant({ isOpen, onOpenChange, cards, installments = [], available, onAddTransaction }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   cards: CreditCardItem[];
+  installments?: InstallmentPlan[];
   available: number;
   onAddTransaction: (t: Omit<TransactionItem, "id">) => void;
 }) {
@@ -187,7 +188,7 @@ export default function VoiceAssistant({ isOpen, onOpenChange, cards, available,
         speak(msg);
         return;
       }
-      const recs = bestCardFor(intent.amount, cards);
+      const recs = bestCardFor(intent.amount, cards, installments);
       setRecommendations(recs);
       const top = recs[0];
       let msg: string;

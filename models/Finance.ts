@@ -46,6 +46,15 @@ const CreditCardItemSchema = new Schema({
     minPayment: Number,
 }, { _id: false });
 
+const InstallmentPlanSchema = new Schema({
+    id: String,
+    cardId: String,
+    label: String,
+    totalAmount: Number,
+    months: Number,
+    startDate: String,
+}, { _id: false });
+
 const BudgetItemSchema = new Schema({
     id: String,
     category: String,
@@ -91,6 +100,7 @@ const FinanceSchema = new Schema({
     goals: [GoalItemSchema],
     transactions: [TransactionItemSchema],
     creditCards: [CreditCardItemSchema],
+    installments: [InstallmentPlanSchema],
     budgets: [BudgetItemSchema],
     settings: {
         autoSnapshotDays: { type: Number, default: 7 },

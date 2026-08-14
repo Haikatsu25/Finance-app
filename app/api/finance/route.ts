@@ -143,6 +143,29 @@ function cleanCreditCards(v: unknown): any[] {
     });
 }
 
+const ALLOWED_TERMS = new Set([3, 6, 9, 10, 12, 18, 24, 36]);
+
+function cleanInstallments(v: unknown): any[] {
+    if (!Array.isArray(v)) return [];
+    return v.slice(0, 200).flatMap((raw) => {
+        if (!raw || typeof raw !== 'object') return [];
+        const r = raw as any;
+        const label = cleanString(r.label);
+        const cardId = cleanString(r.cardId, 64);
+        const startDate = cleanDate(r.startDate);
+        if (!label || !cardId || !startDate) return [];
+        const months = typeof r.months === 'number' ? Math.round(r.months) : parseInt(String(r.months), 10);
+        return [{
+            id: cleanId(r.id),
+            cardId,
+            label,
+            totalAmount: cleanAmount(r.totalAmount),
+            months: ALLOWED_TERMS.has(months) ? months : 12,
+            startDate,
+        }];
+    });
+}
+
 function cleanBudgets(v: unknown): any[] {
     if (!Array.isArray(v)) return [];
     return v.slice(0, 100).flatMap((raw) => {
@@ -225,6 +248,7 @@ export async function GET() {
                     goals: [],
                     transactions: [],
                     creditCards: [],
+                    installments: [],
                     budgets: [],
                     history: [],
                 },
@@ -265,6 +289,7 @@ export async function POST(request: Request) {
         goals: cleanGoals(body?.goals),
         transactions: cleanTransactions(body?.transactions),
         creditCards: cleanCreditCards(body?.creditCards),
+        installments: cleanInstallments(body?.installments),
         budgets: cleanBudgets(body?.budgets),
         settings: cleanSettings(body?.settings),
         history: cleanHistory(body?.history),

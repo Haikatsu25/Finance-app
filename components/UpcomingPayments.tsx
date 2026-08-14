@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardBody } from "@heroui/react";
 import { CalendarClock, CreditCard as CreditCardIcon, Repeat } from "lucide-react";
-import { CreditCardItem, SubscriptionItem } from "@/types";
+import { CreditCardItem, SubscriptionItem, InstallmentPlan } from "@/types";
 import { money } from "@/lib/format";
 import { upcomingPayments, UpcomingPayment } from "@/lib/finance-utils";
 
@@ -21,11 +21,12 @@ function leftLabel(p: UpcomingPayment): string {
   return `en ${p.daysLeft} días`;
 }
 
-export default function UpcomingPayments({ cards, subscriptions }: {
+export default function UpcomingPayments({ cards, subscriptions, installments = [] }: {
   cards: CreditCardItem[];
   subscriptions: SubscriptionItem[];
+  installments?: InstallmentPlan[];
 }) {
-  const payments = upcomingPayments(cards, subscriptions, 30);
+  const payments = upcomingPayments(cards, subscriptions, 30, installments);
   if (payments.length === 0) return null;
 
   const urgent = payments.filter((p) => p.urgency === "overdue" || p.urgency === "urgent").length;
@@ -61,6 +62,9 @@ export default function UpcomingPayments({ cards, subscriptions }: {
                   <span className="text-xs font-bold text-default-700 truncate max-w-[100px]">{p.label}</span>
                 </div>
                 <p className="text-base font-black tnum">{money(p.amount)}</p>
+                {p.note && (
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-indigo-500">{p.note}</p>
+                )}
                 <p className={`text-[10px] font-semibold ${u.text}`}>
                   {p.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} · {leftLabel(p)}
                 </p>

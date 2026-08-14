@@ -1,4 +1,4 @@
-import { TransactionItem, CreditCardItem, SubscriptionItem } from "@/types";
+import { TransactionItem, CreditCardItem, SubscriptionItem, InstallmentPlan } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────
 // FECHAS DE PAGO DE TARJETAS
@@ -32,6 +32,7 @@ export interface UpcomingPayment {
     daysLeft: number;
     kind: "card" | "subscription";
     urgency: "overdue" | "urgent" | "soon" | "ok"; // <0 | ≤3 | ≤7 | resto
+    note?: string;
 }
 
 function urgencyOf(daysLeft: number): UpcomingPayment["urgency"] {
@@ -46,22 +47,26 @@ export function upcomingPayments(
     cards: CreditCardItem[],
     subscriptions: SubscriptionItem[],
     horizon = 30,
+    installments: InstallmentPlan[] = [],
 ): UpcomingPayment[] {
     const out: UpcomingPayment[] = [];
 
     for (const c of cards) {
-        if (c.balance <= 0) continue;
+        // Lo que hay que pagar este corte = contado + mensualidades MSI
+        const { dueThisMonth, monthlyInstallment } = cardDebtBreakdown(c, installments);
+        if (dueThisMonth <= 0) continue;
         const dueDate = nextOccurrence(c.dueDay);
         const daysLeft = daysUntil(dueDate);
         if (daysLeft > horizon) continue;
         out.push({
             id: `card-${c.id}`,
             label: c.label,
-            amount: c.balance,
+            amount: dueThisMonth,
             dueDate,
             daysLeft,
             kind: "card",
             urgency: urgencyOf(daysLeft),
+            note: monthlyInstallment > 0 ? `incluye MSI` : undefined,
         });
     }
 
@@ -87,6 +92,113 @@ export function upcomingPayments(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// MESES SIN INTERESES (MSI)
+// Cada compra diferida se paga en `months` mensualidades iguales.
+// El saldo pendiente sí ocupa tu línea de crédito, pero NO es deuda
+// que debas liquidar este mes: solo la mensualidad en curso.
+// ─────────────────────────────────────────────────────────────────
+
+export interface InstallmentStatus {
+    plan: InstallmentPlan;
+    monthlyPayment: number;
+    monthsPaid: number;
+    monthsLeft: number;
+    paidAmount: number;
+    remainingAmount: number;
+    nextChargeDate: Date | null;
+    progress: number;        // 0–100
+    done: boolean;
+}
+
+/** Meses completos transcurridos entre dos fechas. */
+function fullMonthsBetween(start: Date, end: Date): number {
+    let m = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (end.getDate() < start.getDate()) m -= 1;
+    return Math.max(0, m);
+}
+
+function addMonths(date: Date, n: number): Date {
+    const d = new Date(date.getFullYear(), date.getMonth() + n, 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return new Date(d.getFullYear(), d.getMonth(), Math.min(date.getDate(), lastDay));
+}
+
+export function installmentStatus(plan: InstallmentPlan, from: Date = new Date()): InstallmentStatus {
+    const months = Math.max(1, plan.months || 1);
+    const monthlyPayment = Math.round((plan.totalAmount / months) * 100) / 100;
+    const start = new Date(plan.startDate + "T12:00:00");
+    const elapsed = isNaN(start.getTime()) ? 0 : fullMonthsBetween(start, from);
+    const monthsPaid = Math.min(months, elapsed);
+    const monthsLeft = months - monthsPaid;
+    const paidAmount = Math.round(monthlyPayment * monthsPaid * 100) / 100;
+    const remainingAmount = Math.round((plan.totalAmount - paidAmount) * 100) / 100;
+
+    return {
+        plan,
+        monthlyPayment,
+        monthsPaid,
+        monthsLeft,
+        paidAmount,
+        remainingAmount: Math.max(0, remainingAmount),
+        nextChargeDate: monthsLeft > 0 && !isNaN(start.getTime()) ? addMonths(start, monthsPaid + 1) : null,
+        progress: Math.min(100, (monthsPaid / months) * 100),
+        done: monthsLeft <= 0,
+    };
+}
+
+export interface CardDebtBreakdown {
+    cash: number;                 // deuda de contado (a liquidar este corte)
+    installmentRemaining: number; // saldo pendiente a meses
+    monthlyInstallment: number;   // suma de mensualidades activas
+    totalOwed: number;            // contado + saldo a meses
+    dueThisMonth: number;         // contado + mensualidades de este mes
+    activePlans: InstallmentStatus[];
+}
+
+export function cardDebtBreakdown(
+    card: CreditCardItem,
+    installments: InstallmentPlan[],
+    from: Date = new Date(),
+): CardDebtBreakdown {
+    const statuses = installments
+        .filter((p) => p.cardId === card.id)
+        .map((p) => installmentStatus(p, from));
+    const active = statuses.filter((s) => !s.done);
+
+    const installmentRemaining = Math.round(active.reduce((s, i) => s + i.remainingAmount, 0) * 100) / 100;
+    const monthlyInstallment = Math.round(active.reduce((s, i) => s + i.monthlyPayment, 0) * 100) / 100;
+    const cash = card.balance || 0;
+
+    return {
+        cash,
+        installmentRemaining,
+        monthlyInstallment,
+        totalOwed: Math.round((cash + installmentRemaining) * 100) / 100,
+        dueThisMonth: Math.round((cash + monthlyInstallment) * 100) / 100,
+        activePlans: active.sort((a, b) => a.monthsLeft - b.monthsLeft),
+    };
+}
+
+/** Totales globales de todas las tarjetas. */
+export function totalDebtBreakdown(cards: CreditCardItem[], installments: InstallmentPlan[], from: Date = new Date()) {
+    let cash = 0, installmentRemaining = 0, monthlyInstallment = 0;
+    for (const c of cards) {
+        const b = cardDebtBreakdown(c, installments, from);
+        cash += b.cash;
+        installmentRemaining += b.installmentRemaining;
+        monthlyInstallment += b.monthlyInstallment;
+    }
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    return {
+        cash: r2(cash),
+        installmentRemaining: r2(installmentRemaining),
+        monthlyInstallment: r2(monthlyInstallment),
+        totalOwed: r2(cash + installmentRemaining),
+        dueThisMonth: r2(cash + monthlyInstallment),
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────
 // ¿EN QUÉ TARJETA ME CONVIENE COMPRAR?
 // La compra de hoy cae en el estado de cuenta que cierra en el
 // PRÓXIMO corte; se paga en la fecha límite POSTERIOR a ese corte.
@@ -102,7 +214,12 @@ export interface CardRecommendation {
     fits: boolean;           // ¿alcanza el crédito para el monto?
 }
 
-export function bestCardFor(amount: number, cards: CreditCardItem[], from: Date = new Date()): CardRecommendation[] {
+export function bestCardFor(
+    amount: number,
+    cards: CreditCardItem[],
+    installments: InstallmentPlan[] = [],
+    from: Date = new Date(),
+): CardRecommendation[] {
     const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
 
     const recs = cards.map((card) => {
@@ -122,7 +239,9 @@ export function bestCardFor(amount: number, cards: CreditCardItem[], from: Date 
             dueDate = clamp(statementClose.getFullYear(), statementClose.getMonth() + 1, card.dueDay);
         }
         const floatDays = daysUntil(dueDate, today);
-        const availableCredit = Math.max(0, (card.creditLimit || 0) - (card.balance || 0));
+        // El saldo pendiente a meses TAMBIÉN ocupa la línea de crédito
+        const { totalOwed } = cardDebtBreakdown(card, installments, today);
+        const availableCredit = Math.max(0, (card.creditLimit || 0) - totalOwed);
         const fits = card.creditLimit > 0 ? availableCredit >= amount : true;
         return { card, statementClose, dueDate, floatDays, availableCredit, fits };
     });

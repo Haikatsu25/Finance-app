@@ -1018,7 +1018,6 @@ export default function Dashboard() {
     (s, i) => s + (i.billingCycle === "anual" ? i.amount / 12 : i.amount), 0,
   ));
   const available        = round2(totalAssets - totalLiabilities - totalBuckets);
-  const afterFixed       = round2(available - totalFixedCosts);
 
   const animatedAvailable = useAnimatedCounter(available);
   const isPositive        = available >= 0;
@@ -1044,6 +1043,11 @@ export default function Dashboard() {
   const msiMonthlyByCard: Record<string, number> = Object.fromEntries(
     creditCards.map((c) => [c.id, cardDebtBreakdown(c, installments).monthlyInstallment]),
   );
+
+  // Total de mensualidades MSI del mes y balance REAL tras todos los
+  // pagos del mes (gastos fijos + mensualidades de meses sin intereses)
+  const totalMsiMonthly = round2(Object.values(msiMonthlyByCard).reduce((s, v) => s + v, 0));
+  const afterThisMonth = round2(available - totalFixedCosts - totalMsiMonthly);
 
   /**
    * Botón "Pagado": la deuda de contado queda en $0 y los gastos
@@ -1583,10 +1587,14 @@ export default function Dashboard() {
                   }`}>
                     {!isPositive && "−"}{money(Math.abs(animatedAvailable))}
                   </h2>
-                  {subscriptions.length > 0 && (
+                  {(subscriptions.length > 0 || totalMsiMonthly > 0) && (
                     <p className="text-white/70 text-sm mb-1 tnum">
-                      Después de gastos fijos: <span className={`font-bold ${afterFixed >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{money(afterFixed)}</span>
-                      <span className="text-white/40"> · {money(totalFixedCosts)}/mes en fijos</span>
+                      Real después de pagar este mes:{" "}
+                      <span className={`font-bold ${afterThisMonth >= 0 ? "text-emerald-400" : "text-rose-400"}`}>{money(afterThisMonth)}</span>
+                      <span className="text-white/40">
+                        {totalFixedCosts > 0 && ` · ${money(totalFixedCosts)} fijos`}
+                        {totalMsiMonthly > 0 && ` · ${money(totalMsiMonthly)} de MSI`}
+                      </span>
                     </p>
                   )}
                   <p className="text-white/40 text-sm mb-5">Actualizado ahora</p>

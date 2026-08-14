@@ -301,9 +301,14 @@ export default function CreditCards({
                     </p>
                   )}
 
-                  <p className="text-[11px] text-white/50 tnum mb-3">
-                    Usado {money(bd.totalOwed)} de {money(c.creditLimit)} · {util.toFixed(0)}%
-                  </p>
+                  <div className="flex justify-between items-baseline gap-2 mb-3 flex-wrap">
+                    <p className="text-[11px] text-white/50 tnum">
+                      Usado {money(bd.totalOwed)} de {money(c.creditLimit)} · {util.toFixed(0)}%
+                    </p>
+                    <p className={`text-[11px] tnum font-bold ${util >= 80 ? "text-rose-300" : "text-emerald-300"}`}>
+                      Te quedan {money(Math.max(0, c.creditLimit - bd.totalOwed))}
+                    </p>
+                  </div>
 
                   <div className="h-1.5 rounded-full bg-white/15 mb-3">
                     <div className={`h-full rounded-full ${utilizationColor(util)} transition-all duration-500`} style={{ width: `${util}%` }} />

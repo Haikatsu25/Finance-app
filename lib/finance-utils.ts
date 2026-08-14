@@ -87,6 +87,51 @@ export function upcomingPayments(
 }
 
 // ─────────────────────────────────────────────────────────────────
+// ¿EN QUÉ TARJETA ME CONVIENE COMPRAR?
+// La compra de hoy cae en el estado de cuenta que cierra en el
+// PRÓXIMO corte; se paga en la fecha límite POSTERIOR a ese corte.
+// Más días de financiamiento = mejor (dinero gratis más tiempo).
+// ─────────────────────────────────────────────────────────────────
+
+export interface CardRecommendation {
+    card: CreditCardItem;
+    statementClose: Date;    // corte donde cae la compra de hoy
+    dueDate: Date;           // cuándo se paga realmente
+    floatDays: number;       // días de financiamiento sin intereses
+    availableCredit: number; // límite − deuda actual
+    fits: boolean;           // ¿alcanza el crédito para el monto?
+}
+
+export function bestCardFor(amount: number, cards: CreditCardItem[], from: Date = new Date()): CardRecommendation[] {
+    const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+
+    const recs = cards.map((card) => {
+        // Corte donde cae una compra hecha HOY (si hoy es el corte, la
+        // compra normalmente entra al siguiente ciclo: usamos > hoy)
+        const clamp = (y: number, m: number, d: number) => {
+            const last = new Date(y, m + 1, 0).getDate();
+            return new Date(y, m, Math.min(d, last));
+        };
+        let statementClose = clamp(today.getFullYear(), today.getMonth(), card.cutoffDay);
+        if (statementClose <= today) {
+            statementClose = clamp(today.getFullYear(), today.getMonth() + 1, card.cutoffDay);
+        }
+        // Fecha límite de pago posterior al corte
+        let dueDate = clamp(statementClose.getFullYear(), statementClose.getMonth(), card.dueDay);
+        if (dueDate <= statementClose) {
+            dueDate = clamp(statementClose.getFullYear(), statementClose.getMonth() + 1, card.dueDay);
+        }
+        const floatDays = daysUntil(dueDate, today);
+        const availableCredit = Math.max(0, (card.creditLimit || 0) - (card.balance || 0));
+        const fits = card.creditLimit > 0 ? availableCredit >= amount : true;
+        return { card, statementClose, dueDate, floatDays, availableCredit, fits };
+    });
+
+    // Las que sí alcanzan primero, ordenadas por más días de financiamiento
+    return recs.sort((a, b) => (Number(b.fits) - Number(a.fits)) || (b.floatDays - a.floatDays));
+}
+
+// ─────────────────────────────────────────────────────────────────
 // SIMULADOR DE DEUDAS — amortización con pago fijo mensual
 // ─────────────────────────────────────────────────────────────────
 

@@ -16,6 +16,37 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// ── Notificaciones push (recordatorios de tarjetas) ──────────────
+self.addEventListener("push", (event) => {
+  let payload = { title: "Finance Control", body: "Tienes un recordatorio.", url: "/" };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch { /* payload no-JSON */ }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icon.svg",
+      badge: "/icon.svg",
+      data: { url: payload.url || "/" },
+      tag: payload.title, // agrupa duplicados
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if ("focus" in client) return client.focus();
+      }
+      return clients.openWindow(url);
+    })
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;

@@ -56,21 +56,29 @@ import {
   ReceiptText,
   Eye,
   EyeOff,
+  Mic,
+  Fingerprint,
+  Bell,
+  BellOff,
+  Lock,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
   FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem,
   TransactionItem, CreditCardItem, BudgetItem,
 } from "@/types";
-import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
+import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, moneyExact, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
+import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
+import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import FinanceAI from "./FinanceAI";
 import Transactions from "./Transactions";
 import CreditCards from "./CreditCards";
 import Budgets from "./Budgets";
 import UpcomingPayments from "./UpcomingPayments";
+import VoiceAssistant from "./VoiceAssistant";
 import { startTour } from "./Tutorial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -666,6 +674,18 @@ export default function Dashboard() {
   const [budgets,       setBudgets]       = useState<BudgetItem[]>([]);
   const [history,       setHistory]       = useState<HistorySnapshot[]>([]);
   const [privacy,       setPrivacy]       = useState(false);
+
+  // ── Bloqueo biométrico ───────────────────────────────────────
+  const [locked,        setLocked]        = useState(false);
+  const [lockOn,        setLockOn]        = useState(false);
+  const [bioAvailable,  setBioAvailable]  = useState(false);
+  const [unlocking,     setUnlocking]     = useState(false);
+
+  // ── Notificaciones push ──────────────────────────────────────
+  const [pushStatus, setPushStatus] = useState<"on" | "off" | "denied" | "unsupported">("unsupported");
+  const [pushBusy,   setPushBusy]   = useState(false);
+
+  const { user } = useUser();
   const [mounted,       setMounted]       = useState(false);
   const [isLoading,     setIsLoading]     = useState(true);
   const [loadError,     setLoadError]     = useState(false);
@@ -703,6 +723,14 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
     setPrivacy(loadPrivacyMode());
+
+    // Candado biométrico: si está activado, la app abre bloqueada
+    const enabled = isLockEnabled();
+    setLockOn(enabled);
+    setLocked(enabled);
+    biometricsAvailable().then(setBioAvailable);
+    getPushStatus().then(setPushStatus);
+
     const fetchData = async () => {
       try {
         const res = await fetch("/api/finance");
@@ -757,6 +785,40 @@ export default function Dashboard() {
     const next = !privacy;
     setPrivacyMode(next);
     setPrivacy(next);
+  };
+
+  // ── Candado biométrico: handlers ─────────────────────────────
+  const handleUnlock = async () => {
+    setUnlocking(true);
+    const ok = await verifyLock();
+    setUnlocking(false);
+    if (ok) setLocked(false);
+  };
+
+  const toggleBiometricLock = async () => {
+    if (lockOn) {
+      disableLock();
+      setLockOn(false);
+      return;
+    }
+    const ok = await enableLock(user?.firstName || user?.username || "usuario");
+    if (ok) setLockOn(true);
+  };
+
+  // ── Notificaciones: handlers ─────────────────────────────────
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushStatus === "on") {
+        await disablePush();
+        setPushStatus("off");
+      } else {
+        const res = await enablePush();
+        setPushStatus(res.ok ? "on" : res.reason === "denied" ? "denied" : "off");
+      }
+    } finally {
+      setPushBusy(false);
+    }
   };
 
   // ── Guardado con control de conflictos ───────────────────────
@@ -1001,6 +1063,7 @@ export default function Dashboard() {
   const { isOpen: isQuickAddOpen, onOpen: onQuickAddOpen, onOpenChange: onQuickAddChange } = useDisclosure();
   const { isOpen: isClearOpen, onOpen: onClearOpen, onOpenChange: onClearChange } = useDisclosure();
   const { isOpen: isImportOpen, onOpen: onImportOpen, onOpenChange: onImportChange } = useDisclosure();
+  const { isOpen: isVoiceOpen, onOpen: onVoiceOpen, onOpenChange: onVoiceChange } = useDisclosure();
 
   const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
   const [importPreview, setImportPreview] = useState<{ data: any; counts: string } | null>(null);
@@ -1186,6 +1249,14 @@ export default function Dashboard() {
             <SignedIn>
               <Button
                 isIconOnly variant="light" size="sm"
+                onPress={onVoiceOpen}
+                className="text-default-400 hover:text-emerald-500"
+                aria-label="Asistente de voz"
+              >
+                <Mic size={18} />
+              </Button>
+              <Button
+                isIconOnly variant="light" size="sm"
                 onPress={togglePrivacy}
                 className="text-default-400 hover:text-emerald-500"
                 aria-label={privacy ? "Mostrar montos" : "Ocultar montos"}
@@ -1247,6 +1318,31 @@ export default function Dashboard() {
 
       {/* ── SIGNED IN ─────────────────────────────────────────── */}
       <SignedIn>
+        {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
+        {locked && (
+          <div className="fixed inset-0 z-[100] hero-card flex flex-col items-center justify-center gap-6 p-6">
+            <div className="p-5 rounded-3xl bg-white/5 border border-white/15">
+              <Fingerprint size={44} className="text-emerald-400" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-black text-white mb-1">Finance Control está bloqueada</h2>
+              <p className="text-sm text-white/50">Usa tu huella o rostro para entrar</p>
+            </div>
+            <Button
+              size="lg"
+              className="bg-white text-black font-bold px-8"
+              startContent={<Lock size={17} />}
+              isLoading={unlocking}
+              onPress={handleUnlock}
+            >
+              Desbloquear
+            </Button>
+            <p className="text-[11px] text-white/30 max-w-[260px] text-center">
+              Si tu huella no funciona, desbloquea con el método de tu dispositivo (PIN/patrón) cuando el sistema lo ofrezca.
+            </p>
+          </div>
+        )}
+
         {isLoading ? (
           <DashboardSkeleton />
         ) : loadError ? (
@@ -1660,6 +1756,17 @@ export default function Dashboard() {
           </ModalContent>
         </Modal>
 
+        {/* ── MODAL: asistente de voz ─────────────────────────── */}
+        <VoiceAssistant
+          isOpen={isVoiceOpen}
+          onOpenChange={onVoiceChange}
+          cards={creditCards}
+          available={available}
+          onAddTransaction={(t) => {
+            addTransaction(t);
+          }}
+        />
+
         {/* ── MODAL: detalles de snapshot ─────────────────────── */}
         <Modal isOpen={isOpen} onOpenChange={onOpenChange} size="3xl" scrollBehavior="inside" backdrop="blur">
           <ModalContent>
@@ -1749,9 +1856,49 @@ export default function Dashboard() {
           <ModalContent>
             {(onClose) => (
               <>
-                <ModalHeader className="flex flex-col gap-1">Ajustes de Datos</ModalHeader>
+                <ModalHeader className="flex flex-col gap-1">Ajustes</ModalHeader>
                 <ModalBody className="pb-6">
-                  <p className="text-sm text-default-500 mb-4">
+                  {/* ── Seguridad ─────────────────────────────── */}
+                  <p className="text-xs font-bold uppercase tracking-wider text-default-400">Seguridad</p>
+                  <Button
+                    color={lockOn ? "success" : "default"}
+                    variant="flat"
+                    startContent={<Fingerprint size={18} />}
+                    isDisabled={!bioAvailable && !lockOn}
+                    onPress={toggleBiometricLock}
+                    className="justify-start"
+                  >
+                    {lockOn ? "Bloqueo biométrico: ACTIVADO (toca para quitar)" : "Activar bloqueo con huella / Face ID"}
+                  </Button>
+                  {!bioAvailable && !lockOn && (
+                    <p className="text-[11px] text-default-400 -mt-1">
+                      Este dispositivo no tiene huella/Face ID disponible (o el sitio no está en HTTPS).
+                    </p>
+                  )}
+
+                  {/* ── Notificaciones ────────────────────────── */}
+                  <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Recordatorios</p>
+                  <Button
+                    color={pushStatus === "on" ? "success" : "default"}
+                    variant="flat"
+                    startContent={pushStatus === "on" ? <Bell size={18} /> : <BellOff size={18} />}
+                    isDisabled={pushStatus === "unsupported" || pushStatus === "denied" || pushBusy}
+                    isLoading={pushBusy}
+                    onPress={togglePush}
+                    className="justify-start"
+                  >
+                    {pushStatus === "on" ? "Recordatorios: ACTIVADOS (toca para quitar)"
+                      : pushStatus === "denied" ? "Notificaciones bloqueadas en el navegador"
+                      : pushStatus === "unsupported" ? "Este navegador no soporta notificaciones"
+                      : "Activar recordatorios de corte y pago"}
+                  </Button>
+                  <p className="text-[11px] text-default-400 -mt-1">
+                    Te avisamos 3 días antes, 1 día antes y el día de tu fecha límite de pago, y un día antes del corte.
+                  </p>
+
+                  {/* ── Datos ─────────────────────────────────── */}
+                  <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Datos</p>
+                  <p className="text-sm text-default-500 mb-2">
                     Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
                   </p>
                   <div className="flex flex-col gap-3">

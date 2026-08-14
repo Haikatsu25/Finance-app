@@ -52,6 +52,15 @@ const BudgetItemSchema = new Schema({
     monthlyLimit: Number,
 }, { _id: false });
 
+const PushSubscriptionSchema = new Schema({
+    endpoint: String,
+    keys: {
+        p256dh: String,
+        auth: String,
+    },
+    createdAt: String,
+}, { _id: false });
+
 const HistorySnapshotSchema = new Schema({
     id: String,
     date: String,
@@ -86,6 +95,9 @@ const FinanceSchema = new Schema({
     settings: {
         autoSnapshotDays: { type: Number, default: 7 },
     },
+    // Suscripciones de notificaciones push (una por dispositivo/navegador).
+    // NO viaja por el POST general de /api/finance: se maneja aparte.
+    pushSubscriptions: [PushSubscriptionSchema],
     history: [HistorySnapshotSchema],
 }, { timestamps: true });
 

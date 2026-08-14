@@ -30,13 +30,14 @@ export async function POST(request: Request) {
 
     try {
         await dbConnect();
+        // Si soy miembro de cuentas compartidas, la suscripción vive en ese doc
+        const shared = await Finance.findOne({ 'members.userId': userId }).select('_id');
+        const target = shared ? { _id: shared._id } : { userId };
+
         // Reemplazar si ya existe ese endpoint, luego agregar
+        await Finance.updateOne(target, { $pull: { pushSubscriptions: { endpoint } } });
         await Finance.updateOne(
-            { userId },
-            { $pull: { pushSubscriptions: { endpoint } } },
-        );
-        await Finance.updateOne(
-            { userId },
+            target,
             {
                 $push: {
                     pushSubscriptions: {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
                     },
                 },
             },
-            { upsert: true },
+            shared ? {} : { upsert: true },
         );
         return NextResponse.json({ ok: true });
     } catch (error) {
@@ -70,8 +71,9 @@ export async function DELETE(request: Request) {
 
     try {
         await dbConnect();
+        const shared = await Finance.findOne({ 'members.userId': userId }).select('_id');
         await Finance.updateOne(
-            { userId },
+            shared ? { _id: shared._id } : { userId },
             { $pull: { pushSubscriptions: { endpoint } } },
         );
         return NextResponse.json({ ok: true });

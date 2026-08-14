@@ -62,6 +62,10 @@ import {
   BellOff,
   Lock,
   CreditCard,
+  Users,
+  UserPlus,
+  Copy,
+  LogOut,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
@@ -800,7 +804,18 @@ export default function Dashboard() {
   const [pushStatus, setPushStatus] = useState<"on" | "off" | "denied" | "unsupported">("unsupported");
   const [pushBusy,   setPushBusy]   = useState(false);
 
+  // ── Cuentas compartidas ──────────────────────────────────────
+  const [members,      setMembers]      = useState<{ userId: string; name?: string; email?: string }[]>([]);
+  const [docOwnerId,   setDocOwnerId]   = useState<string | null>(null);
+  const [inviteCode,   setInviteCode]   = useState<string | null>(null);
+  const [joinCode,     setJoinCode]     = useState("");
+  const [shareBusy,    setShareBusy]    = useState(false);
+  const [shareError,   setShareError]   = useState<string | null>(null);
+  const [leaveArmed,   setLeaveArmed]   = useState(false);
+  const [codeCopied,   setCodeCopied]   = useState(false);
+
   const { user } = useUser();
+  const isSharedMember = !!(docOwnerId && user?.id && docOwnerId !== user.id);
   const [mounted,       setMounted]       = useState(false);
   const [isLoading,     setIsLoading]     = useState(true);
   const [loadError,     setLoadError]     = useState(false);
@@ -833,6 +848,8 @@ export default function Dashboard() {
     setInstallments(data.installments || []);
     setBudgets(data.budgets || []);
     setHistory(data.history || []);
+    setMembers(data.members || []);
+    setDocOwnerId(data.userId || null);
     revRef.current = typeof data.rev === "number" ? data.rev : 0;
   }, []);
 
@@ -919,6 +936,90 @@ export default function Dashboard() {
     }
     const ok = await enableLock(user?.firstName || user?.username || "usuario");
     if (ok) setLockOn(true);
+  };
+
+  // ── Cuentas compartidas: handlers ────────────────────────────
+  const shareCall = async (payload: Record<string, unknown>) => {
+    const res = await fetch("/api/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, data };
+  };
+
+  const generateInvite = async () => {
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      const { ok, data } = await shareCall({ action: "invite" });
+      if (ok && data.code) setInviteCode(data.code);
+      else setShareError("No se pudo generar el código. Intenta de nuevo.");
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch { /* clipboard no disponible */ }
+  };
+
+  const joinShared = async () => {
+    if (!joinCode.trim()) return;
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      const { ok, data } = await shareCall({
+        action: "join",
+        code: joinCode.trim(),
+        name: user?.fullName || user?.username || "",
+        email: user?.primaryEmailAddress?.emailAddress || "",
+      });
+      if (ok) {
+        window.location.reload(); // cargar las cuentas compartidas
+      } else {
+        setShareError(
+          data?.error === "invalid_or_expired" ? "Código inválido o vencido."
+          : data?.error === "own_code" ? "Ese código es tuyo — compártelo con la otra persona."
+          : data?.error === "full" ? "Ese grupo ya está lleno."
+          : data?.error === "has_members" ? "Ya tienes miembros en tus cuentas; no puedes unirte a otras."
+          : "No se pudo unir. Revisa el código.",
+        );
+      }
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const leaveShared = async () => {
+    if (!leaveArmed) {
+      setLeaveArmed(true);
+      setTimeout(() => setLeaveArmed(false), 4000);
+      return;
+    }
+    setShareBusy(true);
+    try {
+      await shareCall({ action: "leave" });
+      window.location.reload(); // regresar a mis cuentas personales
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const removeMember = async (memberId: string) => {
+    setShareBusy(true);
+    try {
+      const { ok } = await shareCall({ action: "remove", memberId });
+      if (ok) setMembers((prev) => prev.filter((m) => m.userId !== memberId));
+    } finally {
+      setShareBusy(false);
+    }
   };
 
   // ── Notificaciones: handlers ─────────────────────────────────
@@ -2092,6 +2193,103 @@ export default function Dashboard() {
                   <p className="text-[11px] text-default-400 -mt-1">
                     Te avisamos 3 días antes, 1 día antes y el día de tu fecha límite de pago, y un día antes del corte.
                   </p>
+
+                  {/* ── Cuentas compartidas ───────────────────── */}
+                  <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Cuentas compartidas</p>
+
+                  {isSharedMember ? (
+                    <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 space-y-2">
+                      <p className="text-sm text-default-600 flex items-center gap-2">
+                        <Users size={15} className="text-cyan-500 shrink-0" />
+                        Estás viendo <span className="font-bold">cuentas compartidas</span> de otra persona.
+                      </p>
+                      <p className="text-[11px] text-default-400">
+                        Tus datos personales se conservan y regresan cuando salgas.
+                      </p>
+                      <Button
+                        size="sm" color="danger" variant="flat"
+                        startContent={<LogOut size={14} />}
+                        isLoading={shareBusy}
+                        onPress={leaveShared}
+                      >
+                        {leaveArmed ? "¿Seguro? Toca de nuevo para salir" : "Salir de estas cuentas"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {members.length > 0 && (
+                        <div className="space-y-1.5">
+                          {members.map((m) => (
+                            <div key={m.userId} className="flex items-center gap-2 p-2 rounded-xl bg-default-100/60 border border-default-200/50">
+                              <Users size={13} className="text-cyan-500 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-default-700 truncate">{m.name || "Sin nombre"}</p>
+                                {m.email && <p className="text-[10px] text-default-400 truncate">{m.email}</p>}
+                              </div>
+                              <button
+                                onClick={() => removeMember(m.userId)}
+                                className="p-1.5 rounded-lg text-default-300 hover:text-rose-500 hover:bg-rose-500/10 transition-all shrink-0"
+                                aria-label={`Quitar a ${m.name || m.email || "miembro"}`}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {inviteCode ? (
+                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-1.5">
+                          <p className="text-[11px] text-default-500">Comparte este código (vence en 72 h):</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl font-black tracking-[0.25em] tnum text-emerald-600 dark:text-emerald-400">
+                              {inviteCode}
+                            </span>
+                            <Button isIconOnly size="sm" variant="flat" color={codeCopied ? "success" : "default"} onPress={copyInvite} aria-label="Copiar código">
+                              {codeCopied ? <Check size={14} /> : <Copy size={14} />}
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-default-400">
+                            La otra persona lo ingresa en Ajustes → &quot;Unirme con código&quot; desde su propia cuenta.
+                          </p>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="flat" color="primary"
+                          startContent={<UserPlus size={16} />}
+                          isLoading={shareBusy}
+                          onPress={generateInvite}
+                          className="justify-start"
+                        >
+                          Invitar a alguien (generar código)
+                        </Button>
+                      )}
+
+                      {members.length === 0 && (
+                        <div className="flex gap-2">
+                          <Input
+                            size="sm" variant="bordered" placeholder="Código de invitación"
+                            aria-label="Código de invitación"
+                            value={joinCode}
+                            onValueChange={(v) => setJoinCode(v.toUpperCase())}
+                            maxLength={6}
+                            classNames={{ input: "uppercase tracking-widest font-bold" }}
+                            className="flex-1"
+                          />
+                          <Button
+                            size="sm" variant="flat" color="secondary" className="font-bold"
+                            isDisabled={joinCode.trim().length !== 6}
+                            isLoading={shareBusy}
+                            onPress={joinShared}
+                          >
+                            Unirme
+                          </Button>
+                        </div>
+                      )}
+
+                      {shareError && <p className="text-[11px] text-rose-500 font-semibold">{shareError}</p>}
+                    </>
+                  )}
 
                   {/* ── Datos ─────────────────────────────────── */}
                   <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Datos</p>

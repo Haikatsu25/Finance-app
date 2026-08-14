@@ -229,6 +229,17 @@ export async function GET() {
     try {
         await dbConnect();
 
+        // ── Cuentas compartidas: si soy miembro del documento de otra
+        //    persona, ESE documento es mi fuente de verdad ─────────────
+        const shared = await Finance.findOne({ 'members.userId': userId });
+        if (shared) {
+            if (typeof shared.rev !== 'number') {
+                await Finance.updateOne({ _id: shared._id }, { $set: { rev: 0 } });
+                shared.rev = 0;
+            }
+            return NextResponse.json(shared);
+        }
+
         // Documentos creados por versiones anteriores no tienen `rev`.
         // Normalizarlo aquí evita falsos conflictos al guardar.
         await Finance.updateOne(
@@ -300,6 +311,31 @@ export async function POST(request: Request) {
 
     try {
         await dbConnect();
+
+        // ── Cuentas compartidas: los guardados de un miembro van al
+        //    documento del dueño, con el mismo control de conflictos ──
+        const shared = await Finance.findOne({ 'members.userId': userId }).select('_id');
+        if (shared) {
+            const revMatch = baseRev === 0 || baseRev === null
+                ? { $or: [{ rev: baseRev ?? 0 }, { rev: { $exists: false } }, { rev: null }] }
+                : { rev: baseRev };
+            if (baseRev !== null) {
+                const updated = await Finance.findOneAndUpdate(
+                    { _id: shared._id, ...revMatch },
+                    { $set: { ...clean, rev: baseRev + 1 } },
+                    { new: true }
+                );
+                if (updated) return NextResponse.json(updated);
+                const current = await Finance.findById(shared._id);
+                return NextResponse.json({ error: 'conflict', server: current }, { status: 409 });
+            }
+            const updated = await Finance.findOneAndUpdate(
+                { _id: shared._id },
+                { $set: clean, $inc: { rev: 1 } },
+                { new: true }
+            );
+            return NextResponse.json(updated);
+        }
 
         if (baseRev !== null) {
             // Guardado con control de concurrencia optimista.

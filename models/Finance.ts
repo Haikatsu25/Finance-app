@@ -62,6 +62,13 @@ const BudgetItemSchema = new Schema({
     monthlyLimit: Number,
 }, { _id: false });
 
+const MemberSchema = new Schema({
+    userId: String,
+    name: String,
+    email: String,
+    joinedAt: String,
+}, { _id: false });
+
 const PushSubscriptionSchema = new Schema({
     endpoint: String,
     keys: {
@@ -105,6 +112,14 @@ const FinanceSchema = new Schema({
     budgets: [BudgetItemSchema],
     settings: {
         autoSnapshotDays: { type: Number, default: 7 },
+    },
+    // ── Cuentas compartidas ──────────────────────────────────
+    // El dueño del documento es `userId`. Los miembros ven y editan
+    // exactamente las mismas finanzas. Se une con un código temporal.
+    members: [MemberSchema],
+    invite: {
+        code: String,
+        expiresAt: String,
     },
     // Suscripciones de notificaciones push (una por dispositivo/navegador).
     // NO viaja por el POST general de /api/finance: se maneja aparte.

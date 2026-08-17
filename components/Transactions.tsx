@@ -104,13 +104,18 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
     if (!editTx || !onUpdate) return;
     const parsed = round2(parseFloat(eAmount));
     if (!eLabel.trim() || !Number.isFinite(parsed) || parsed <= 0 || !eDate) return;
-    onUpdate(editTx.id, { label: eLabel.trim(), amount: parsed, date: eDate, type: eType, category: eCategory, accountId: eAccountId === "none" ? undefined : eAccountId });
+    const editFuture = eDate > todayIso;
+    onUpdate(editTx.id, { label: eLabel.trim(), amount: parsed, date: eDate, type: eType, category: eCategory, accountId: (eAccountId === "none" || editFuture) ? undefined : eAccountId });
     setEditTx(null);
   };
 
   const cats = type === "expense" ? expenseCats : incomeCats;
   const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
   const currentMonth = monthKey(new Date());
+  const maxMonth = shiftMonth(currentMonth, 3);
+  const viewingFuture = month > currentMonth;
+  const todayIso = new Date().toISOString().split("T")[0];
+  const dateIsFuture = !!date && date > todayIso;
 
   const summary = useMemo(() => summarizeMonth(transactions, month), [transactions, month]);
   const prevSummary = useMemo(() => summarizeMonth(transactions, shiftMonth(month, -1)), [transactions, month]);
@@ -152,8 +157,11 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       type,
       category,
       source: "manual",
-      ...(accountId !== "none" ? { accountId } : {}),
+      // Un gasto planeado (fecha futura) no toca el saldo de ninguna cuenta
+      ...(accountId !== "none" && !dateIsFuture ? { accountId } : {}),
     });
+    // Si registraste para otro mes, salta a ese mes para que lo veas
+    if (date && monthKey(date) !== month && !searching) setMonth(monthKey(date));
     setLabel(""); setAmount(""); setDate("");
   };
 
@@ -180,7 +188,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
             <span className="text-xs font-bold px-2 capitalize min-w-[120px] text-center">{monthLabel(month)}</span>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
-              disabled={month >= currentMonth}
+              disabled={month >= maxMonth}
               className="p-1.5 rounded-lg hover:bg-default-200 text-default-500 disabled:opacity-30"
               aria-label="Mes siguiente"
             >
@@ -191,7 +199,33 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       </div>
 
       {/* Resumen del mes (oculto durante búsqueda) */}
-      {!searching && !filtering && <MonthlySummary summary={summary} prevSummary={prevSummary} />}
+      {!searching && !filtering && !viewingFuture && <MonthlySummary summary={summary} prevSummary={prevSummary} />}
+
+      {/* Mes futuro: lo que llevas comprometido */}
+      {!searching && !filtering && viewingFuture && (
+        <Card className="glass border border-cyan-500/25">
+          <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex-1">
+              <p className="text-sm font-bold capitalize">Plan de {monthLabel(month)}</p>
+              <p className="text-xs text-default-400">
+                Gastos que ya sabes que vienen — se suman aquí y a tu proyección de flujo
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Comprometido</p>
+                <p className="text-lg font-black tnum text-rose-500">{money(summary.expense)}</p>
+              </div>
+              {summary.income > 0 && (
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Ingresos esperados</p>
+                  <p className="text-lg font-black tnum text-emerald-500">{money(summary.income)}</p>
+                </div>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* ── Búsqueda y filtros ───────────────────────────────── */}
       <Card className="glass border-0">
@@ -308,6 +342,11 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               </Button>
             </div>
           </div>
+          {dateIsFuture && (
+            <p className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-2">
+              📅 Se registrará como gasto planeado de {monthLabel(monthKey(date))} — aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
+            </p>
+          )}
         </CardBody>
       </Card>
 
@@ -321,8 +360,8 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 <p className="text-sm">Nada coincide con tu búsqueda</p>
               ) : (
                 <>
-                  <p className="text-sm">Sin movimientos en {monthLabel(month)}</p>
-                  <p className="text-xs mt-1">Registra tu primer gasto o ingreso arriba</p>
+                  <p className="text-sm">{viewingFuture ? `Sin gastos planeados para ${monthLabel(month)}` : `Sin movimientos en ${monthLabel(month)}`}</p>
+                  <p className="text-xs mt-1">{viewingFuture ? "Registra arriba con la fecha de ese mes lo que ya sabes que viene" : "Registra tu primer gasto o ingreso arriba"}</p>
                 </>
               )}
             </div>

@@ -2278,6 +2278,7 @@ export default function Dashboard() {
                 subscriptions={subscriptions}
                 installments={installments}
                 startBalance={available}
+                transactions={transactions}
               />
               <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
             </div>

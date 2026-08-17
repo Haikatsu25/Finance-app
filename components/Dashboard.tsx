@@ -79,7 +79,6 @@ import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock
 import { cardDebtBreakdown } from "@/lib/finance-utils";
 import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
-import FinanceAI from "./FinanceAI";
 import Transactions from "./Transactions";
 import CreditCards from "./CreditCards";
 import Budgets from "./Budgets";
@@ -1883,10 +1882,7 @@ export default function Dashboard() {
           {/* ── FINANCE AI ────────────────────────────────────── */}
           <section className={activeTab !== "ai" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <div className="space-y-6">
-              <AIChat />
-              <FinanceAI history={history} assets={assets} liabilities={liabilities} buckets={buckets} isDark={isDark} />
-            </div>
+            <AIChat />
           </section>
 
           {/* ── HISTORIAL ─────────────────────────────────────── */}

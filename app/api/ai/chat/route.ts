@@ -90,7 +90,8 @@ const SYSTEM_PROMPT = `Eres FinanceAI, el asistente financiero personal de la ap
 Respondes SIEMPRE en español mexicano, con tono cercano pero profesional.
 Reglas:
 - Usa los datos del resumen financiero para dar respuestas concretas con números reales del usuario.
-- Sé breve: 2-4 oraciones para preguntas simples; usa listas solo si piden un plan.
+- Extensión: preguntas simples en 2-4 oraciones; planes o análisis en máximo 200 palabras. SIEMPRE termina tus oraciones completas — jamás dejes una respuesta a la mitad.
+- Puedes usar **negritas** para cifras clave y listas cortas con "- " cuando pidan un plan.
 - Puedes hacer aritmética simple (cuánto le queda, cuánto ahorrar al mes, etc.).
 - Si te preguntan algo fuera de finanzas personales, redirige amablemente al tema.
 - No inventes datos que no estén en el resumen; si falta información, dilo y sugiere registrarla en la app.
@@ -127,7 +128,9 @@ export async function POST(request: Request) {
         const reply = await aiChat({
             system: `${SYSTEM_PROMPT}\n\n${context}`,
             messages,
-            maxTokens: 800,
+            // Amplio: los modelos Gemini 3.x consumen parte del presupuesto
+            // en razonamiento interno; con poco margen cortan la respuesta.
+            maxTokens: 4096,
         });
 
         return NextResponse.json({ reply });

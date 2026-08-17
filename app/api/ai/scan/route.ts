@@ -65,6 +65,9 @@ export async function POST(request: Request) {
         if (error?.message === 'RATE_LIMITED') {
             return NextResponse.json({ error: 'rate_limited' }, { status: 429 });
         }
+        if (error?.message === 'BAD_KEY') {
+            return NextResponse.json({ error: 'bad_key' }, { status: 502 });
+        }
         console.error('[api/ai/scan] failed:', error);
         return NextResponse.json({ error: 'ai_failed' }, { status: 500 });
     }

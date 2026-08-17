@@ -144,7 +144,16 @@ export async function POST(request: Request) {
                 { status: 429 },
             );
         }
+        if (error?.message === 'BAD_KEY') {
+            return NextResponse.json(
+                { error: 'bad_key', reply: 'La clave GEMINI_API_KEY parece inválida o restringida. Verifica que se copió completa y sin espacios, y que en Vercel se hizo Redeploy después de agregarla.' },
+                { status: 502 },
+            );
+        }
         console.error('[api/ai/chat] failed:', error);
-        return NextResponse.json({ error: 'ai_failed' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'ai_failed', reply: `La IA no respondió (${error?.message || 'error desconocido'}). Revisa los logs de Vercel para el detalle.` },
+            { status: 500 },
+        );
     }
 }

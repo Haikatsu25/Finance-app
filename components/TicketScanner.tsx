@@ -61,6 +61,8 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
         setErrorMsg(
           body?.error === "missing_key"
             ? "Falta configurar la clave gratuita GEMINI_API_KEY en el servidor."
+            : body?.error === "bad_key"
+              ? "La clave GEMINI_API_KEY parece inválida. Revísala en Vercel y haz Redeploy."
             : body?.error === "rate_limited"
               ? "La IA alcanzó su límite gratuito por ahora. Intenta en un minuto."
               : body?.error === "no_legible"

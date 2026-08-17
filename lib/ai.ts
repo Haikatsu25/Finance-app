@@ -10,10 +10,9 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 const STATIC_CANDIDATES = [
     process.env.GEMINI_MODEL,
+    "gemini-flash-latest",   // alias siempre-actual de Google
+    "gemini-3.5-flash",
     "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
 ].filter(Boolean) as string[];
 
 // Se recuerda entre invocaciones mientras viva la instancia serverless
@@ -35,8 +34,12 @@ function getKey(): string {
     return apiKey;
 }
 
-/** Pregunta a Google qué modelos soporta esta clave y elige el mejor flash. */
-async function discoverModel(apiKey: string): Promise<string | null> {
+/**
+ * Pregunta a Google qué modelos soporta esta clave y elige el mejor flash,
+ * EXCLUYENDO los que ya fallaron en esta llamada (Google a veces lista
+ * modelos retirados que responden 404 al usarlos).
+ */
+async function discoverModel(apiKey: string, exclude: Set<string>): Promise<string | null> {
     try {
         const res = await fetch(`${API_BASE}/models?key=${apiKey}&pageSize=100`);
         if (!res.ok) {
@@ -47,22 +50,29 @@ async function discoverModel(apiKey: string): Promise<string | null> {
         const models: string[] = (data?.models || [])
             .filter((m: any) => (m.supportedGenerationMethods || []).includes("generateContent"))
             .map((m: any) => String(m.name || "").replace(/^models\//, ""))
-            // Excluir especializados: embeddings, imagen, audio, video, etc.
-            .filter((n: string) => n && !/embed|imagen|image|tts|audio|live|veo|aqa|learnlm/i.test(n));
+            // Excluir especializados y los que ya fallaron
+            .filter((n: string) => n && !/embed|imagen|image|tts|audio|live|veo|aqa|learnlm/i.test(n))
+            .filter((n: string) => !exclude.has(n));
 
         if (!models.length) return null;
 
-        // Preferencia: flash estable > flash lite > flash preview > lo que sea
+        // Versión numérica del nombre ("gemini-3.7-flash" → 3.7); latest = infinito
+        const version = (n: string) => {
+            if (/latest/i.test(n)) return 999;
+            const m = n.match(/gemini-(\d+(?:\.\d+)?)/i);
+            return m ? parseFloat(m[1]) : 0;
+        };
+        // Preferencia: flash > otros; versión más NUEVA primero; sin lite/preview
         const score = (n: string) => {
             let s = 0;
-            if (/flash/i.test(n)) s -= 100;
-            if (/lite/i.test(n)) s += 10;
-            if (/preview|exp/i.test(n)) s += 20;
-            if (/pro/i.test(n)) s += 5; // pro sirve pero suele tener menos cuota gratis
+            if (/flash/i.test(n)) s -= 1000;
+            if (/lite/i.test(n)) s += 100;
+            if (/preview|exp/i.test(n)) s += 200;
+            s -= version(n) * 10; // más nuevo = mejor
             return s;
         };
-        models.sort((a, b) => score(a) - score(b) || a.length - b.length);
-        console.log("[gemini] modelos disponibles:", models.slice(0, 5).join(", "), "→ usando:", models[0]);
+        models.sort((a, b) => score(a) - score(b));
+        console.log("[gemini] modelos disponibles:", models.slice(0, 6).join(", "), "→ usando:", models[0]);
         return models[0];
     } catch (err) {
         console.error("[gemini] ListModels failed", err);
@@ -108,24 +118,29 @@ async function callGemini(body: Record<string, unknown>): Promise<string> {
 
     let sawRateLimit = false;
     let lastStatus = 0;
+    const failed = new Set<string>();
 
     for (const model of candidates) {
         const r = await tryModel(apiKey, model, body);
-        if (r.ok) return r.text;
+        if (r.ok) { discoveredModel = model; return r.text; }
+        failed.add(model);
         lastStatus = r.status;
         if (r.status === 429) { sawRateLimit = true; continue; }
         if (r.status === 400 || r.status === 401 || r.status === 403) throw new Error("BAD_KEY");
         // 404 → probar siguiente candidato
     }
 
-    // Todos fallaron: preguntar a Google qué modelos existen realmente
-    const found = await discoverModel(apiKey);
-    if (found && !candidates.includes(found)) {
+    // Todos fallaron: preguntar a Google qué modelos existen realmente,
+    // excluyendo los que acaban de fallar. Hasta 3 intentos con distintos.
+    for (let i = 0; i < 3; i++) {
+        const found = await discoverModel(apiKey, failed);
+        if (!found) break;
         const r = await tryModel(apiKey, found, body);
         if (r.ok) {
             discoveredModel = found; // recordar para las siguientes llamadas
             return r.text;
         }
+        failed.add(found);
         if (r.status === 429) sawRateLimit = true;
         if (r.status === 400 || r.status === 401 || r.status === 403) throw new Error("BAD_KEY");
         lastStatus = r.status;

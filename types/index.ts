@@ -43,7 +43,11 @@ export interface TransactionItem {
     date: string;               // YYYY-MM-DD
     type: "expense" | "income";
     category?: string;
-    source?: "manual" | "scan"; // scan = capturado con el escáner de tickets
+    source?: "manual" | "scan" | "fixed"; // scan = escáner de tickets; fixed = gasto fijo automático
+    /** Si nació de un gasto fijo, el id de la suscripción (evita duplicados por mes) */
+    subId?: string;
+    /** Cuenta (item de activos) de la que salió/entró el dinero */
+    accountId?: string;
     addedBy?: AddedBy;
 }
 
@@ -81,6 +85,7 @@ export interface BudgetItem {
 
 export interface AppSettings {
     autoSnapshotDays?: number;  // cada cuántos días auto-guardar (default 7)
+    demoData?: boolean;         // true mientras están cargados los datos de ejemplo
 }
 
 export interface FinanceState {
@@ -95,6 +100,8 @@ export interface FinanceState {
     budgets: BudgetItem[];
     history: HistorySnapshot[];
     settings?: AppSettings;
+    customExpenseCats?: string[];
+    customIncomeCats?: string[];
 }
 
 export interface HistorySnapshot {

@@ -7,7 +7,7 @@ import {
 } from "@heroui/react";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
-  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck,
+  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil,
 } from "lucide-react";
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
@@ -122,7 +122,7 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────
 export default function CreditCards({
-  cards, installments, liabilities = [], onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment, onMarkPaid, viewerId,
+  cards, installments, liabilities = [], onAdd, onRemove, onUpdateBalance, onAddInstallment, onRemoveInstallment, onMarkPaid, viewerId, onUpdateCard, onUpdateInstallment,
 }: {
   cards: CreditCardItem[];
   installments: InstallmentPlan[];
@@ -134,6 +134,8 @@ export default function CreditCards({
   onRemoveInstallment: (id: string) => void;
   onMarkPaid?: (id: string) => void;
   viewerId?: string;
+  onUpdateCard?: (id: string, patch: Partial<CreditCardItem>) => void;
+  onUpdateInstallment?: (id: string, patch: Partial<InstallmentPlan>) => void;
 }) {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { isOpen: isMsiOpen, onOpen: onMsiOpen, onOpenChange: onMsiChange } = useDisclosure();
@@ -141,6 +143,8 @@ export default function CreditCards({
   const [expanded, setExpanded] = useState<string | null>(null);
   const [cardToDelete, setCardToDelete] = useState<CreditCardItem | null>(null);
   const [cardToPay, setCardToPay] = useState<CreditCardItem | null>(null);
+  const [editingCard, setEditingCard] = useState<CreditCardItem | null>(null);
+  const [editingPlan, setEditingPlan] = useState<InstallmentPlan | null>(null);
 
   // Alta de tarjeta
   const [label, setLabel] = useState("");
@@ -166,8 +170,42 @@ export default function CreditCards({
 
   const totals = totalDebtBreakdown(cards, installments);
 
+  const openEditCard = (c: CreditCardItem) => {
+    setLabel(c.label);
+    setBalance("");
+    setCreditLimit(String(c.creditLimit));
+    setCutoffDay(String(c.cutoffDay));
+    setDueDay(String(c.dueDay));
+    setApr(c.apr ? String(c.apr) : "");
+    setEditingCard(c);
+    onOpen();
+  };
+
+  const openEditMsi = (p: InstallmentPlan) => {
+    setMsiCardId(p.cardId);
+    setMsiLabel(p.label);
+    setMsiAmount(String(p.totalAmount));
+    setMsiMonths(String(p.months));
+    setMsiDate(p.startDate);
+    setEditingPlan(p);
+    onMsiOpen();
+  };
+
   const submitCard = (close: () => void) => {
     if (!validCard) return;
+    if (editingCard && onUpdateCard) {
+      onUpdateCard(editingCard.id, {
+        label: label.trim(),
+        creditLimit: round2(parseFloat(creditLimit)),
+        cutoffDay: Math.min(31, Math.max(1, parseInt(cutoffDay) || 1)),
+        dueDay: Math.min(31, Math.max(1, parseInt(dueDay))),
+        apr: round2(parseFloat(apr) || 0),
+      });
+      setEditingCard(null);
+      setLabel(""); setBalance(""); setCreditLimit(""); setCutoffDay(""); setDueDay(""); setApr("");
+      close();
+      return;
+    }
     onAdd({
       label: label.trim(),
       balance: round2(parseFloat(balance) || 0),
@@ -183,6 +221,19 @@ export default function CreditCards({
 
   const submitMsi = (close: () => void) => {
     if (!validMsi) return;
+    if (editingPlan && onUpdateInstallment) {
+      onUpdateInstallment(editingPlan.id, {
+        cardId: msiCardId,
+        label: msiLabel.trim(),
+        totalAmount: round2(parseFloat(msiAmount)),
+        months: parseInt(msiMonths) || 12,
+        startDate: msiDate || editingPlan.startDate,
+      });
+      setEditingPlan(null);
+      setMsiLabel(""); setMsiAmount(""); setMsiDate("");
+      close();
+      return;
+    }
     onAddInstallment({
       cardId: msiCardId,
       label: msiLabel.trim(),
@@ -275,14 +326,26 @@ export default function CreditCards({
                         Corte día {c.cutoffDay} · Pago día {c.dueDay}
                       </p>
                     </div>
-                    <button
-                      onClick={() => setCardToDelete(c)}
-                      className="shrink-0 p-2 -m-1 rounded-lg text-white/45 hover:text-rose-400 hover:bg-white/10 active:bg-white/15 transition-all"
-                      aria-label={`Eliminar ${c.label}`}
-                      title="Eliminar tarjeta"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <div className="flex items-center shrink-0 -m-1">
+                      {onUpdateCard && (
+                        <button
+                          onClick={() => openEditCard(c)}
+                          className="p-2 rounded-lg text-white/45 hover:text-cyan-300 hover:bg-white/10 transition-all"
+                          aria-label={`Editar ${c.label}`}
+                          title="Editar tarjeta"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setCardToDelete(c)}
+                        className="p-2 rounded-lg text-white/45 hover:text-rose-400 hover:bg-white/10 active:bg-white/15 transition-all"
+                        aria-label={`Eliminar ${c.label}`}
+                        title="Eliminar tarjeta"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Desglose contado / meses */}
@@ -376,6 +439,15 @@ export default function CreditCards({
                               <span className="text-[11px] tnum font-bold text-indigo-300">
                                 {money(s.monthlyPayment)}<span className="text-white/40 font-normal">/mes</span>
                               </span>
+                              {onUpdateInstallment && (
+                                <button
+                                  onClick={() => openEditMsi(s.plan)}
+                                  className="p-1.5 -m-1 rounded-lg text-white/35 hover:text-cyan-300 hover:bg-white/10 transition-all"
+                                  aria-label={`Editar compra a meses ${s.plan.label}`}
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                              )}
                               <button
                                 onClick={() => onRemoveInstallment(s.plan.id)}
                                 className="p-1.5 -m-1 rounded-lg text-white/35 hover:text-rose-400 hover:bg-white/10 transition-all"
@@ -413,19 +485,26 @@ export default function CreditCards({
       </CardBody>
 
       {/* ── Modal: alta de tarjeta ─────────────────────────────── */}
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur">
+      <Modal isOpen={isOpen} onOpenChange={(o) => { onOpenChange(); if (!o) setEditingCard(null); }} backdrop="blur">
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader>Nueva tarjeta de crédito</ModalHeader>
+              <ModalHeader>{editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}</ModalHeader>
               <ModalBody>
                 <Input label="Nombre" placeholder="Ej. BBVA Azul, Nu" variant="bordered" value={label} onValueChange={setLabel} />
                 <div className="flex gap-2">
-                  <Input label="Deuda de contado" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>} value={balance} onValueChange={setBalance} />
+                  {!editingCard && (
+                    <Input label="Deuda de contado" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
+                      startContent={<span className="text-default-400 text-xs">$</span>} value={balance} onValueChange={setBalance} />
+                  )}
                   <Input label="Límite de crédito" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
                     startContent={<span className="text-default-400 text-xs">$</span>} value={creditLimit} onValueChange={setCreditLimit} />
                 </div>
+                {editingCard && (
+                  <p className="text-[11px] text-default-400">
+                    La deuda de contado se actualiza desde la propia tarjeta (campo &quot;Reemplazar deuda&quot; o gastos vinculados).
+                  </p>
+                )}
                 <div className="flex gap-2">
                   <Input label="Día de corte" type="number" min="1" max="31" placeholder="15" variant="bordered" value={cutoffDay} onValueChange={setCutoffDay} />
                   <Input label="Día límite de pago" type="number" min="1" max="31" placeholder="5" variant="bordered" value={dueDay} onValueChange={setDueDay} />
@@ -438,7 +517,7 @@ export default function CreditCards({
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>Cancelar</Button>
                 <Button color="primary" variant="shadow" className="font-bold" isDisabled={!validCard} onPress={() => submitCard(onClose)}>
-                  Guardar tarjeta
+                  {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
                 </Button>
               </ModalFooter>
             </>
@@ -447,7 +526,7 @@ export default function CreditCards({
       </Modal>
 
       {/* ── Modal: compra a meses sin intereses ────────────────── */}
-      <Modal isOpen={isMsiOpen} onOpenChange={onMsiChange} backdrop="blur">
+      <Modal isOpen={isMsiOpen} onOpenChange={(o) => { onMsiChange(); if (!o) setEditingPlan(null); }} backdrop="blur">
         <ModalContent>
           {(onClose) => {
             const amt = parseFloat(msiAmount);
@@ -457,7 +536,7 @@ export default function CreditCards({
               <>
                 <ModalHeader className="flex items-center gap-2">
                   <Layers size={18} className="text-indigo-500" />
-                  Compra a meses sin intereses
+                  {editingPlan ? `Editar "${editingPlan.label}"` : "Compra a meses sin intereses"}
                 </ModalHeader>
                 <ModalBody>
                   <Select label="Tarjeta" variant="bordered" selectedKeys={msiCardId ? [msiCardId] : []}
@@ -490,7 +569,7 @@ export default function CreditCards({
                   <Button variant="light" onPress={onClose}>Cancelar</Button>
                   <Button color="secondary" variant="shadow" className="font-bold bg-indigo-500"
                     isDisabled={!validMsi} onPress={() => submitMsi(onClose)}>
-                    Agregar a meses
+                    {editingPlan ? "Guardar cambios" : "Agregar a meses"}
                   </Button>
                 </ModalFooter>
               </>

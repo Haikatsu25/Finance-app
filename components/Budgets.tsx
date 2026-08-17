@@ -2,29 +2,41 @@
 
 import React, { useMemo, useState } from "react";
 import { Card, CardHeader, CardBody, Input, Button, Select, SelectItem } from "@heroui/react";
-import { PiggyBank, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { PiggyBank, Plus, Trash2, AlertTriangle, Pencil, Check } from "lucide-react";
 import { BudgetItem, TransactionItem } from "@/types";
 import { money, round2 } from "@/lib/format";
 import { monthKey, spentByCategory } from "@/lib/finance-utils";
 import { EXPENSE_CATEGORIES } from "./Transactions";
 import AddedByBadge from "./AddedByBadge";
 
-export default function Budgets({ budgets, transactions, onAdd, onRemove, viewerId }: {
+export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpdateLimit, extraCategories = [], viewerId }: {
   budgets: BudgetItem[];
   transactions: TransactionItem[];
   onAdd: (b: Omit<BudgetItem, "id">) => void;
   onRemove: (id: string) => void;
+  onUpdateLimit?: (id: string, monthlyLimit: number) => void;
+  extraCategories?: string[];
   viewerId?: string;
 }) {
+  const catList = [...EXPENSE_CATEGORIES.slice(0, -1), ...extraCategories, "Otros"];
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [limit, setLimit] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const commitEdit = (id: string) => {
+    const parsed = round2(parseFloat(editValue));
+    if (Number.isFinite(parsed) && parsed > 0 && onUpdateLimit) onUpdateLimit(id, parsed);
+    setEditingId(null);
+    setEditValue("");
+  };
 
   const spent = useMemo(
     () => spentByCategory(transactions, monthKey(new Date())),
     [transactions],
   );
 
-  const available = EXPENSE_CATEGORIES.filter((c) => !budgets.some((b) => b.category === c));
+  const available = catList.filter((c) => !budgets.some((b) => b.category === c));
   const limitValid = limit !== "" && Number.isFinite(parseFloat(limit)) && parseFloat(limit) > 0;
 
   const submit = () => {
@@ -69,19 +81,46 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, viewer
                       {(over || warn) && <AlertTriangle size={12} className={over ? "text-rose-500" : "text-amber-500"} />}
                       <AddedByBadge addedBy={b.addedBy} viewerId={viewerId} />
                     </span>
-                    <button
-                      onClick={() => onRemove(b.id)}
-                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-0.5"
-                      aria-label={`Eliminar presupuesto de ${b.category}`}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      {onUpdateLimit && (
+                        <button
+                          onClick={() => { setEditingId(b.id); setEditValue(String(b.monthlyLimit)); }}
+                          className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-0.5"
+                          aria-label={`Editar límite de ${b.category}`}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onRemove(b.id)}
+                        className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-0.5"
+                        aria-label={`Eliminar presupuesto de ${b.category}`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-xs tnum mb-1.5">
+                  <div className="flex justify-between items-center text-xs tnum mb-1.5 gap-2">
                     <span className={`font-bold ${over ? "text-rose-500" : warn ? "text-amber-600 dark:text-amber-400" : "text-default-600"}`}>
                       {money(used)}
                     </span>
-                    <span className="text-default-400">de {money(b.monthlyLimit)}</span>
+                    {editingId === b.id ? (
+                      <span className="flex items-center gap-1">
+                        <Input
+                          size="sm" type="number" min="0" inputMode="decimal" variant="bordered"
+                          value={editValue} onValueChange={setEditValue}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitEdit(b.id); }}
+                          className="w-24" aria-label="Nuevo límite"
+                          startContent={<span className="text-default-400 text-[10px]">$</span>}
+                        />
+                        <Button isIconOnly size="sm" color="primary" variant="flat" className="min-w-7 w-7 h-7"
+                          onPress={() => commitEdit(b.id)} aria-label="Guardar límite">
+                          <Check size={13} />
+                        </Button>
+                      </span>
+                    ) : (
+                      <span className="text-default-400">de {money(b.monthlyLimit)}</span>
+                    )}
                   </div>
                   <div className="h-2 rounded-full bg-default-200/60 overflow-hidden" role="progressbar"
                     aria-valuenow={Math.min(100, Math.round(pct))} aria-valuemin={0} aria-valuemax={100}>
@@ -102,7 +141,7 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, viewer
         <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-default-200/50">
           <Select size="sm" variant="bordered" aria-label="Categoría" className="flex-1"
             selectedKeys={category ? [category] : []} onChange={(e) => setCategory(e.target.value)}>
-            {(available.length ? available : EXPENSE_CATEGORIES).map((c) => <SelectItem key={c}>{c}</SelectItem>)}
+            {(available.length ? available : catList).map((c) => <SelectItem key={c}>{c}</SelectItem>)}
           </Select>
           <Input type="number" min="0" inputMode="decimal" placeholder="Límite mensual $" size="sm" variant="bordered"
             className="w-full sm:w-44" value={limit} onValueChange={setLimit} />

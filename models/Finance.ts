@@ -41,7 +41,9 @@ const TransactionItemSchema = new Schema({
     date: String,
     type: String,       // expense | income
     category: String,
-    source: String,     // manual | scan
+    source: String,     // manual | scan | fixed
+    subId: String,      // liga con el gasto fijo que lo generó
+    accountId: String,  // cuenta (activo) afectada
     addedBy: AddedBySchema,
 }, { _id: false });
 
@@ -124,7 +126,10 @@ const FinanceSchema = new Schema({
     budgets: [BudgetItemSchema],
     settings: {
         autoSnapshotDays: { type: Number, default: 7 },
+        demoData: { type: Boolean, default: false },
     },
+    customExpenseCats: [String],
+    customIncomeCats: [String],
     // ── Cuentas compartidas ──────────────────────────────────
     // El dueño del documento es `userId`. Los miembros ven y editan
     // exactamente las mismas finanzas. Se une con un código temporal.

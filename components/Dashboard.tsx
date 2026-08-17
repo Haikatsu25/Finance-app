@@ -66,6 +66,11 @@ import {
   UserPlus,
   Copy,
   LogOut,
+  Pencil,
+  Repeat,
+  ArrowLeftRight,
+  Tag,
+  Wand2,
 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
@@ -76,7 +81,7 @@ import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/n
 import { useTheme } from "next-themes";
 import { money, moneyExact, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown } from "@/lib/finance-utils";
+import { cardDebtBreakdown, monthKey, monthLabel } from "@/lib/finance-utils";
 import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -87,6 +92,7 @@ import VoiceAssistant from "./VoiceAssistant";
 import AddedByBadge from "./AddedByBadge";
 import AIChat from "./AIChat";
 import AIInsights from "./AIInsights";
+import CashflowTimeline from "./CashflowTimeline";
 import TicketScanner from "./TicketScanner";
 import { startTour } from "./Tutorial";
 
@@ -239,7 +245,7 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION — captura de activos / gastos / apartados
 // ─────────────────────────────────────────────────────────────────────────────
-function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, msiMonthly, viewerId }: {
+function Section({ title, description, icon, items, total, color, categories, onAdd, onRemove, cards, msiMonthly, viewerId, onEdit }: {
   title: string; description: string; icon: React.ReactNode;
   items: FinanceItem[]; total: number;
   color: "success" | "danger" | "warning"; categories: string[];
@@ -250,6 +256,7 @@ function Section({ title, description, icon, items, total, color, categories, on
   /** Mensualidad de MSI activa por tarjeta (cardId → $/mes) */
   msiMonthly?: Record<string, number>;
   viewerId?: string;
+  onEdit?: (id: string) => void;
 }) {
   const [label, setLabel]       = useState("");
   const [amount, setAmount]     = useState("");
@@ -332,10 +339,19 @@ function Section({ title, description, icon, items, total, color, categories, on
                     {item.date && <span className="text-[10px] text-default-400">{item.date}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className={`tnum font-bold text-sm text-right ${t.text}`}>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <span className={`tnum font-bold text-sm text-right mr-1 ${t.text}`}>
                     {money(item.amount)}
                   </span>
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(item.id)}
+                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1.5 rounded-lg hover:bg-indigo-500/10"
+                      aria-label={`Editar ${item.label}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
                   <button
                     onClick={() => onRemove(item.id)}
                     className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
@@ -476,11 +492,12 @@ function Section({ title, description, icon, items, total, color, categories, on
 // ─────────────────────────────────────────────────────────────────────────────
 // SUBSCRIPTIONS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId }: {
+function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, onEdit }: {
   items: SubscriptionItem[]; total: number;
   onAdd: (label: string, amount: string, cycle: "mensual" | "anual", category: string) => void;
   onRemove: (id: string) => void;
   viewerId?: string;
+  onEdit?: (id: string) => void;
 }) {
   const [label, setLabel]   = useState("");
   const [amount, setAmount] = useState("");
@@ -541,10 +558,19 @@ function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId }: {
                     <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className={`tnum font-bold text-sm ${t.text}`}>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <span className={`tnum font-bold text-sm mr-1 ${t.text}`}>
                     {money(item.amount)}
                   </span>
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(item.id)}
+                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1.5 rounded-lg hover:bg-indigo-500/10"
+                      aria-label={`Editar ${item.label}`}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  )}
                   <button
                     onClick={() => onRemove(item.id)}
                     className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
@@ -658,12 +684,13 @@ function GoalContribution({ current, label, onContribute }: {
 // ─────────────────────────────────────────────────────────────────────────────
 // GOALS SECTION
 // ─────────────────────────────────────────────────────────────────────────────
-function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId }: {
+function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId, onEdit }: {
   items: GoalItem[];
   onAdd: (label: string, target: string, deadline: string) => void;
   onRemove: (id: string) => void;
   onUpdateProgress: (id: string, newAmount: string) => void;
   viewerId?: string;
+  onEdit?: (id: string) => void;
 }) {
   const [label, setLabel] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
@@ -712,13 +739,24 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId }: {
                       {done && <Check size={14} className="text-emerald-500" />}
                       <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
                     </span>
-                    <button
-                      onClick={() => onRemove(item.id)}
-                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
-                      aria-label={`Eliminar meta ${item.label}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center">
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(item.id)}
+                          className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1"
+                          aria-label={`Editar meta ${item.label}`}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onRemove(item.id)}
+                        className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                        aria-label={`Eliminar meta ${item.label}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex justify-between text-xs text-default-500 tnum mb-1">
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">{money(item.currentAmount)}</span>
@@ -802,6 +840,9 @@ export default function Dashboard() {
   const [budgets,       setBudgets]       = useState<BudgetItem[]>([]);
   const [history,       setHistory]       = useState<HistorySnapshot[]>([]);
   const [privacy,       setPrivacy]       = useState(false);
+  const [customExpenseCats, setCustomExpenseCats] = useState<string[]>([]);
+  const [customIncomeCats,  setCustomIncomeCats]  = useState<string[]>([]);
+  const [appSettings, setAppSettings] = useState<{ autoSnapshotDays: number; demoData: boolean }>({ autoSnapshotDays: 7, demoData: false });
 
   // ── Bloqueo biométrico ───────────────────────────────────────
   const [locked,        setLocked]        = useState(false);
@@ -862,6 +903,12 @@ export default function Dashboard() {
     setInstallments(data.installments || []);
     setBudgets(data.budgets || []);
     setHistory(data.history || []);
+    setCustomExpenseCats(data.customExpenseCats || []);
+    setCustomIncomeCats(data.customIncomeCats || []);
+    setAppSettings({
+      autoSnapshotDays: data.settings?.autoSnapshotDays || 7,
+      demoData: data.settings?.demoData === true,
+    });
     setMembers(data.members || []);
     setDocOwnerId(data.userId || null);
     revRef.current = typeof data.rev === "number" ? data.rev : 0;
@@ -1063,6 +1110,8 @@ export default function Dashboard() {
     history: HistorySnapshot[]; subscriptions: SubscriptionItem[]; goals: GoalItem[];
     transactions: TransactionItem[]; creditCards: CreditCardItem[]; budgets: BudgetItem[];
     installments: InstallmentPlan[];
+    customExpenseCats: string[]; customIncomeCats: string[];
+    settings: { autoSnapshotDays: number; demoData: boolean };
   };
 
   async function doSave(payload: SavePayload) {
@@ -1119,11 +1168,11 @@ export default function Dashboard() {
   useEffect(() => {
     if (!mounted || isLoading || loadError) return;
     const timer = setTimeout(
-      () => saveData({ assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments }),
+      () => saveData({ assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments, customExpenseCats, customIncomeCats, settings: appSettings }),
       900,
     );
     return () => clearTimeout(timer);
-  }, [assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments, mounted, isLoading, loadError, saveData]);
+  }, [assets, liabilities, buckets, history, subscriptions, goals, transactions, creditCards, budgets, installments, customExpenseCats, customIncomeCats, appSettings, mounted, isLoading, loadError, saveData]);
 
   // ── Totales ──────────────────────────────────────────────────
   const totalAssets      = round2(assets.reduce((s, i) => s + i.amount, 0));
@@ -1287,8 +1336,19 @@ export default function Dashboard() {
   };
 
   // ── Movimientos (ledger) ─────────────────────────────────────
+  /** Un movimiento ligado a cuenta mueve el saldo de ese activo:
+   *  gasto lo baja, ingreso lo sube. dir=-1 revierte el efecto. */
+  const applyTxToAccount = (t: { accountId?: string; type: "expense" | "income"; amount: number }, dir: 1 | -1) => {
+    if (!t.accountId) return;
+    const delta = dir * (t.type === "income" ? t.amount : -t.amount);
+    setAssets((prev) => prev.map((a) =>
+      a.id === t.accountId ? { ...a, amount: Math.max(0, round2(a.amount + delta)) } : a,
+    ));
+  };
+
   const addTransaction = (t: Omit<TransactionItem, "id">) => {
     setTransactions((prev) => [...prev, { ...t, id: crypto.randomUUID(), addedBy: author }]);
+    applyTxToAccount(t, 1);
   };
 
   const removeTransaction = (id: string) => {
@@ -1296,12 +1356,14 @@ export default function Dashboard() {
     if (idx === -1) return;
     const item = transactions[idx];
     setTransactions(transactions.filter((i) => i.id !== id));
+    applyTxToAccount(item, -1);
     scheduleUndo(item.label, () => {
       setTransactions((prev) => {
         const next = [...prev];
         next.splice(Math.min(idx, next.length), 0, item);
         return next;
       });
+      applyTxToAccount(item, 1);
     });
   };
 
@@ -1358,6 +1420,248 @@ export default function Dashboard() {
 
   const removeBudget = (id: string) => {
     setBudgets(budgets.filter((i) => i.id !== id));
+  };
+
+  // ── EDICIÓN DE REGISTROS ─────────────────────────────────────
+  type EditKind = "asset" | "liability" | "bucket" | "sub" | "goal";
+  const [editTarget, setEditTarget] = useState<{ kind: EditKind; id: string } | null>(null);
+  const [eLabel, setELabel] = useState("");
+  const [eAmount, setEAmount] = useState("");
+  const [eDate, setEDate] = useState("");
+  const [eCategory, setECategory] = useState("");
+  const [eCycle, setECycle] = useState<"mensual" | "anual">("mensual");
+  const [eTarget, setETarget] = useState("");
+  const [eCurrent, setECurrent] = useState("");
+  const [eDeadline, setEDeadline] = useState("");
+
+  const openEditItem = (kind: "asset" | "liability" | "bucket", id: string) => {
+    const list = kind === "asset" ? assets : kind === "liability" ? liabilities : buckets;
+    const item = list.find((i) => i.id === id);
+    if (!item) return;
+    setELabel(item.label);
+    setEAmount(String(item.amount));
+    setEDate(item.date || "");
+    setECategory(item.category || QUICK_CATEGORIES[kind][0]);
+    setEditTarget({ kind, id });
+  };
+
+  const openEditSub = (id: string) => {
+    const item = subscriptions.find((i) => i.id === id);
+    if (!item) return;
+    setELabel(item.label);
+    setEAmount(String(item.amount));
+    setECycle(item.billingCycle);
+    setEditTarget({ kind: "sub", id });
+  };
+
+  const openEditGoal = (id: string) => {
+    const item = goals.find((i) => i.id === id);
+    if (!item) return;
+    setELabel(item.label);
+    setETarget(String(item.targetAmount));
+    setECurrent(String(item.currentAmount));
+    setEDeadline(item.deadline);
+    setEditTarget({ kind: "goal", id });
+  };
+
+  const saveEdit = () => {
+    if (!editTarget) return;
+    const { kind, id } = editTarget;
+
+    if (kind === "asset" || kind === "liability" || kind === "bucket") {
+      const parsed = round2(parseFloat(eAmount));
+      if (!eLabel.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
+      const setters = { asset: setAssets, liability: setLiabilities, bucket: setBuckets } as const;
+      const list = kind === "asset" ? assets : kind === "liability" ? liabilities : buckets;
+      const prev = list.find((i) => i.id === id);
+      // Gasto ligado a tarjeta: la deuda se ajusta por la DIFERENCIA
+      if (kind === "liability" && prev?.cardId && prev.amount !== parsed) {
+        bumpCardBalance(prev.cardId, parsed - prev.amount);
+      }
+      setters[kind]((prevList) => prevList.map((i) =>
+        i.id === id ? { ...i, label: eLabel.trim(), amount: parsed, date: eDate, category: eCategory } : i,
+      ));
+    }
+
+    if (kind === "sub") {
+      const parsed = round2(parseFloat(eAmount));
+      if (!eLabel.trim() || !Number.isFinite(parsed) || parsed <= 0) return;
+      setSubscriptions((prev) => prev.map((i) =>
+        i.id === id ? { ...i, label: eLabel.trim(), amount: parsed, billingCycle: eCycle } : i,
+      ));
+    }
+
+    if (kind === "goal") {
+      const target = round2(parseFloat(eTarget));
+      const current = round2(parseFloat(eCurrent) || 0);
+      if (!eLabel.trim() || !Number.isFinite(target) || target <= 0 || !eDeadline) return;
+      setGoals((prev) => prev.map((i) =>
+        i.id === id ? { ...i, label: eLabel.trim(), targetAmount: target, currentAmount: Math.max(0, current), deadline: eDeadline } : i,
+      ));
+    }
+
+    setEditTarget(null);
+  };
+
+  const updateTransaction = (id: string, patch: Partial<TransactionItem>) => {
+    const prev = transactions.find((t) => t.id === id);
+    if (prev) {
+      const next = { ...prev, ...patch };
+      // Revertir el efecto anterior y aplicar el nuevo (cuenta/monto/tipo pueden cambiar)
+      applyTxToAccount(prev, -1);
+      applyTxToAccount(next, 1);
+    }
+    setTransactions((list) => list.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  };
+
+  const updateCreditCardInfo = (id: string, patch: Partial<CreditCardItem>) => {
+    setCreditCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  };
+
+  const updateInstallmentInfo = (id: string, patch: Partial<InstallmentPlan>) => {
+    setInstallments((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
+  const updateBudgetLimit = (id: string, monthlyLimit: number) => {
+    setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, monthlyLimit } : b)));
+  };
+
+  // ── Transferencias entre cuentas (activos) ───────────────────
+  const { isOpen: isTransferOpen, onOpen: onTransferOpen, onOpenChange: onTransferChange } = useDisclosure();
+  const [tFrom, setTFrom] = useState("");
+  const [tTo, setTTo] = useState("");
+  const [tAmount, setTAmount] = useState("");
+
+  const doTransfer = (close: () => void) => {
+    const amount = round2(parseFloat(tAmount));
+    const from = assets.find((a) => a.id === tFrom);
+    const to = assets.find((a) => a.id === tTo);
+    if (!from || !to || from.id === to.id || !Number.isFinite(amount) || amount <= 0 || amount > from.amount) return;
+    setAssets((prev) => prev.map((a) =>
+      a.id === from.id ? { ...a, amount: round2(a.amount - amount) }
+      : a.id === to.id ? { ...a, amount: round2(a.amount + amount) }
+      : a,
+    ));
+    scheduleUndo(`Transferencia ${money(amount)}`, () => {
+      setAssets((prev) => prev.map((a) =>
+        a.id === from.id ? { ...a, amount: round2(a.amount + amount) }
+        : a.id === to.id ? { ...a, amount: round2(a.amount - amount) }
+        : a,
+      ));
+    });
+    setTAmount("");
+    close();
+  };
+
+  // ── Categorías personalizadas ────────────────────────────────
+  const [newCatE, setNewCatE] = useState("");
+  const [newCatI, setNewCatI] = useState("");
+
+  const addCustomCat = (kind: "expense" | "income") => {
+    const value = (kind === "expense" ? newCatE : newCatI).trim();
+    if (!value) return;
+    const setter = kind === "expense" ? setCustomExpenseCats : setCustomIncomeCats;
+    setter((prev) => (prev.some((c) => c.toLowerCase() === value.toLowerCase()) ? prev : [...prev, value].slice(0, 30)));
+    kind === "expense" ? setNewCatE("") : setNewCatI("");
+  };
+
+  // ── Datos de ejemplo (onboarding) ────────────────────────────
+  const [demoDismissed, setDemoDismissed] = useState(false);
+  const isEmpty = !isLoading && !loadError &&
+    assets.length + liabilities.length + buckets.length + subscriptions.length +
+    goals.length + transactions.length + creditCards.length === 0;
+
+  const loadDemoData = () => {
+    const today = new Date();
+    const iso = (d: Date) => d.toISOString().split("T")[0];
+    const daysAgo = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
+    const monthsFromNow = (n: number) => { const d = new Date(today); d.setMonth(d.getMonth() + n); return d; };
+    const uid = () => crypto.randomUUID();
+
+    const cardId = uid();
+    const acc1 = uid();
+    setAssets([
+      { id: acc1, label: "BBVA Débito (ejemplo)", amount: 8500, date: iso(today), type: "asset", category: "Banco" },
+      { id: uid(), label: "Efectivo (ejemplo)", amount: 1200, date: iso(today), type: "asset", category: "Efectivo" },
+    ]);
+    setBuckets([
+      { id: uid(), label: "Fondo emergencia (ejemplo)", amount: 2000, date: iso(today), type: "bucket", category: "Emergencia" },
+    ]);
+    setCreditCards([
+      { id: cardId, label: "Nu (ejemplo)", balance: 2350, creditLimit: 20000, cutoffDay: 18, dueDay: 28, apr: 65, minPayment: 0 },
+    ]);
+    setInstallments([
+      { id: uid(), cardId, label: "Pantalla (ejemplo)", totalAmount: 6000, months: 6, startDate: iso(daysAgo(65)) },
+    ]);
+    setSubscriptions([
+      { id: uid(), label: "Netflix (ejemplo)", amount: 219, billingCycle: "mensual", category: "Suscripción" },
+      { id: uid(), label: "Spotify (ejemplo)", amount: 129, billingCycle: "mensual", category: "Suscripción" },
+    ]);
+    setGoals([
+      { id: uid(), label: "Viaje (ejemplo)", targetAmount: 15000, currentAmount: 3500, deadline: iso(monthsFromNow(6)) },
+    ]);
+    setBudgets([
+      { id: uid(), category: "Comida", monthlyLimit: 3000 },
+      { id: uid(), category: "Transporte", monthlyLimit: 1500 },
+    ]);
+    setTransactions([
+      { id: uid(), label: "Nómina (ejemplo)", amount: 9500, date: iso(daysAgo(10)), type: "income", category: "Nómina", source: "manual" },
+      { id: uid(), label: "Súper (ejemplo)", amount: 780, date: iso(daysAgo(6)), type: "expense", category: "Súper", source: "manual", accountId: acc1 },
+      { id: uid(), label: "Tacos (ejemplo)", amount: 185, date: iso(daysAgo(4)), type: "expense", category: "Comida", source: "manual" },
+      { id: uid(), label: "Gasolina (ejemplo)", amount: 600, date: iso(daysAgo(3)), type: "expense", category: "Transporte", source: "manual", accountId: acc1 },
+      { id: uid(), label: "Cine (ejemplo)", amount: 240, date: iso(daysAgo(1)), type: "expense", category: "Entretenimiento", source: "manual" },
+      { id: uid(), label: "Comida corrida (ejemplo)", amount: 1450, date: iso(daysAgo(20)), type: "expense", category: "Comida", source: "manual" },
+      { id: uid(), label: "Nómina (ejemplo)", amount: 9500, date: iso(daysAgo(40)), type: "income", category: "Nómina", source: "manual" },
+      { id: uid(), label: "Ropa (ejemplo)", amount: 899, date: iso(daysAgo(35)), type: "expense", category: "Ropa", source: "manual" },
+    ]);
+    setAppSettings((s) => ({ ...s, demoData: true }));
+  };
+
+  const clearDemoData = () => {
+    setAssets([]); setLiabilities([]); setBuckets([]); setSubscriptions([]);
+    setGoals([]); setTransactions([]); setCreditCards([]); setInstallments([]);
+    setBudgets([]); setHistory([]);
+    setAppSettings((s) => ({ ...s, demoData: false }));
+    setDemoDismissed(true);
+  };
+
+  // ── GASTOS FIJOS AUTOMÁTICOS ─────────────────────────────────
+  const currentMonthKey = monthKey(new Date());
+  const [fixedDismissed, setFixedDismissed] = useState(true);
+
+  useEffect(() => {
+    try {
+      setFixedDismissed(localStorage.getItem(`fc_fixed_skip_${currentMonthKey}`) === "1");
+    } catch { setFixedDismissed(false); }
+  }, [currentMonthKey]);
+
+  const pendingFixed = subscriptions.filter((s) =>
+    s.billingCycle === "mensual" &&
+    !transactions.some((t) => t.subId === s.id && monthKey(t.date) === currentMonthKey),
+  );
+  const pendingFixedTotal = round2(pendingFixed.reduce((s, i) => s + i.amount, 0));
+
+  const registerFixedCharges = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setTransactions((prev) => [
+      ...prev,
+      ...pendingFixed.map((s) => ({
+        id: crypto.randomUUID(),
+        label: s.label,
+        amount: s.amount,
+        date: today,
+        type: "expense" as const,
+        category: s.category || "Suscripción",
+        source: "fixed" as const,
+        subId: s.id,
+        addedBy: author,
+      })),
+    ]);
+  };
+
+  const dismissFixedCharges = () => {
+    setFixedDismissed(true);
+    try { localStorage.setItem(`fc_fixed_skip_${currentMonthKey}`, "1"); } catch { /* noop */ }
   };
 
   // ── Modales ──────────────────────────────────────────────────
@@ -1778,6 +2082,77 @@ export default function Dashboard() {
 
           <div id="tab-content" style={{ scrollMarginTop: "72px" }} />
 
+          {/* ── BIENVENIDA / DATOS DE EJEMPLO ─────────────────── */}
+          {activeTab === "dashboard" && isEmpty && !demoDismissed && (
+            <Card className="hero-card glow-hero-positive border-0 overflow-hidden relative animate-fade-in-up">
+              <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full border border-white/10" />
+              <CardBody className="relative z-10 p-6 text-center">
+                <div className="inline-flex p-3 rounded-2xl bg-white/10 border border-white/15 mb-3">
+                  <Wand2 size={22} className="text-emerald-400" />
+                </div>
+                <h3 className="text-lg font-black text-white mb-1">¡Bienvenido a Finance Control!</h3>
+                <p className="text-sm text-white/60 max-w-md mx-auto mb-4">
+                  Empieza registrando tu primera cuenta o tarjeta — o explora la app ya llena
+                  con datos de ejemplo que puedes borrar cuando quieras.
+                </p>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Button size="sm" className="bg-white text-black font-bold" startContent={<Wand2 size={14} />} onPress={loadDemoData}>
+                    Cargar datos de ejemplo
+                  </Button>
+                  <Button size="sm" variant="light" className="text-white/60 hover:text-white" onPress={() => setDemoDismissed(true)}>
+                    Empezar desde cero
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {appSettings.demoData && (
+            <Card className="glass border border-amber-500/30">
+              <CardBody className="p-3 flex flex-row items-center gap-3">
+                <Wand2 size={16} className="text-amber-500 shrink-0" />
+                <p className="text-xs text-default-600 flex-1">
+                  Estás explorando con <span className="font-bold">datos de ejemplo</span>. Juega con todo — nada es real.
+                </p>
+                <Button size="sm" color="warning" variant="flat" className="font-bold shrink-0" onPress={clearDemoData}>
+                  Borrar ejemplo y empezar
+                </Button>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* ── GASTOS FIJOS DEL MES PENDIENTES ───────────────── */}
+          {activeTab === "dashboard" && pendingFixed.length > 0 && !fixedDismissed && (
+            <Card className="glass border border-indigo-500/25 animate-fade-in-up">
+              <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/12 w-fit shrink-0">
+                  <Repeat size={18} className="text-indigo-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold">
+                    ¿Registro tus gastos fijos de <span className="capitalize">{monthLabel(currentMonthKey).split(" ")[0]}</span>?
+                  </p>
+                  <p className="text-xs text-default-400 truncate">
+                    {pendingFixed.map((s) => s.label).join(" · ")} — total{" "}
+                    <span className="font-bold tnum text-default-600">{money(pendingFixedTotal)}</span>
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button size="sm" variant="light" className="text-default-400" onPress={dismissFixedCharges}>
+                    Este mes no
+                  </Button>
+                  <Button
+                    size="sm" variant="shadow" className="font-bold bg-indigo-500 text-white"
+                    startContent={<Check size={14} />}
+                    onPress={registerFixedCharges}
+                  >
+                    Registrar {pendingFixed.length}
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
           {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}
           {activeTab === "dashboard" && (
             <UpcomingPayments cards={creditCards} subscriptions={subscriptions} installments={installments} />
@@ -1785,8 +2160,14 @@ export default function Dashboard() {
 
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
           <section className={activeTab !== "dashboard" ? "hidden" : ""} id="management-sections">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-bold section-title">Mis Finanzas</h2>
+              {assets.length >= 2 && (
+                <Button size="sm" variant="flat" color="primary" className="font-bold"
+                  startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>
+                  Transferir entre cuentas
+                </Button>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               <Section
@@ -1800,6 +2181,7 @@ export default function Dashboard() {
                 onAdd={(l, a, d, c) => handleAddItem("asset", l, a, d, c)}
                 onRemove={(id) => removeItem(id, "asset")}
                 viewerId={user?.id}
+                onEdit={(id) => openEditItem("asset", id)}
               />
               <Section
                 title="Gastos & Deudas"
@@ -1814,6 +2196,7 @@ export default function Dashboard() {
                 cards={creditCards}
                 msiMonthly={msiMonthlyByCard}
                 viewerId={user?.id}
+                onEdit={(id) => openEditItem("liability", id)}
               />
               <Section
                 title="Apartados & Ahorro"
@@ -1826,6 +2209,7 @@ export default function Dashboard() {
                 onAdd={(l, a, d, c) => handleAddItem("bucket", l, a, d, c)}
                 onRemove={(id) => removeItem(id, "bucket")}
                 viewerId={user?.id}
+                onEdit={(id) => openEditItem("bucket", id)}
               />
               <SubscriptionsSection
                 items={subscriptions}
@@ -1833,6 +2217,7 @@ export default function Dashboard() {
                 onAdd={handleAddSubscription}
                 onRemove={removeSubscription}
                 viewerId={user?.id}
+                onEdit={openEditSub}
               />
               <CreditCards
                 cards={creditCards}
@@ -1844,6 +2229,8 @@ export default function Dashboard() {
                 onAddInstallment={addInstallment}
                 onRemoveInstallment={removeInstallment}
                 onMarkPaid={markCardPaid}
+                onUpdateCard={updateCreditCardInfo}
+                onUpdateInstallment={updateInstallmentInfo}
                 viewerId={user?.id}
               />
               <Budgets
@@ -1851,6 +2238,8 @@ export default function Dashboard() {
                 transactions={transactions}
                 onAdd={addBudget}
                 onRemove={removeBudget}
+                onUpdateLimit={updateBudgetLimit}
+                extraCategories={customExpenseCats}
                 viewerId={user?.id}
               />
               <GoalsSection
@@ -1859,6 +2248,7 @@ export default function Dashboard() {
                 onRemove={removeGoal}
                 onUpdateProgress={updateGoalProgress}
                 viewerId={user?.id}
+                onEdit={openEditGoal}
               />
             </div>
           </section>
@@ -1870,15 +2260,27 @@ export default function Dashboard() {
               transactions={transactions}
               onAdd={addTransaction}
               onRemove={removeTransaction}
+              onUpdate={updateTransaction}
               viewerId={user?.id}
               onScanRequest={onScannerOpen}
+              accounts={assets}
+              extraExpenseCats={customExpenseCats}
+              extraIncomeCats={customIncomeCats}
             />
           </section>
 
           {/* ── ANALYTICS ─────────────────────────────────────── */}
           <section className={activeTab !== "analytics" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
+            <div className="space-y-4">
+              <CashflowTimeline
+                cards={creditCards}
+                subscriptions={subscriptions}
+                installments={installments}
+                startBalance={available}
+              />
+              <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
+            </div>
           </section>
 
           {/* ── FINANCE AI ────────────────────────────────────── */}
@@ -2082,6 +2484,132 @@ export default function Dashboard() {
                     startContent={<Plus size={16} />}
                   >
                     Agregar
+                  </Button>
+                </ModalFooter>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: transferir entre cuentas ─────────────────── */}
+        <Modal isOpen={isTransferOpen} onOpenChange={onTransferChange} backdrop="blur" size="sm">
+          <ModalContent>
+            {(onClose) => {
+              const from = assets.find((a) => a.id === tFrom);
+              const parsed = parseFloat(tAmount);
+              const valid = tFrom && tTo && tFrom !== tTo && Number.isFinite(parsed) && parsed > 0 && from && parsed <= from.amount;
+              return (
+                <>
+                  <ModalHeader className="flex items-center gap-2">
+                    <ArrowLeftRight size={17} className="text-emerald-500" />
+                    Transferir entre cuentas
+                  </ModalHeader>
+                  <ModalBody>
+                    <Select label="De" variant="bordered" selectedKeys={tFrom ? [tFrom] : []}
+                      onChange={(e) => setTFrom(e.target.value)}>
+                      {assets.map((a) => (
+                        <SelectItem key={a.id} textValue={a.label}>{`${a.label} — ${money(a.amount)}`}</SelectItem>
+                      ))}
+                    </Select>
+                    <Select label="Hacia" variant="bordered" selectedKeys={tTo ? [tTo] : []}
+                      onChange={(e) => setTTo(e.target.value)}>
+                      {assets.filter((a) => a.id !== tFrom).map((a) => (
+                        <SelectItem key={a.id} textValue={a.label}>{`${a.label} — ${money(a.amount)}`}</SelectItem>
+                      ))}
+                    </Select>
+                    <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                      startContent={<span className="text-default-400 text-xs">$</span>}
+                      value={tAmount} onValueChange={setTAmount} />
+                    {from && Number.isFinite(parsed) && parsed > from.amount && (
+                      <p className="text-[11px] text-rose-500 font-semibold">
+                        {from.label} solo tiene {money(from.amount)}.
+                      </p>
+                    )}
+                    <p className="text-[11px] text-default-400">
+                      Mueve el saldo entre tus cuentas — no cuenta como gasto ni ingreso.
+                    </p>
+                  </ModalBody>
+                  <ModalFooter>
+                    <Button variant="light" onPress={onClose}>Cancelar</Button>
+                    <Button color="primary" variant="shadow" className="font-bold" isDisabled={!valid}
+                      startContent={<ArrowLeftRight size={15} />} onPress={() => doTransfer(onClose)}>
+                      Transferir
+                    </Button>
+                  </ModalFooter>
+                </>
+              );
+            }}
+          </ModalContent>
+        </Modal>
+
+        {/* ── MODAL: editar registro ──────────────────────────── */}
+        <Modal isOpen={editTarget !== null} onOpenChange={(o) => { if (!o) setEditTarget(null); }} backdrop="blur">
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader className="flex items-center gap-2">
+                  <Pencil size={17} className="text-indigo-500" />
+                  Editar registro
+                </ModalHeader>
+                <ModalBody>
+                  <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel} />
+
+                  {(editTarget?.kind === "asset" || editTarget?.kind === "liability" || editTarget?.kind === "bucket") && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                          startContent={<span className="text-default-400 text-xs">$</span>}
+                          value={eAmount} onValueChange={setEAmount} className="flex-1" />
+                        <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
+                      </div>
+                      <Select label="Categoría" variant="bordered"
+                        selectedKeys={eCategory ? [eCategory] : []}
+                        onChange={(e) => setECategory(e.target.value)}>
+                        {QUICK_CATEGORIES[editTarget.kind].map((c) => <SelectItem key={c}>{c}</SelectItem>)}
+                      </Select>
+                      {editTarget.kind === "liability" &&
+                        liabilities.find((l) => l.id === editTarget.id)?.cardId && (
+                        <p className="text-[11px] text-cyan-500">
+                          Este gasto está ligado a una tarjeta: al cambiar el monto, la deuda de la tarjeta se ajusta por la diferencia.
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {editTarget?.kind === "sub" && (
+                    <div className="flex gap-2">
+                      <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                        startContent={<span className="text-default-400 text-xs">$</span>}
+                        value={eAmount} onValueChange={setEAmount} className="flex-1" />
+                      <Select label="Ciclo" variant="bordered" className="w-[140px]"
+                        selectedKeys={[eCycle]}
+                        onChange={(e) => { const v = e.target.value; if (v === "mensual" || v === "anual") setECycle(v); }}>
+                        <SelectItem key="mensual">Mensual</SelectItem>
+                        <SelectItem key="anual">Anual</SelectItem>
+                      </Select>
+                    </div>
+                  )}
+
+                  {editTarget?.kind === "goal" && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input label="Monto meta" type="number" min="0" inputMode="decimal" variant="bordered"
+                          startContent={<span className="text-default-400 text-xs">$</span>}
+                          value={eTarget} onValueChange={setETarget} className="flex-1" />
+                        <Input label="Llevo ahorrado" type="number" min="0" inputMode="decimal" variant="bordered"
+                          startContent={<span className="text-default-400 text-xs">$</span>}
+                          value={eCurrent} onValueChange={setECurrent} className="flex-1" />
+                      </div>
+                      <Input label="Fecha límite" type="date" variant="bordered" value={eDeadline} onValueChange={setEDeadline} />
+                    </>
+                  )}
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="light" onPress={onClose}>Cancelar</Button>
+                  <Button color="primary" variant="shadow" className="font-bold"
+                    startContent={<Check size={15} />}
+                    onPress={() => { saveEdit(); onClose(); }}>
+                    Guardar cambios
                   </Button>
                 </ModalFooter>
               </>
@@ -2336,6 +2864,40 @@ export default function Dashboard() {
                       {shareError && <p className="text-[11px] text-rose-500 font-semibold">{shareError}</p>}
                     </>
                   )}
+
+                  {/* ── Categorías personalizadas ──────────────── */}
+                  <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Categorías personalizadas</p>
+                  {([
+                    { kind: "expense" as const, label: "Para gastos", list: customExpenseCats, setter: setCustomExpenseCats, value: newCatE, setValue: setNewCatE },
+                    { kind: "income" as const, label: "Para ingresos", list: customIncomeCats, setter: setCustomIncomeCats, value: newCatI, setValue: setNewCatI },
+                  ]).map(({ kind, label: catLabel, list, setter, value, setValue }) => (
+                    <div key={kind} className="space-y-1.5">
+                      <p className="text-[11px] font-semibold text-default-500">{catLabel}</p>
+                      {list.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {list.map((c) => (
+                            <span key={c} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              <Tag size={10} />
+                              {c}
+                              <button onClick={() => setter((prev) => prev.filter((x) => x !== c))} aria-label={`Quitar ${c}`} className="hover:text-rose-500 ml-0.5">
+                                <X size={11} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Input size="sm" variant="bordered" placeholder={kind === "expense" ? "Ej. Mascota, Gym" : "Ej. Propinas"}
+                          value={value} onValueChange={setValue}
+                          onKeyDown={(e) => { if (e.key === "Enter") addCustomCat(kind); }}
+                          className="flex-1" aria-label={`Nueva categoría ${catLabel}`} />
+                        <Button size="sm" variant="flat" color="primary" isIconOnly isDisabled={!value.trim()}
+                          onPress={() => addCustomCat(kind)} aria-label="Agregar categoría">
+                          <Plus size={14} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
 
                   {/* ── Datos ─────────────────────────────────── */}
                   <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Datos</p>

@@ -107,7 +107,7 @@ function cleanGoals(v: unknown): any[] {
 }
 
 const TX_TYPES = new Set(['expense', 'income']);
-const TX_SOURCES = new Set(['manual', 'scan']);
+const TX_SOURCES = new Set(['manual', 'scan', 'fixed']);
 const MAX_TRANSACTIONS = 5000;
 
 function cleanTransactions(v: unknown): any[] {
@@ -126,6 +126,8 @@ function cleanTransactions(v: unknown): any[] {
             type: TX_TYPES.has(r.type) ? r.type : 'expense',
             category: cleanString(r.category, 60),
             source: TX_SOURCES.has(r.source) ? r.source : 'manual',
+            subId: cleanString(r.subId, 64),
+            accountId: cleanString(r.accountId, 64),
             ...cleanAddedBy(r.addedBy),
         }];
     });
@@ -203,7 +205,20 @@ function cleanSettings(v: unknown): any {
     const days = typeof r.autoSnapshotDays === 'number' ? r.autoSnapshotDays : 7;
     return {
         autoSnapshotDays: Math.max(1, Math.min(90, Math.round(days))),
+        demoData: r.demoData === true,
     };
+}
+
+function cleanCategoryList(v: unknown): string[] {
+    if (!Array.isArray(v)) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of v.slice(0, 60)) {
+        const s = cleanString(raw, 40);
+        if (s && !seen.has(s.toLowerCase())) { seen.add(s.toLowerCase()); out.push(s); }
+        if (out.length >= 30) break;
+    }
+    return out;
 }
 
 function cleanHistory(v: unknown): any[] {
@@ -320,6 +335,8 @@ export async function POST(request: Request) {
         installments: cleanInstallments(body?.installments),
         budgets: cleanBudgets(body?.budgets),
         settings: cleanSettings(body?.settings),
+        customExpenseCats: cleanCategoryList(body?.customExpenseCats),
+        customIncomeCats: cleanCategoryList(body?.customIncomeCats),
         history: cleanHistory(body?.history),
     };
 

@@ -67,7 +67,11 @@ function renderMarkdown(text: string): React.ReactNode {
   return <div className="space-y-0.5">{blocks}</div>;
 }
 
-export default function AIChat() {
+export default function AIChat({ queuedPrompt, onPromptConsumed }: {
+  /** Pregunta disparada desde fuera (p. ej. el botón de análisis profundo) */
+  queuedPrompt?: string | null;
+  onPromptConsumed?: () => void;
+}) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +80,14 @@ export default function AIChat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (queuedPrompt) {
+      send(queuedPrompt);
+      onPromptConsumed?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queuedPrompt]);
 
   const send = async (text?: string) => {
     const content = (text ?? input).trim();

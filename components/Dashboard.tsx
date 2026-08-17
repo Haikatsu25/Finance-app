@@ -86,6 +86,7 @@ import UpcomingPayments from "./UpcomingPayments";
 import VoiceAssistant from "./VoiceAssistant";
 import AddedByBadge from "./AddedByBadge";
 import AIChat from "./AIChat";
+import AIInsights from "./AIInsights";
 import TicketScanner from "./TicketScanner";
 import { startTour } from "./Tutorial";
 
@@ -1367,6 +1368,7 @@ export default function Dashboard() {
   const { isOpen: isImportOpen, onOpen: onImportOpen, onOpenChange: onImportChange } = useDisclosure();
   const { isOpen: isVoiceOpen, onOpen: onVoiceOpen, onOpenChange: onVoiceChange } = useDisclosure();
   const { isOpen: isScannerOpen, onOpen: onScannerOpen, onOpenChange: onScannerChange } = useDisclosure();
+  const [aiPrompt, setAiPrompt] = useState<string | null>(null);
 
   const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
   const [importPreview, setImportPreview] = useState<{ data: any; counts: string } | null>(null);
@@ -1882,7 +1884,13 @@ export default function Dashboard() {
           {/* ── FINANCE AI ────────────────────────────────────── */}
           <section className={activeTab !== "ai" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <AIChat />
+            <div className="space-y-4">
+              <AIInsights
+                data={{ assets, liabilities, buckets, subscriptions, goals, transactions, creditCards, installments, budgets }}
+                onAskAI={(p) => setAiPrompt(p)}
+              />
+              <AIChat queuedPrompt={aiPrompt} onPromptConsumed={() => setAiPrompt(null)} />
+            </div>
           </section>
 
           {/* ── HISTORIAL ─────────────────────────────────────── */}

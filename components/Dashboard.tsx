@@ -86,6 +86,8 @@ import Budgets from "./Budgets";
 import UpcomingPayments from "./UpcomingPayments";
 import VoiceAssistant from "./VoiceAssistant";
 import AddedByBadge from "./AddedByBadge";
+import AIChat from "./AIChat";
+import TicketScanner from "./TicketScanner";
 import { startTour } from "./Tutorial";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1365,6 +1367,7 @@ export default function Dashboard() {
   const { isOpen: isClearOpen, onOpen: onClearOpen, onOpenChange: onClearChange } = useDisclosure();
   const { isOpen: isImportOpen, onOpen: onImportOpen, onOpenChange: onImportChange } = useDisclosure();
   const { isOpen: isVoiceOpen, onOpen: onVoiceOpen, onOpenChange: onVoiceChange } = useDisclosure();
+  const { isOpen: isScannerOpen, onOpen: onScannerOpen, onOpenChange: onScannerChange } = useDisclosure();
 
   const [selectedSnapshot, setSelectedSnapshot] = useState<HistorySnapshot | null>(null);
   const [importPreview, setImportPreview] = useState<{ data: any; counts: string } | null>(null);
@@ -1610,10 +1613,14 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap gap-2 justify-center mt-12 animate-fade-in-up delay-300">
-            {["📊 Analíticas avanzadas", "🧠 Red Neuronal IA", "📱 Móvil amigable", "🔒 Datos seguros"].map((f) => (
+            {["📊 Analíticas avanzadas", "🧠 Asistente IA", "📱 Móvil amigable", "🔒 Datos seguros"].map((f) => (
               <span key={f} className="glass px-4 py-2 rounded-full text-xs font-medium text-default-600">{f}</span>
             ))}
           </div>
+
+          <a href="/privacidad" className="mt-8 text-[11px] text-default-400 hover:text-emerald-500 underline underline-offset-2">
+            Aviso de privacidad
+          </a>
         </div>
       </SignedOut>
 
@@ -1863,6 +1870,7 @@ export default function Dashboard() {
               onAdd={addTransaction}
               onRemove={removeTransaction}
               viewerId={user?.id}
+              onScanRequest={onScannerOpen}
             />
           </section>
 
@@ -1875,7 +1883,10 @@ export default function Dashboard() {
           {/* ── FINANCE AI ────────────────────────────────────── */}
           <section className={activeTab !== "ai" ? "hidden" : ""}>
             <Divider className="my-2" />
-            <FinanceAI history={history} assets={assets} liabilities={liabilities} buckets={buckets} isDark={isDark} />
+            <div className="space-y-6">
+              <AIChat />
+              <FinanceAI history={history} assets={assets} liabilities={liabilities} buckets={buckets} isDark={isDark} />
+            </div>
           </section>
 
           {/* ── HISTORIAL ─────────────────────────────────────── */}
@@ -2073,6 +2084,16 @@ export default function Dashboard() {
             )}
           </ModalContent>
         </Modal>
+
+        {/* ── MODAL: escáner de tickets (IA gratuita) ─────────── */}
+        <TicketScanner
+          isOpen={isScannerOpen}
+          onOpenChange={onScannerChange}
+          onConfirm={(t) => {
+            addTransaction(t);
+            changeTab("transactions");
+          }}
+        />
 
         {/* ── MODAL: asistente de voz ─────────────────────────── */}
         <VoiceAssistant
@@ -2352,6 +2373,11 @@ export default function Dashboard() {
                       Limpiar Historial
                     </Button>
                   </div>
+
+                  <a href="/privacidad" target="_blank" rel="noopener"
+                    className="text-[11px] text-default-400 hover:text-emerald-500 underline underline-offset-2 mt-2">
+                    Aviso de privacidad
+                  </a>
                 </ModalBody>
               </>
             )}

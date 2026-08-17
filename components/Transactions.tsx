@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Card, CardBody, Input, Button, Select, SelectItem } from "@heroui/react";
 import {
   ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight,
-  Plus, Trash2, ReceiptText,
+  Plus, Trash2, ReceiptText, ScanLine,
 } from "lucide-react";
 import { TransactionItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
@@ -18,11 +18,12 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
 
-export default function Transactions({ transactions, onAdd, onRemove, viewerId }: {
+export default function Transactions({ transactions, onAdd, onRemove, viewerId, onScanRequest }: {
   transactions: TransactionItem[];
   onAdd: (t: Omit<TransactionItem, "id">) => void;
   onRemove: (id: string) => void;
   viewerId?: string;
+  onScanRequest?: () => void;
 }) {
   const [month, setMonth] = useState<string>(monthKey(new Date()));
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -131,11 +132,19 @@ export default function Transactions({ transactions, onAdd, onRemove, viewerId }
               </Select>
               <Input type="date" size="sm" variant="bordered" aria-label="Fecha" className="w-[130px]" value={date} onValueChange={setDate} />
             </div>
-            <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="shadow"
-              className="font-bold" isDisabled={!label.trim() || !amountValid}
-              startContent={<Plus size={14} />} onPress={submit}>
-              Registrar
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="shadow"
+                className="font-bold flex-1 lg:flex-none" isDisabled={!label.trim() || !amountValid}
+                startContent={<Plus size={14} />} onPress={submit}>
+                Registrar
+              </Button>
+              {onScanRequest && (
+                <Button size="sm" variant="flat" color="secondary" className="font-bold"
+                  startContent={<ScanLine size={14} />} onPress={onScanRequest}>
+                  Escanear ticket
+                </Button>
+              )}
+            </div>
           </div>
         </CardBody>
       </Card>

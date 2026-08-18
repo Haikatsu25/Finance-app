@@ -115,7 +115,10 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const maxMonth = shiftMonth(currentMonth, 3);
   const viewingFuture = month > currentMonth;
   const todayIso = new Date().toISOString().split("T")[0];
-  const dateIsFuture = !!date && date > todayIso;
+  // Fecha efectiva: la que escribas; si no escribes ninguna y estás viendo
+  // otro mes, se registra en ESE mes (día 1); si no, hoy.
+  const effectiveDate = date || (!searching && month !== currentMonth ? `${month}-01` : todayIso);
+  const dateIsFuture = effectiveDate > todayIso;
 
   const summary = useMemo(() => summarizeMonth(transactions, month), [transactions, month]);
   const prevSummary = useMemo(() => summarizeMonth(transactions, shiftMonth(month, -1)), [transactions, month]);
@@ -153,7 +156,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
     onAdd({
       label: label.trim(),
       amount: round2(parseFloat(amount)),
-      date: date || new Date().toISOString().split("T")[0],
+      date: effectiveDate,
       type,
       category,
       source: "manual",
@@ -161,7 +164,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       ...(accountId !== "none" && !dateIsFuture ? { accountId } : {}),
     });
     // Si registraste para otro mes, salta a ese mes para que lo veas
-    if (date && monthKey(date) !== month && !searching) setMonth(monthKey(date));
+    if (monthKey(effectiveDate) !== month && !searching) setMonth(monthKey(effectiveDate));
     setLabel(""); setAmount(""); setDate("");
   };
 
@@ -344,7 +347,14 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           </div>
           {dateIsFuture && (
             <p className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-2">
-              📅 Se registrará como gasto planeado de {monthLabel(monthKey(date))} — aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
+              📅 Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de <span className="capitalize">{monthLabel(monthKey(effectiveDate))}</span>
+              {!date && <> (día 1 — puedes elegir otro día con el campo de fecha)</>}
+              {" "}— aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
+            </p>
+          )}
+          {!dateIsFuture && !date && month !== currentMonth && !searching && (
+            <p className="text-[11px] text-default-400 font-semibold mt-2">
+              📅 Se registrará en <span className="capitalize">{monthLabel(month)}</span> (día 1) — elige otro día con el campo de fecha si quieres.
             </p>
           )}
         </CardBody>

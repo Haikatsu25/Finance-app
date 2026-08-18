@@ -79,9 +79,9 @@ import {
 } from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
-import { money, moneyExact, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
+import { money, moneyExact, moneyParts, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, monthKey, monthLabel } from "@/lib/finance-utils";
+import { cardDebtBreakdown, monthKey, monthLabel, summarizeMonth } from "@/lib/finance-utils";
 import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -160,19 +160,20 @@ function StatCard({
   const t = TONE[tone];
   return (
     <Card
-      className="glass card-hover border-0 animate-fade-in-scale"
+      className="glass card-hover border-0 animate-fade-in-scale rounded-2xl md:rounded-3xl"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <CardBody className="flex flex-row justify-between items-center p-5">
-        <div className="min-w-0">
-          <p className="text-default-500 text-[11px] font-bold uppercase tracking-wider mb-1">{label}</p>
+      {/* Móvil: tile vertical compacta (3 en fila). Desktop: fila con icono a la derecha. */}
+      <CardBody className="flex flex-col md:flex-row md:justify-between items-start md:items-center p-3 md:p-5 gap-2 md:gap-0">
+        <div className={`p-1.5 md:p-3 ${t.iconBg} rounded-lg md:rounded-2xl shrink-0 md:order-2 [&_svg]:w-4 [&_svg]:h-4 md:[&_svg]:w-5 md:[&_svg]:h-5`}>
+          <div className={t.text}>{icon}</div>
+        </div>
+        <div className="min-w-0 md:order-1 w-full">
+          <p className="text-default-500 text-[9px] md:text-[11px] font-bold uppercase tracking-wider mb-0.5 md:mb-1 truncate">{label}</p>
           {/* Número en blanco/tinta; el color queda en el icono (estilo Revolut) */}
-          <p className="text-2xl font-extrabold tnum tracking-tight text-foreground">
+          <p className="text-sm sm:text-base md:text-2xl font-extrabold tnum tracking-tight text-foreground truncate">
             {money(Math.abs(animated))}
           </p>
-        </div>
-        <div className={`p-3 ${t.iconBg} rounded-2xl shrink-0`}>
-          <div className={t.text}>{icon}</div>
         </div>
       </CardBody>
     </Card>
@@ -226,7 +227,7 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
               key={t.id}
               onClick={() => onChange(t.id)}
               className={`relative flex flex-col items-center gap-1 px-3 py-1.5 min-w-[56px] rounded-xl transition-all duration-200 ${
-                isActive ? "text-emerald-600 dark:text-emerald-400" : "text-default-400 hover:text-default-600"
+                isActive ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" : "text-default-400 hover:text-default-600"
               }`}
               aria-label={t.label}
               aria-current={isActive ? "page" : undefined}
@@ -1985,7 +1986,7 @@ export default function Dashboard() {
 
               <Card
                 id="balance-card"
-                className={`col-span-1 md:col-span-8 border-0 overflow-hidden relative ${
+                className={`col-span-1 md:col-span-8 border-0 overflow-hidden relative rounded-3xl ${
                   isPositive
                     ? "hero-card glow-hero-positive"
                     : "hero-card-negative glow-hero-negative"
@@ -1996,7 +1997,7 @@ export default function Dashboard() {
                 <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full border border-white/5" />
                 <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full border border-white/5" />
 
-                <CardBody className="relative z-10 py-8 px-7">
+                <CardBody className="relative z-10 py-6 px-5 sm:py-8 sm:px-7">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <PiggyBank size={16} className={isPositive ? "text-emerald-400" : "text-rose-400"} />
@@ -2008,11 +2009,41 @@ export default function Dashboard() {
                       MXN
                     </span>
                   </div>
-                  <h2 className={`text-6xl sm:text-7xl font-black tracking-tighter mb-2 tnum ${
-                    isPositive ? "neon-number" : "neon-number-negative"
-                  }`}>
-                    {!isPositive && "−"}{money(Math.abs(animatedAvailable))}
-                  </h2>
+                  {(() => {
+                    const p = moneyParts(Math.abs(animatedAvailable));
+                    return (
+                      <h2 className={`text-5xl sm:text-7xl font-black tracking-tighter mb-2 tnum ${
+                        isPositive ? "neon-number" : "neon-number-negative"
+                      }`}>
+                        {!isPositive && "−"}{p.int}
+                        {!p.masked && p.cents && (
+                          <span className="text-2xl sm:text-4xl font-bold text-white/35">{p.cents}</span>
+                        )}
+                      </h2>
+                    );
+                  })()}
+                  {(() => {
+                    const ms = summarizeMonth(transactions, currentMonthKey);
+                    if (ms.income === 0 && ms.expense === 0) return null;
+                    const pos = ms.net >= 0;
+                    return (
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold tnum border ${
+                          pos
+                            ? "bg-emerald-400/10 border-emerald-400/25 text-emerald-300"
+                            : "bg-rose-400/10 border-rose-400/25 text-rose-300"
+                        }`}>
+                          {pos ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                          {pos ? "+" : "−"}{money(Math.abs(ms.net))} este mes
+                        </span>
+                        {ms.expense > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold tnum bg-white/8 border border-white/15 text-white/60">
+                            {money(ms.expense)} gastado
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {(totalFixedCosts > 0 || totalMsiMonthly > 0) && (
                     <p className="text-white/70 text-sm mb-1 tnum">
                       Ya descontado: <span className="text-white/50">{money(totalLiabilities)} deudas</span>
@@ -2072,7 +2103,7 @@ export default function Dashboard() {
                 </CardBody>
               </Card>
 
-              <div className="col-span-1 md:col-span-4 flex flex-col gap-3">
+              <div className="col-span-1 md:col-span-4 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-3">
                 <StatCard label="Total Activos"  value={totalAssets}      icon={<TrendingUp size={20} />}   tone="emerald" delay={100} />
                 <StatCard label="Gastos / Deudas" value={totalLiabilities} icon={<TrendingDown size={20} />} tone="rose"    delay={200} />
                 <StatCard label="Apartados"       value={totalBuckets}     icon={<Wallet size={20} />}       tone="amber"   delay={300} />

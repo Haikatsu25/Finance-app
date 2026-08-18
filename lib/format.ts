@@ -51,6 +51,16 @@ export function moneyExact(n: number): string {
     return MXN2.format(n);
 }
 
+/** Partes del monto para el hero estilo fintech: entero grande + centavos atenuados */
+export function moneyParts(n: number): { int: string; cents: string; masked: boolean } {
+    if (privacyOn) return { int: MASK, cents: "", masked: true };
+    if (!Number.isFinite(n)) n = 0;
+    const full = MXN2.format(n); // ej. $12,540.28
+    const dot = full.lastIndexOf(".");
+    if (dot === -1) return { int: full, cents: "", masked: false };
+    return { int: full.slice(0, dot), cents: full.slice(dot), masked: false };
+}
+
 /** Redondeo seguro a 2 decimales para cálculos previos a guardar */
 export function round2(n: number): number {
     if (!Number.isFinite(n)) return 0;

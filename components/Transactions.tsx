@@ -283,8 +283,8 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       {/* Captura */}
       <Card className="glass border-0">
         <CardBody className="p-4">
-          <div className="flex flex-col lg:flex-row gap-2">
-            <div className="flex gap-1.5">
+          <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2">
+            <div className="flex gap-1.5 shrink-0">
               <button
                 onClick={() => { setType("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -302,8 +302,8 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 <ArrowUpCircle size={14} /> Ingreso
               </button>
             </div>
-            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="flex-1" value={label} onValueChange={setLabel} />
-            <div className="flex gap-2">
+            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="flex-1 min-w-[180px] basis-[180px]" value={label} onValueChange={setLabel} />
+            <div className="flex gap-2 flex-wrap">
               <Input
                 type="number" min="0" inputMode="decimal" placeholder="0.00" size="sm" variant="bordered"
                 startContent={<span className="text-default-400 text-xs font-bold">$</span>}
@@ -326,7 +326,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 </Select>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="shadow"
                 className="font-bold flex-1 lg:flex-none" isDisabled={!label.trim() || !amountValid}
                 startContent={<Plus size={14} />} onPress={submit}>

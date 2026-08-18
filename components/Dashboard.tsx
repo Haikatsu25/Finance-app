@@ -915,6 +915,20 @@ export default function Dashboard() {
     revRef.current = typeof data.rev === "number" ? data.rev : 0;
   }, []);
 
+  // Con el candado puesto, el documento no debe poder desplazarse:
+  // si no, se alcanza a ver (y a arrastrar) el contenido de atras.
+  useEffect(() => {
+    if (!locked) return;
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, [locked]);
+
   useEffect(() => {
     setMounted(true);
     setPrivacy(loadPrivacyMode());
@@ -1934,7 +1948,7 @@ export default function Dashboard() {
       <SignedIn>
         {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
         {locked && (
-          <div className="fixed inset-0 z-[100] hero-card flex flex-col items-center justify-center gap-6 p-6">
+          <div className="fixed inset-0 z-[100] hero-card flex flex-col items-center justify-center gap-6 p-6 overflow-hidden overscroll-none touch-none">
             <div className="p-5 rounded-3xl bg-white/5 border border-white/15">
               <Fingerprint size={44} className="text-sky-400" />
             </div>

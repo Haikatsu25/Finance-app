@@ -227,14 +227,14 @@ function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: NavTab)
               key={t.id}
               onClick={() => onChange(t.id)}
               className={`relative flex flex-col items-center gap-1 px-3 py-1.5 min-w-[56px] rounded-xl transition-all duration-200 ${
-                isActive ? "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400" : "text-default-400 hover:text-default-600"
+                isActive ? "bg-blue-500/12 text-blue-600 dark:text-sky-400" : "text-default-400 hover:text-default-600"
               }`}
               aria-label={t.label}
               aria-current={isActive ? "page" : undefined}
             >
               {t.icon}
               <span className="text-[10px] font-semibold">{t.label}</span>
-              {isActive && <span className="absolute -bottom-0.5 w-6 h-0.5 rounded-full bg-emerald-500" />}
+              {isActive && <span className="absolute -bottom-0.5 w-6 h-0.5 rounded-full bg-sky-400" />}
             </button>
           );
         })}
@@ -1818,7 +1818,7 @@ export default function Dashboard() {
       <nav className="glass-nav w-full sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-md shadow-emerald-500/25">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 shadow-md shadow-blue-500/25">
               <Wallet className="text-white w-5 h-5" />
             </div>
             <div>
@@ -1844,7 +1844,7 @@ export default function Dashboard() {
                 onClick={() => changeTab(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
                   activeTab === tab.id
-                    ? "bg-white dark:bg-default-100 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                    ? "bg-white dark:bg-default-100 text-blue-600 dark:text-sky-400 shadow-sm"
                     : "text-default-500 hover:text-default-700"
                 }`}
               >
@@ -1860,7 +1860,7 @@ export default function Dashboard() {
               <Button
                 isIconOnly variant="light" size="sm"
                 onPress={onVoiceOpen}
-                className="text-default-400 hover:text-emerald-500"
+                className="text-default-400 hover:text-sky-500"
                 aria-label="Asistente de voz"
               >
                 <Mic size={18} />
@@ -1868,7 +1868,7 @@ export default function Dashboard() {
               <Button
                 isIconOnly variant="light" size="sm"
                 onPress={togglePrivacy}
-                className="text-default-400 hover:text-emerald-500"
+                className="text-default-400 hover:text-sky-500"
                 aria-label={privacy ? "Mostrar montos" : "Ocultar montos"}
               >
                 {privacy ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -1877,7 +1877,7 @@ export default function Dashboard() {
             <Button
               isIconOnly variant="light" size="sm"
               onPress={handleStartTour}
-              className="text-default-400 hover:text-emerald-500"
+              className="text-default-400 hover:text-sky-500"
               aria-label="Iniciar tour"
             >
               <HelpCircle size={18} />
@@ -1894,7 +1894,7 @@ export default function Dashboard() {
       <SignedOut>
         <div className="min-h-[90dvh] flex flex-col items-center justify-center p-6 text-center">
           <div className="animate-fade-in-up">
-            <div className="inline-flex p-4 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 shadow-2xl shadow-emerald-500/40 mb-8">
+            <div className="inline-flex p-4 rounded-3xl bg-gradient-to-br from-blue-500 to-sky-400 shadow-2xl shadow-blue-500/40 mb-8">
               <Wallet className="text-white w-14 h-14" />
             </div>
             <h1 className="text-4xl sm:text-6xl font-black mb-4 tracking-tight gradient-text-emerald">
@@ -1910,7 +1910,7 @@ export default function Dashboard() {
             <SignInButton mode="modal">
               <Button
                 size="lg"
-                className="font-bold bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-xl shadow-emerald-500/40 hover:shadow-emerald-500/60 transition-shadow"
+                className="font-bold bg-gradient-to-r from-blue-500 to-sky-400 text-white shadow-xl shadow-blue-500/40 hover:shadow-emerald-500/60 transition-shadow"
               >
                 Iniciar Sesión
                 <ChevronRight size={18} />
@@ -1924,7 +1924,7 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <a href="/privacidad" className="mt-8 text-[11px] text-default-400 hover:text-emerald-500 underline underline-offset-2">
+          <a href="/privacidad" className="mt-8 text-[11px] text-default-400 hover:text-sky-500 underline underline-offset-2">
             Aviso de privacidad
           </a>
         </div>
@@ -1936,7 +1936,7 @@ export default function Dashboard() {
         {locked && (
           <div className="fixed inset-0 z-[100] hero-card flex flex-col items-center justify-center gap-6 p-6">
             <div className="p-5 rounded-3xl bg-white/5 border border-white/15">
-              <Fingerprint size={44} className="text-emerald-400" />
+              <Fingerprint size={44} className="text-sky-400" />
             </div>
             <div className="text-center">
               <h2 className="text-xl font-black text-white mb-1">Finance Control está bloqueada</h2>
@@ -2000,7 +2000,7 @@ export default function Dashboard() {
                 <CardBody className="relative z-10 py-6 px-5 sm:py-8 sm:px-7">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <PiggyBank size={16} className={isPositive ? "text-emerald-400" : "text-rose-400"} />
+                      <PiggyBank size={16} className={isPositive ? "text-sky-400" : "text-rose-400"} />
                       <p className="text-white/60 font-semibold text-xs tracking-[0.2em] uppercase">
                         {isPositive ? "Disponible Real Este Mes" : "Déficit Este Mes"}
                       </p>
@@ -2063,7 +2063,7 @@ export default function Dashboard() {
                       <div
                         className={`h-full rounded-full transition-all duration-1000 ${
                           isPositive
-                            ? "bg-gradient-to-r from-emerald-400 to-cyan-400"
+                            ? "bg-gradient-to-r from-blue-400 to-sky-300"
                             : "bg-gradient-to-r from-rose-400 to-orange-400"
                         }`}
                         style={{ width: `${balanceProgress}%` }}
@@ -2119,7 +2119,7 @@ export default function Dashboard() {
               <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full border border-white/10" />
               <CardBody className="relative z-10 p-6 text-center">
                 <div className="inline-flex p-3 rounded-2xl bg-white/10 border border-white/15 mb-3">
-                  <Wand2 size={22} className="text-emerald-400" />
+                  <Wand2 size={22} className="text-sky-400" />
                 </div>
                 <h3 className="text-lg font-black text-white mb-1">¡Bienvenido a Finance Control!</h3>
                 <p className="text-sm text-white/60 max-w-md mx-auto mb-4">
@@ -2973,7 +2973,7 @@ export default function Dashboard() {
                   </div>
 
                   <a href="/privacidad" target="_blank" rel="noopener"
-                    className="text-[11px] text-default-400 hover:text-emerald-500 underline underline-offset-2 mt-2">
+                    className="text-[11px] text-default-400 hover:text-sky-500 underline underline-offset-2 mt-2">
                     Aviso de privacidad
                   </a>
                 </ModalBody>

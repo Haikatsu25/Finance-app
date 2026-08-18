@@ -35,10 +35,10 @@
 .dark {
   /* Premium dark: casi negro, tarjetas grafito con highlight superior,
      neón solo como acento puntual */
-  --background: #05070c;
+  --background: #060c16;
   --foreground: #eef2f8;
 
-  --card-bg: linear-gradient(180deg, #0d121c 0%, #0a0e16 100%);
+  --card-bg: linear-gradient(180deg, #0c1524 0%, #09101c 100%);
   --card-border: rgba(255, 255, 255, 0.065);
   --card-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
@@ -49,7 +49,7 @@
     0 2px 4px rgba(0, 0, 0, 0.5),
     0 24px 56px -18px rgba(0, 0, 0, 0.9);
 
-  --nav-bg: rgba(5, 7, 12, 0.82);
+  --nav-bg: rgba(6, 12, 22, 0.82);
   --nav-border: rgba(255, 255, 255, 0.06);
 }
 
@@ -76,7 +76,7 @@ body::before {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(16, 185, 129, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
     radial-gradient(ellipse 60% 50% at 100% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 60%);
   pointer-events: none;
 }
@@ -84,13 +84,13 @@ body::before {
 .dark body::before,
 :root[class~="dark"] body::before {
   background:
-    radial-gradient(ellipse 60% 45% at 20% -12%, rgba(16, 185, 129, 0.13) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 95% -5%, rgba(124, 92, 255, 0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 20% -12%, rgba(59, 130, 246, 0.16) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 95% -5%, rgba(56, 189, 248, 0.09) 0%, transparent 55%),
     radial-gradient(ellipse 100% 60% at 50% 115%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.22);
+  background: rgba(59, 130, 246, 0.28);
 }
 
 @layer components {
@@ -133,10 +133,10 @@ body::before {
   ─────────────────────────────────────────── */
   .hero-card {
     background:
-      radial-gradient(130% 170% at 100% 0%, rgba(0, 227, 156, 0.22) 0%, transparent 48%),
-      radial-gradient(120% 160% at 0% 110%, rgba(124, 92, 255, 0.17) 0%, transparent 52%),
-      radial-gradient(90% 120% at 55% 45%, rgba(34, 211, 238, 0.07) 0%, transparent 60%),
-      linear-gradient(135deg, #0c1118 0%, #05070c 100%);
+      radial-gradient(130% 170% at 100% 0%, rgba(72, 149, 255, 0.30) 0%, transparent 48%),
+      radial-gradient(120% 160% at 0% 110%, rgba(30, 64, 175, 0.35) 0%, transparent 52%),
+      radial-gradient(90% 120% at 55% 45%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
+      linear-gradient(135deg, #0b1526 0%, #060c16 100%);
     border: 1px solid rgba(255, 255, 255, 0.09);
   }
 
@@ -162,7 +162,7 @@ body::before {
   }
 
   .glow-hero-positive {
-    box-shadow: 0 24px 64px -20px rgba(0, 227, 156, 0.35), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 24px 64px -20px rgba(59, 130, 246, 0.40), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
   }
 
   .glow-hero-negative {
@@ -172,7 +172,7 @@ body::before {
   /* Texto-neón para el gran número del héroe */
   .neon-number {
     color: #ffffff;
-    text-shadow: 0 0 32px rgba(0, 227, 156, 0.35);
+    text-shadow: 0 0 32px rgba(96, 165, 250, 0.40);
   }
 
   .neon-number-negative {
@@ -188,7 +188,7 @@ body::before {
   }
 
   .gradient-text-emerald {
-    background: linear-gradient(120deg, #059669 0%, #0891b2 100%);
+    background: linear-gradient(120deg, #3b82f6 0%, #38bdf8 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -210,7 +210,7 @@ body::before {
      no neón. Un solo elemento saturado por vista.
   ─────────────────────────────────────────── */
   .glow-emerald {
-    box-shadow: 0 12px 40px -12px rgba(16, 185, 129, 0.45);
+    box-shadow: 0 12px 40px -12px rgba(59, 130, 246, 0.45);
   }
 
   .glow-rose {
@@ -249,8 +249,8 @@ body::before {
     align-items: center;
     justify-content: center;
     color: white;
-    background: linear-gradient(135deg, #10b981 0%, #0891b2 100%);
-    box-shadow: 0 8px 24px -6px rgba(16, 185, 129, 0.5);
+    background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+    box-shadow: 0 8px 24px -6px rgba(59, 130, 246, 0.5);
     transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s;
   }
 
@@ -378,7 +378,7 @@ body::before {
 }
 
 :focus-visible {
-  outline: 2px solid #10b981;
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
   border-radius: 4px;
 }

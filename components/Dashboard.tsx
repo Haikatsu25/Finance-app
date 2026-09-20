@@ -2003,8 +2003,8 @@ export default function Dashboard() {
 
           {/* ── ESTE MES | PLAN ───────────────────────────────── */}
           {activeTab === "dashboard" && (
-            <div className="flex justify-center -mb-4">
-              <div className="inline-flex items-center gap-1 bg-default-100/70 rounded-xl p-1" role="tablist" aria-label="Vista de Inicio">
+            <div className="flex justify-center relative z-10">
+              <div className="inline-flex items-center gap-1 bg-default-100/70 rounded-xl p-1 shadow-sm" role="tablist" aria-label="Vista de Inicio">
                 <button
                   role="tab" aria-selected={!planMode}
                   onClick={() => setPlanMode(false)}

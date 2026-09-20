@@ -128,7 +128,10 @@ export function installmentStatus(plan: InstallmentPlan, from: Date = new Date()
     const monthlyPayment = Math.round((plan.totalAmount / months) * 100) / 100;
     const start = new Date(plan.startDate + "T12:00:00");
     const elapsed = isNaN(start.getTime()) ? 0 : fullMonthsBetween(start, from);
-    const monthsPaid = Math.min(months, elapsed);
+    // Ajuste manual (+/-): permite adelantar o atrasar mensualidades sin
+    // perder el avance automatico por calendario.
+    const adjust = Number.isFinite(plan.paidAdjust) ? Math.trunc(plan.paidAdjust as number) : 0;
+    const monthsPaid = Math.min(months, Math.max(0, elapsed + adjust));
     const monthsLeft = months - monthsPaid;
     const paidAmount = Math.round(monthlyPayment * monthsPaid * 100) / 100;
     const remainingAmount = Math.round((plan.totalAmount - paidAmount) * 100) / 100;
@@ -371,4 +374,150 @@ export function spentByCategory(transactions: TransactionItem[], key: string): M
         map.set(c, (map.get(c) || 0) + t.amount);
     }
     return map;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// PLAN DEL MES — la foto completa de un mes futuro con lo que ya se
+// sabe: ingresos esperados, compromisos (fijos + MSI) y gastos planeados.
+// Todo sale de datos existentes; no requiere campos nuevos.
+// ─────────────────────────────────────────────────────────────────
+
+export interface PlanEvent {
+    id: string;
+    label: string;
+    amount: number;          // con signo: + entra, − sale
+    date: Date;
+    kind: "income" | "planned" | "fixed" | "msi";
+    note?: string;
+    txId?: string;
+}
+
+export interface PlanCard {
+    card: CreditCardItem;
+    msi: number;             // mensualidades MSI que caen en el mes
+    plans: number;           // cuántas compras a meses siguen activas
+    dueDate: Date;
+}
+
+export interface PlanMsi {
+    status: InstallmentStatus;   // al cierre del mes (ya con la mensualidad de ese mes)
+    card?: CreditCardItem;
+}
+
+export interface MonthPlan {
+    key: string;
+    income: number;
+    fixed: number;
+    msi: number;
+    commitments: number;     // fixed + msi
+    planned: number;
+    outflow: number;         // commitments + planned
+    balance: number;         // income − outflow
+    committedPct: number | null;  // outflow / income (null si no hay ingresos)
+    incomeItems: TransactionItem[];
+    plannedItems: TransactionItem[];
+    fixedItems: { sub: SubscriptionItem; amount: number; note?: string }[];
+    msiItems: PlanMsi[];
+    cards: PlanCard[];
+    events: PlanEvent[];     // ordenados por fecha
+}
+
+function clampDay(y: number, m0: number, day: number): Date {
+    const last = new Date(y, m0 + 1, 0).getDate();
+    return new Date(y, m0, Math.max(1, Math.min(day, last)));
+}
+
+export function planMonth(
+    key: string,
+    data: {
+        transactions: TransactionItem[];
+        subscriptions: SubscriptionItem[];
+        installments: InstallmentPlan[];
+        cards: CreditCardItem[];
+    },
+): MonthPlan {
+    const [y, m] = key.split("-").map(Number);
+    const m0 = m - 1;
+    const firstDay = new Date(y, m0, 1, 12);
+    const lastDay = new Date(y, m0 + 1, 0, 12);
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+
+    const inMonth = data.transactions.filter((t) => monthKey(t.date) === key);
+    const incomeItems = inMonth.filter((t) => t.type === "income").sort((a, b) => a.date.localeCompare(b.date));
+    const plannedItems = inMonth.filter((t) => t.type === "expense").sort((a, b) => a.date.localeCompare(b.date));
+
+    const events: PlanEvent[] = [];
+    const toDate = (iso: string) => new Date(iso + "T12:00:00");
+
+    let income = 0;
+    for (const t of incomeItems) {
+        income += t.amount;
+        events.push({ id: `inc-${t.id}`, label: t.label, amount: t.amount, date: toDate(t.date), kind: "income", txId: t.id });
+    }
+
+    let planned = 0;
+    for (const t of plannedItems) {
+        planned += t.amount;
+        events.push({ id: `plan-${t.id}`, label: t.label, amount: -t.amount, date: toDate(t.date), kind: "planned", txId: t.id });
+    }
+
+    // Fijos: mensuales completos; anuales prorrateados a 12 (igual que el héroe)
+    const fixedItems: MonthPlan["fixedItems"] = [];
+    let fixed = 0;
+    for (const s of data.subscriptions) {
+        const amount = s.billingCycle === "anual" ? r2(s.amount / 12) : s.amount;
+        if (amount <= 0) continue;
+        fixed += amount;
+        const note = s.billingCycle === "anual" ? "anual ÷ 12" : undefined;
+        fixedItems.push({ sub: s, amount, note });
+        events.push({ id: `fix-${s.id}`, label: s.label, amount: -amount, date: firstDay, kind: "fixed", note: "fijo" });
+    }
+
+    // MSI activos en el mes: aún les queda mensualidad al empezar el mes.
+    // El estado que se muestra es al cierre (ya contando la de ese mes).
+    const msiItems: PlanMsi[] = [];
+    const msiByCard = new Map<string, number>();
+    let msi = 0;
+    for (const p of data.installments) {
+        const atStart = installmentStatus(p, firstDay);
+        if (atStart.done) continue;
+        const atEnd = installmentStatus(p, lastDay);
+        const card = data.cards.find((c) => c.id === p.cardId);
+        msiItems.push({ status: atEnd, card });
+        msi += atStart.monthlyPayment;
+        msiByCard.set(p.cardId, (msiByCard.get(p.cardId) || 0) + atStart.monthlyPayment);
+    }
+
+    // Tarjetas con mensualidades en el mes, con su fecha de pago
+    const cards: PlanCard[] = data.cards.map((c) => {
+        const cardMsi = r2(msiByCard.get(c.id) || 0);
+        const plans = msiItems.filter((i) => i.card?.id === c.id).length;
+        const dueDate = clampDay(y, m0, c.dueDay || 1);
+        if (cardMsi > 0) {
+            events.push({ id: `msi-${c.id}`, label: `${c.label} · MSI`, amount: -cardMsi, date: dueDate, kind: "msi", note: "msi" });
+        }
+        return { card: c, msi: cardMsi, plans, dueDate };
+    }).filter((pc) => pc.msi > 0);
+
+    events.sort((a, b) => a.date.getTime() - b.date.getTime() || a.kind.localeCompare(b.kind));
+
+    const commitments = r2(fixed + msi);
+    const outflow = r2(commitments + planned);
+    return {
+        key,
+        income: r2(income),
+        fixed: r2(fixed),
+        msi: r2(msi),
+        commitments,
+        planned: r2(planned),
+        outflow,
+        balance: r2(income - outflow),
+        committedPct: income > 0 ? Math.round((outflow / income) * 100) : null,
+        incomeItems,
+        plannedItems,
+        fixedItems,
+        msiItems,
+        cards,
+        events,
+    };
 }

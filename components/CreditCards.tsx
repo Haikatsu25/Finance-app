@@ -7,7 +7,7 @@ import {
 } from "@heroui/react";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
-  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil,
+  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil, Minus,
 } from "lucide-react";
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
@@ -160,6 +160,7 @@ export default function CreditCards({
   const [msiAmount, setMsiAmount] = useState("");
   const [msiMonths, setMsiMonths] = useState("12");
   const [msiDate, setMsiDate] = useState("");
+  const [msiPaid, setMsiPaid] = useState("");   // mensualidades ya pagadas (absoluto, solo al editar)
 
   const validCard = label.trim() && creditLimit && dueDay &&
     Number.isFinite(parseFloat(creditLimit)) && parseFloat(creditLimit) > 0 &&
@@ -187,6 +188,7 @@ export default function CreditCards({
     setMsiAmount(String(p.totalAmount));
     setMsiMonths(String(p.months));
     setMsiDate(p.startDate);
+    setMsiPaid(String(installmentStatus(p).monthsPaid));
     setEditingPlan(p);
     onMsiOpen();
   };
@@ -222,15 +224,27 @@ export default function CreditCards({
   const submitMsi = (close: () => void) => {
     if (!validMsi) return;
     if (editingPlan && onUpdateInstallment) {
+      const months = parseInt(msiMonths) || 12;
+      const startDate = msiDate || editingPlan.startDate;
+      // El campo se captura en absoluto ("llevo 5 pagadas") pero se guarda como
+      // ajuste sobre el calendario, para que siga avanzando solo mes con mes.
+      const base = installmentStatus(
+        { ...editingPlan, months, startDate, paidAdjust: 0 },
+      ).monthsPaid;
+      const typed = parseInt(msiPaid);
+      const paidAdjust = Number.isFinite(typed)
+        ? Math.max(0, Math.min(months, typed)) - base
+        : (editingPlan.paidAdjust || 0);
       onUpdateInstallment(editingPlan.id, {
         cardId: msiCardId,
         label: msiLabel.trim(),
         totalAmount: round2(parseFloat(msiAmount)),
-        months: parseInt(msiMonths) || 12,
-        startDate: msiDate || editingPlan.startDate,
+        months,
+        startDate,
+        paidAdjust,
       });
       setEditingPlan(null);
-      setMsiLabel(""); setMsiAmount(""); setMsiDate("");
+      setMsiLabel(""); setMsiAmount(""); setMsiDate(""); setMsiPaid("");
       close();
       return;
     }
@@ -460,10 +474,37 @@ export default function CreditCards({
                           <div className="h-1 rounded-full bg-white/15 mb-1">
                             <div className="h-full rounded-full bg-indigo-400 transition-all duration-500" style={{ width: `${s.progress}%` }} />
                           </div>
-                          <p className="text-[10px] text-white/40 tnum">
-                            {s.monthsPaid}/{s.plan.months} pagados · restan {money(s.remainingAmount)}
-                            {s.nextChargeDate && ` · próximo ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {onUpdateInstallment && (
+                              <span className="flex items-center gap-0.5 shrink-0">
+                                <button
+                                  onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) - 1 })}
+                                  disabled={s.monthsPaid <= 0}
+                                  className="w-5 h-5 rounded-md bg-white/10 text-white/60 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-white/10 transition-all flex items-center justify-center"
+                                  aria-label={`Quitar una mensualidad pagada de ${s.plan.label}`}
+                                >
+                                  <Minus size={10} />
+                                </button>
+                                <button
+                                  onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) + 1 })}
+                                  disabled={s.monthsPaid >= s.plan.months}
+                                  className="w-5 h-5 rounded-md bg-white/10 text-white/60 hover:bg-indigo-400/30 hover:text-indigo-200 disabled:opacity-25 disabled:hover:bg-white/10 transition-all flex items-center justify-center"
+                                  aria-label={`Marcar una mensualidad más pagada de ${s.plan.label}`}
+                                >
+                                  <Plus size={10} />
+                                </button>
+                              </span>
+                            )}
+                            <p className="text-[10px] text-white/40 tnum">
+                              <span className="text-white/70 font-bold">{s.monthsPaid}/{s.plan.months}</span> pagados · restan {money(s.remainingAmount)}
+                              {s.nextChargeDate && ` · próximo ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
+                            </p>
+                            {!!s.plan.paidAdjust && (
+                              <span className="text-[9px] font-bold uppercase text-indigo-300 shrink-0">
+                                {s.plan.paidAdjust > 0 ? `+${s.plan.paidAdjust} ajustado` : `${s.plan.paidAdjust} ajustado`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -545,7 +586,7 @@ export default function CreditCards({
                   </Select>
                   <Input label="¿Qué compraste?" placeholder="Ej. Laptop, Refrigerador" variant="bordered" value={msiLabel} onValueChange={setMsiLabel} />
                   <div className="flex gap-2">
-                    <Input label="Monto total" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
+                    <Input label="Monto total" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" variant="bordered"
                       startContent={<span className="text-default-400 text-xs">$</span>} value={msiAmount} onValueChange={setMsiAmount} className="flex-1" />
                     <Select label="Plazo" variant="bordered" className="w-32" selectedKeys={[msiMonths]}
                       onChange={(e) => setMsiMonths(e.target.value || "12")}>
@@ -554,6 +595,15 @@ export default function CreditCards({
                   </div>
                   <Input label="Fecha de compra" type="date" variant="bordered" value={msiDate} onValueChange={setMsiDate}
                     description="Si la dejas vacía se usa hoy" />
+
+                  {editingPlan && (
+                    <Input
+                      label="Mensualidades ya pagadas" type="number" min="0" max={String(mths)} step="1"
+                      inputMode="numeric" variant="bordered" value={msiPaid} onValueChange={setMsiPaid}
+                      endContent={<span className="text-default-400 text-xs">de {mths}</span>}
+                      description="Súbela si ya diste por pagada la del mes que viene aunque no llegue tu fecha de pago"
+                    />
+                  )}
 
                   {monthly > 0 && (
                     <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center gap-3">

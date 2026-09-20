@@ -72,6 +72,11 @@ export interface InstallmentPlan {
     totalAmount: number;     // monto total diferido
     months: number;          // plazo: 3, 6, 9, 12, 18, 24
     startDate: string;       // YYYY-MM-DD, fecha de la compra
+    /** Ajuste manual de mensualidades pagadas (+/-). Sirve para dar por
+     *  pagada la del mes que viene antes de que llegue tu fecha de pago.
+     *  Se SUMA a las que van corridas por calendario, asi la cuenta sigue
+     *  avanzando sola mes con mes. */
+    paidAdjust?: number;
     addedBy?: AddedBy;
 }
 

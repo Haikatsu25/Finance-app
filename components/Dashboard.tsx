@@ -79,9 +79,9 @@ import {
 } from "@/types";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
-import { money, moneyExact, moneyParts, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
+import { money, moneyExact, moneySmart, moneyParts, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, monthKey, monthLabel, summarizeMonth } from "@/lib/finance-utils";
+import { cardDebtBreakdown, monthKey, monthLabel, shiftMonth, summarizeMonth } from "@/lib/finance-utils";
 import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -93,6 +93,7 @@ import AddedByBadge from "./AddedByBadge";
 import AIChat from "./AIChat";
 import AIInsights from "./AIInsights";
 import CashflowTimeline from "./CashflowTimeline";
+import PlanView from "./PlanView";
 import TicketScanner from "./TicketScanner";
 import { startTour } from "./Tutorial";
 
@@ -342,7 +343,7 @@ function Section({ title, description, icon, items, total, color, categories, on
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   <span className={`tnum font-bold text-sm text-right mr-1 ${t.text}`}>
-                    {money(item.amount)}
+                    {moneySmart(item.amount)}
                   </span>
                   {onEdit && (
                     <button
@@ -415,6 +416,7 @@ function Section({ title, description, icon, items, total, color, categories, on
             <Input
               type="number"
               min="0"
+              step="0.01"
               inputMode="decimal"
               placeholder="0.00"
               size="sm"
@@ -561,7 +563,7 @@ function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, onEdit 
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   <span className={`tnum font-bold text-sm mr-1 ${t.text}`}>
-                    {money(item.amount)}
+                    {moneySmart(item.amount)}
                   </span>
                   {onEdit && (
                     <button
@@ -597,6 +599,7 @@ function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, onEdit 
             <Input
               type="number"
               min="0"
+              step="0.01"
               inputMode="decimal"
               placeholder="0.00"
               size="sm"
@@ -664,6 +667,7 @@ function GoalContribution({ current, label, onContribute }: {
         className="w-24"
         type="number"
         min="0"
+        step="0.01"
         inputMode="decimal"
         value={value}
         onValueChange={setValue}
@@ -760,8 +764,8 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId, onEd
                     </div>
                   </div>
                   <div className="flex justify-between text-xs text-default-500 tnum mb-1">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{money(item.currentAmount)}</span>
-                    <span>{money(item.targetAmount)}</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{moneySmart(item.currentAmount)}</span>
+                    <span>{moneySmart(item.targetAmount)}</span>
                   </div>
                   <div className="h-2 rounded-full bg-default-200/60 mb-2 overflow-hidden" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100}>
                     <div
@@ -785,7 +789,7 @@ function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerId, onEd
 
         <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-default-200/50 mt-2">
           <Input placeholder="Ej. Viaje, Auto" size="sm" variant="bordered" value={label} onValueChange={setLabel} className="flex-1" />
-          <Input type="number" min="0" inputMode="decimal" placeholder="Monto Meta ($)" size="sm" variant="bordered" value={targetAmount} onValueChange={setTargetAmount} className="w-full sm:w-36" />
+          <Input type="number" min="0" step="0.01" inputMode="decimal" placeholder="Monto Meta ($)" size="sm" variant="bordered" value={targetAmount} onValueChange={setTargetAmount} className="w-full sm:w-36" />
           <Input type="date" size="sm" variant="bordered" aria-label="Fecha límite" value={deadline} onValueChange={setDeadline} className="w-full sm:w-36" />
           <Button variant="shadow" onPress={handleAdd} isDisabled={!label.trim() || !targetAmount || !deadline} className="font-bold bg-purple-500 text-white">
             Crear Meta
@@ -876,6 +880,9 @@ export default function Dashboard() {
   const [isLoading,     setIsLoading]     = useState(true);
   const [loadError,     setLoadError]     = useState(false);
   const [activeTab,     setActiveTab]     = useState<NavTab>("dashboard");
+  // Inicio tiene dos caras: "Este mes" (hoy) y "Plan" (un mes futuro)
+  const [planMode,      setPlanMode]      = useState(false);
+  const [planMonthKey,  setPlanMonthKey]  = useState(() => shiftMonth(monthKey(new Date()), 1));
   const [saveStatus,    setSaveStatus]    = useState<SaveStatus>("idle");
 
   // Concurrencia optimista: rev del documento en servidor
@@ -1830,16 +1837,16 @@ export default function Dashboard() {
 
       {/* ── TOP NAV ──────────────────────────────────────────── */}
       <nav className="glass-nav w-full sticky top-0 z-50 transition-all duration-300">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 shadow-md shadow-blue-500/25">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 shadow-md shadow-blue-500/25 shrink-0">
               <Wallet className="text-white w-5 h-5" />
             </div>
-            <div>
-              <h1 className="text-lg font-extrabold tracking-tight gradient-text-emerald">
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-extrabold tracking-tight gradient-text-emerald truncate whitespace-nowrap">
                 Finance Control
               </h1>
-              <p className="text-[10px] text-default-400 -mt-0.5 hidden sm:block">
+              <p className="text-[10px] text-default-400 -mt-0.5 hidden sm:block truncate">
                 Gestión financiera inteligente
               </p>
             </div>
@@ -1868,7 +1875,7 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
             <SaveIndicator status={saveStatus} />
             <SignedIn>
               <Button
@@ -1994,7 +2001,49 @@ export default function Dashboard() {
         ) : (
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8 pb-28 md:pb-8">
 
-          {/* ── HERO ─────────────────────────────────────────── */}
+          {/* ── ESTE MES | PLAN ───────────────────────────────── */}
+          {activeTab === "dashboard" && (
+            <div className="flex justify-center -mb-4">
+              <div className="inline-flex items-center gap-1 bg-default-100/70 rounded-xl p-1" role="tablist" aria-label="Vista de Inicio">
+                <button
+                  role="tab" aria-selected={!planMode}
+                  onClick={() => setPlanMode(false)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${!planMode ? "bg-white dark:bg-default-100 text-blue-600 dark:text-sky-400 shadow-sm" : "text-default-500 hover:text-default-700"}`}
+                >
+                  Este mes
+                </button>
+                <button
+                  role="tab" aria-selected={planMode}
+                  onClick={() => setPlanMode(true)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${planMode ? "bg-white dark:bg-default-100 text-blue-600 dark:text-sky-400 shadow-sm" : "text-default-500 hover:text-default-700"}`}
+                >
+                  Plan <span className="capitalize">{monthLabel(planMonthKey).split(" de ")[0]}</span> ›
+                </button>
+              </div>
+            </div>
+          )}
+
+          {planMode && activeTab === "dashboard" ? (
+            <PlanView
+              month={planMonthKey}
+              onMonthChange={setPlanMonthKey}
+              minMonth={shiftMonth(currentMonthKey, 1)}
+              maxMonth={shiftMonth(currentMonthKey, 3)}
+              transactions={transactions}
+              subscriptions={subscriptions}
+              installments={installments}
+              cards={creditCards}
+              accounts={assets}
+              startBalance={afterThisMonth}
+              onAddTransaction={addTransaction}
+              onRemoveTransaction={removeTransaction}
+              onUpdateTransaction={updateTransaction}
+              onUpdateInstallment={updateInstallmentInfo}
+              extraExpenseCats={customExpenseCats}
+              extraIncomeCats={customIncomeCats}
+              viewerId={user?.id}
+            />
+          ) : (
           <section className="animate-fade-in-up">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
@@ -2124,11 +2173,12 @@ export default function Dashboard() {
               </div>
             </div>
           </section>
+          )}
 
           <div id="tab-content" style={{ scrollMarginTop: "72px" }} />
 
           {/* ── BIENVENIDA / DATOS DE EJEMPLO ─────────────────── */}
-          {activeTab === "dashboard" && isEmpty && !demoDismissed && (
+          {activeTab === "dashboard" && !planMode && isEmpty && !demoDismissed && (
             <Card className="hero-card glow-hero-positive border-0 overflow-hidden relative animate-fade-in-up">
               <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full border border-white/10" />
               <CardBody className="relative z-10 p-6 text-center">
@@ -2167,7 +2217,7 @@ export default function Dashboard() {
           )}
 
           {/* ── GASTOS FIJOS DEL MES PENDIENTES ───────────────── */}
-          {activeTab === "dashboard" && pendingFixed.length > 0 && !fixedDismissed && (
+          {activeTab === "dashboard" && !planMode && pendingFixed.length > 0 && !fixedDismissed && (
             <Card className="glass border border-indigo-500/25 animate-fade-in-up">
               <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-indigo-500/12 w-fit shrink-0">
@@ -2199,12 +2249,12 @@ export default function Dashboard() {
           )}
 
           {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}
-          {activeTab === "dashboard" && (
+          {activeTab === "dashboard" && !planMode && (
             <UpcomingPayments cards={creditCards} subscriptions={subscriptions} installments={installments} />
           )}
 
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
-          <section className={activeTab !== "dashboard" ? "hidden" : ""} id="management-sections">
+          <section className={activeTab !== "dashboard" || planMode ? "hidden" : ""} id="management-sections">
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-bold section-title">Mis Finanzas</h2>
               {assets.length >= 2 && (
@@ -2498,6 +2548,7 @@ export default function Dashboard() {
                     <Input
                       type="number"
                       min="0"
+                      step="0.01"
                       inputMode="decimal"
                       placeholder="0.00"
                       variant="bordered"
@@ -2563,7 +2614,7 @@ export default function Dashboard() {
                         <SelectItem key={a.id} textValue={a.label}>{`${a.label} — ${money(a.amount)}`}</SelectItem>
                       ))}
                     </Select>
-                    <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                    <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
                       startContent={<span className="text-default-400 text-xs">$</span>}
                       value={tAmount} onValueChange={setTAmount} />
                     {from && Number.isFinite(parsed) && parsed > from.amount && (
@@ -2603,7 +2654,7 @@ export default function Dashboard() {
                   {(editTarget?.kind === "asset" || editTarget?.kind === "liability" || editTarget?.kind === "bucket") && (
                     <>
                       <div className="flex gap-2">
-                        <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                        <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
                           startContent={<span className="text-default-400 text-xs">$</span>}
                           value={eAmount} onValueChange={setEAmount} className="flex-1" />
                         <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
@@ -2624,7 +2675,7 @@ export default function Dashboard() {
 
                   {editTarget?.kind === "sub" && (
                     <div className="flex gap-2">
-                      <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
+                      <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
                         startContent={<span className="text-default-400 text-xs">$</span>}
                         value={eAmount} onValueChange={setEAmount} className="flex-1" />
                       <Select label="Ciclo" variant="bordered" className="w-[140px]"
@@ -2639,10 +2690,10 @@ export default function Dashboard() {
                   {editTarget?.kind === "goal" && (
                     <>
                       <div className="flex gap-2">
-                        <Input label="Monto meta" type="number" min="0" inputMode="decimal" variant="bordered"
+                        <Input label="Monto meta" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
                           startContent={<span className="text-default-400 text-xs">$</span>}
                           value={eTarget} onValueChange={setETarget} className="flex-1" />
-                        <Input label="Llevo ahorrado" type="number" min="0" inputMode="decimal" variant="bordered"
+                        <Input label="Llevo ahorrado" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
                           startContent={<span className="text-default-400 text-xs">$</span>}
                           value={eCurrent} onValueChange={setECurrent} className="flex-1" />
                       </div>

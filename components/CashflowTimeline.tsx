@@ -134,13 +134,13 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
               const negative = r.after < 0;
               const isIncome = r.kind === "income";
               return (
-                <div key={r.id} className="flex items-center gap-3 relative">
+                <div key={r.id} className="flex items-center gap-2 sm:gap-3 relative">
                   <span className={`w-[15px] h-[15px] rounded-full border-2 shrink-0 z-10 ${
                     negative ? "bg-rose-500 border-rose-300/50"
                     : isIncome ? "bg-emerald-500 border-emerald-300/50"
                     : "bg-default-100 border-default-300"
                   }`} />
-                  <div className="w-[74px] shrink-0">
+                  <div className="w-[56px] sm:w-[74px] shrink-0">
                     <p className="text-[11px] font-bold text-default-600 capitalize leading-tight">
                       {r.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
                     </p>
@@ -148,26 +148,32 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
                       {r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft}d`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {r.kind === "card" ? <CreditCardIcon size={12} className="text-default-400 shrink-0" />
-                      : r.kind === "planned" ? <ReceiptText size={12} className="text-cyan-500 shrink-0" />
-                      : r.kind === "income" ? <TrendingUp size={12} className="text-emerald-500 shrink-0" />
-                      : <Repeat size={12} className="text-default-400 shrink-0" />}
-                    <span className="text-xs font-semibold text-default-700 truncate">{r.label}</span>
-                    {r.note && (
-                      <span className={`text-[8px] font-bold uppercase shrink-0 ${
-                        isIncome ? "text-emerald-500" : r.kind === "planned" ? "text-cyan-500" : "text-indigo-500"
-                      }`}>{r.note}</span>
-                    )}
+                  {/* En pantallas chicas el concepto va arriba y los montos abajo:
+                      en una sola linea se encimaban con textos largos o fuente grande. */}
+                  <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3">
+                    <div className="flex items-center gap-1.5 min-w-0 sm:flex-1">
+                      {r.kind === "card" ? <CreditCardIcon size={12} className="text-default-400 shrink-0" />
+                        : r.kind === "planned" ? <ReceiptText size={12} className="text-cyan-500 shrink-0" />
+                        : r.kind === "income" ? <TrendingUp size={12} className="text-emerald-500 shrink-0" />
+                        : <Repeat size={12} className="text-default-400 shrink-0" />}
+                      <span className="text-xs font-semibold text-default-700 truncate">{r.label}</span>
+                      {r.note && (
+                        <span className={`text-[8px] font-bold uppercase shrink-0 ${
+                          isIncome ? "text-emerald-500" : r.kind === "planned" ? "text-cyan-500" : "text-indigo-500"
+                        }`}>{r.note}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0">
+                      <span className={`tnum text-xs font-bold whitespace-nowrap ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                        {isIncome ? "+" : "−"}{money(Math.abs(r.amount))}
+                      </span>
+                      <span className={`tnum text-xs font-black whitespace-nowrap sm:w-[86px] text-right ${
+                        negative ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
+                      }`}>
+                        {negative && "−"}{money(Math.abs(r.after))}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`tnum text-xs font-bold shrink-0 ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
-                    {isIncome ? "+" : "−"}{money(Math.abs(r.amount))}
-                  </span>
-                  <span className={`tnum text-xs font-black shrink-0 w-[86px] text-right ${
-                    negative ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
-                  }`}>
-                    {negative && "−"}{money(Math.abs(r.after))}
-                  </span>
                 </div>
               );
             })}

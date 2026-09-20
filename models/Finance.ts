@@ -66,6 +66,7 @@ const InstallmentPlanSchema = new Schema({
     totalAmount: Number,
     months: Number,
     startDate: String,
+    paidAdjust: Number,
     addedBy: AddedBySchema,
 }, { _id: false });
 

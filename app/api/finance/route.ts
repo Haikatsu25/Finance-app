@@ -162,6 +162,13 @@ function cleanCreditCards(v: unknown): any[] {
 
 const ALLOWED_TERMS = new Set([3, 6, 9, 10, 12, 18, 24, 36]);
 
+/** Ajuste manual de mensualidades pagadas: entero chico, positivo o negativo. */
+function cleanPaidAdjust(v: unknown): { paidAdjust?: number } {
+    const n = typeof v === 'number' ? v : parseInt(String(v ?? ''), 10);
+    if (!Number.isFinite(n) || n === 0) return {};
+    return { paidAdjust: Math.max(-60, Math.min(60, Math.trunc(n))) };
+}
+
 function cleanInstallments(v: unknown): any[] {
     if (!Array.isArray(v)) return [];
     return v.slice(0, 200).flatMap((raw) => {
@@ -179,6 +186,7 @@ function cleanInstallments(v: unknown): any[] {
             totalAmount: cleanAmount(r.totalAmount),
             months: ALLOWED_TERMS.has(months) ? months : 12,
             startDate,
+            ...cleanPaidAdjust(r.paidAdjust),
             ...cleanAddedBy(r.addedBy),
         }];
     });

@@ -51,6 +51,15 @@ export function moneyExact(n: number): string {
     return MXN2.format(n);
 }
 
+/** $12,345 o $12,345.67 — muestra centavos SOLO cuando el monto los tiene.
+ *  Para listas donde el usuario captura importes exactos (ej. $1,234.56). */
+export function moneySmart(n: number): string {
+    if (privacyOn) return MASK;
+    if (!Number.isFinite(n)) n = 0;
+    const hasCents = Math.round(Math.abs(n) * 100) % 100 !== 0;
+    return hasCents ? MXN2.format(n) : MXN0.format(n);
+}
+
 /** Partes del monto para el hero estilo fintech: entero grande + centavos atenuados */
 export function moneyParts(n: number): { int: string; cents: string; masked: boolean } {
     if (privacyOn) return { int: MASK, cents: "", masked: true };

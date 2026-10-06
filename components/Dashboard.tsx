@@ -1,95 +1,38 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Card,
-  CardHeader,
-  CardBody,
-  Input,
-  Button,
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
-  Divider,
-  Chip,
-  Select,
-  SelectItem,
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-  Calendar as CalendarWidget,
-} from "@heroui/react";
-import { parseDate } from "@internationalized/date";
+import { Button, Divider, useDisclosure } from "@heroui/react";
 import {
   Plus,
-  Trash2,
-  Save,
   Wallet,
   ShieldAlert,
-  PiggyBank,
   DollarSign,
   TrendingDown,
   TrendingUp,
-  History,
-  HelpCircle,
-  Calendar,
-  Target,
-  BarChart2,
-  Brain,
-  LayoutDashboard,
-  X,
-  ChevronRight,
-  Download,
-  Upload,
-  Database,
-  Undo2,
-  Check,
-  CloudUpload,
-  AlertTriangle,
-  RefreshCw,
-  ReceiptText,
-  Eye,
-  EyeOff,
-  Mic,
-  Fingerprint,
-  Bell,
-  BellOff,
-  Lock,
-  CreditCard,
-  Users,
-  UserPlus,
-  Copy,
-  LogOut,
-  Pencil,
-  Repeat,
   ArrowLeftRight,
-  Tag,
-  Wand2,
 } from "lucide-react";
-import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import {
-  FinanceItem, HistorySnapshot, SubscriptionItem, GoalItem,
-  TransactionItem, CreditCardItem, BudgetItem, InstallmentPlan,
+  FinanceItem,
+  HistorySnapshot,
+  SubscriptionItem,
+  GoalItem,
+  TransactionItem,
+  CreditCardItem,
+  BudgetItem,
+  InstallmentPlan,
 } from "@/types";
-import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
-import { money, moneyExact, moneySmart, moneyParts, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
+import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, monthKey, monthLabel, shiftMonth, summarizeMonth } from "@/lib/finance-utils";
-import { pushSupported, getPushStatus, enablePush, disablePush } from "@/lib/push-client";
+import { cardDebtBreakdown, monthKey, shiftMonth } from "@/lib/finance-utils";
+import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
 import CreditCards from "./CreditCards";
 import Budgets from "./Budgets";
 import UpcomingPayments from "./UpcomingPayments";
 import VoiceAssistant from "./VoiceAssistant";
-import AddedByBadge from "./AddedByBadge";
 import AIChat from "./AIChat";
 import AIInsights from "./AIInsights";
 import CashflowTimeline from "./CashflowTimeline";
@@ -97,7 +40,6 @@ import PlanView from "./PlanView";
 import TicketScanner from "./TicketScanner";
 import { startTour } from "./Tutorial";
 
-import { TONE, SECTION_TONE, type ToneName } from "./dashboard/tone";
 import { useAnimatedCounter } from "./dashboard/useAnimatedCounter";
 import { QUICK_CATEGORIES, type QuickAddType, type EditKind } from "./dashboard/quickAdd";
 import { StatCard } from "./dashboard/StatCard";
@@ -106,7 +48,7 @@ import { BottomNav, type NavTab } from "./dashboard/BottomNav";
 import { Section } from "./dashboard/Section";
 import { SubscriptionsSection } from "./dashboard/SubscriptionsSection";
 import { GoalsSection } from "./dashboard/GoalsSection";
-import { SaveIndicator, type SaveStatus } from "./dashboard/SaveIndicator";
+import { type SaveStatus } from "./dashboard/SaveIndicator";
 import { SignedOutLanding } from "./dashboard/SignedOutLanding";
 import { BiometricLockScreen } from "./dashboard/BiometricLockScreen";
 import { LoadErrorView } from "./dashboard/LoadErrorView";

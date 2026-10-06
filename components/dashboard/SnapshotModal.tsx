@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Card, CardBody, Divider, Button, Calendar as CalendarWidget } from "@heroui/react";
 import { parseDate } from "@internationalized/date";
 import { DollarSign, ShieldAlert, Wallet } from "lucide-react";

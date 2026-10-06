@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { monthLabel } from "@/lib/finance-utils";
 
 export function HomeViewToggle({ planMode, setPlanMode, planMonthKey }: {

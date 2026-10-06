@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Button } from "@heroui/react";
 import { Undo2 } from "lucide-react";
 

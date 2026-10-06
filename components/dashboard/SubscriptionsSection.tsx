@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardBody, Input, Button, Select, SelectItem } from "@heroui/react";
 import { Plus, Trash2, Pencil, Calendar } from "lucide-react";
 import { SubscriptionItem } from "@/types";

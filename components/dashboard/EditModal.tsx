@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Button, Select, SelectItem } from "@heroui/react";
 import { Pencil, Check } from "lucide-react";
 import { FinanceItem } from "@/types";

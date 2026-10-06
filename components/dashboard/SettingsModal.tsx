@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Button } from "@heroui/react";
+import { Modal, ModalContent, ModalHeader, ModalBody, Input, Button } from "@heroui/react";
 import {
   Fingerprint, Bell, BellOff, Users, LogOut, Trash2, Check, Copy, UserPlus,
   Tag, X, Plus, Download, Upload,

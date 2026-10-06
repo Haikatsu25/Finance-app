@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Button } from "@heroui/react";
 import { SignInButton } from "@clerk/nextjs";
 import { Wallet, ChevronRight } from "lucide-react";

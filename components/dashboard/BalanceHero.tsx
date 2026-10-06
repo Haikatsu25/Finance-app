@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { Card, CardBody, Button } from "@heroui/react";
 import { PiggyBank, TrendingUp, TrendingDown, Save, History, Database } from "lucide-react";
 import { TransactionItem } from "@/types";

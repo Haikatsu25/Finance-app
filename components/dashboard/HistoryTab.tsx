@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import {
   Card, Button, Divider, Chip,
   Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,

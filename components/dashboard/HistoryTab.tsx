@@ -70,13 +70,13 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="tnum text-emerald-600 dark:text-emerald-400 text-sm font-bold text-right">
+                  <TableCell className="tnum text-money-in-text text-sm font-bold text-right">
                     {money(h.totalAssets)}
                   </TableCell>
-                  <TableCell className="tnum text-rose-600 dark:text-rose-400 text-sm font-bold text-right">
+                  <TableCell className="tnum text-money-out-text text-sm font-bold text-right">
                     −{money(h.totalLiabilities)}
                   </TableCell>
-                  <TableCell className="tnum text-amber-600 dark:text-amber-400 text-sm font-bold text-right">
+                  <TableCell className="tnum text-money-hold-text text-sm font-bold text-right">
                     −{money(h.totalBuckets)}
                   </TableCell>
                   <TableCell className="text-right">

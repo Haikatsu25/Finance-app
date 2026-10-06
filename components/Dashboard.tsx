@@ -123,6 +123,7 @@ import { TransferModal } from "./dashboard/TransferModal";
 import { EditModal } from "./dashboard/EditModal";
 import { SnapshotModal } from "./dashboard/SnapshotModal";
 import { SettingsModal } from "./dashboard/SettingsModal";
+import { ClearHistoryModal } from "./dashboard/ClearHistoryModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1512,30 +1513,7 @@ export default function Dashboard() {
         />
 
         {/* ── MODAL: confirmar limpiar historial ──────────────── */}
-        <Modal isOpen={isClearOpen} onOpenChange={onClearChange} backdrop="blur" size="sm">
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-amber-500" />
-                  Limpiar historial
-                </ModalHeader>
-                <ModalBody>
-                  <p className="text-sm text-default-500">
-                    Se eliminarán <span className="font-bold">{history.length}</span> snapshots guardados.
-                    Esta acción no se puede deshacer.
-                  </p>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button color="danger" variant="shadow" className="font-bold" onPress={() => confirmClearHistory(onClose)}>
-                    Sí, limpiar
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
+        <ClearHistoryModal isOpen={isClearOpen} onOpenChange={onClearChange} historyCount={history.length} onConfirm={confirmClearHistory} />
 
         {/* ── MODAL: confirmar importación ────────────────────── */}
         <Modal isOpen={isImportOpen} onOpenChange={onImportChange} backdrop="blur" size="sm">

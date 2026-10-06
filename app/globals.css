@@ -500,15 +500,20 @@ textarea::placeholder {
   opacity: 1;
 }
 
-/* Gráfica del simulador: ejes y rejilla salen de los tokens (los atributos SVG
-   de recharts quedaban fijos en gris azulado, ilegible en uno de los dos temas) */
-.sim-chart .recharts-cartesian-axis-tick-value,
-.sim-chart .recharts-label {
+/* Gráficas (recharts): ejes, rejilla y leyenda salen de los tokens. Los atributos
+   SVG quedaban fijos en gris azulado, ilegible en uno de los dos temas. */
+.chart-tokens .recharts-cartesian-axis-tick-value,
+.chart-tokens .recharts-label {
   fill: var(--ink-soft);
 }
 
-.sim-chart .recharts-cartesian-grid line {
+.chart-tokens .recharts-cartesian-grid line {
   stroke: var(--rule);
+}
+
+/* La leyenda pinta cada texto del color de su serie (rojo sobre papel no llega a 4.5:1) */
+.chart-tokens .recharts-legend-item-text {
+  color: var(--foreground) !important;
 }
 
 .card-face input::placeholder {

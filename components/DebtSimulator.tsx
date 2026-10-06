@@ -132,7 +132,7 @@ export default function DebtSimulator({ card, onClose }: {
 
               {/* Curva de amortización */}
               {result && Number.isFinite(result.months) && result.schedule.length > 1 && (
-                <div className="sim-chart h-[200px] w-full mt-2">
+                <div className="chart-tokens h-[200px] w-full mt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={result.schedule} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
                       <defs>

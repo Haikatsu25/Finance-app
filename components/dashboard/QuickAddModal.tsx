@@ -31,9 +31,9 @@ export function QuickAddModal({
             <ModalBody className="pb-2">
               <div className="flex gap-2">
                 {([
-                  { id: "asset",     label: "Activo",   cls: "bg-emerald-500" },
-                  { id: "liability", label: "Gasto",    cls: "bg-rose-500" },
-                  { id: "bucket",    label: "Apartado", cls: "bg-amber-500" },
+                  { id: "asset",     label: "Activo",   cls: "bg-money-in text-(--slab-in-fg)" },
+                  { id: "liability", label: "Gasto",    cls: "bg-money-out text-white" },
+                  { id: "bucket",    label: "Apartado", cls: "bg-money-hold text-(--slab-in-fg)" },
                 ] as { id: QuickAddType; label: string; cls: string }[]).map((opt) => (
                   <button
                     key={opt.id}
@@ -43,7 +43,7 @@ export function QuickAddModal({
                     }}
                     className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
                       quickType === opt.id
-                        ? `${opt.cls} text-white shadow-md`
+                        ? opt.cls
                         : "bg-default-100 text-default-500 hover:bg-default-200"
                     }`}
                   >

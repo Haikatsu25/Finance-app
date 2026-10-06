@@ -115,6 +115,7 @@ import { HomeViewToggle } from "./dashboard/HomeViewToggle";
 import { UndoToast } from "./dashboard/UndoToast";
 import { BalanceHero } from "./dashboard/BalanceHero";
 import { WelcomeCard } from "./dashboard/WelcomeCard";
+import { DemoDataBanner } from "./dashboard/DemoDataBanner";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1211,17 +1212,7 @@ export default function Dashboard() {
           )}
 
           {appSettings.demoData && (
-            <Card className="glass border border-amber-500/30">
-              <CardBody className="p-3 flex flex-row items-center gap-3">
-                <Wand2 size={16} className="text-amber-500 shrink-0" />
-                <p className="text-xs text-default-600 flex-1">
-                  Estás explorando con <span className="font-bold">datos de ejemplo</span>. Juega con todo — nada es real.
-                </p>
-                <Button size="sm" color="warning" variant="flat" className="font-bold shrink-0" onPress={clearDemoData}>
-                  Borrar ejemplo y empezar
-                </Button>
-              </CardBody>
-            </Card>
+            <DemoDataBanner onClear={clearDemoData} />
           )}
 
           {/* ── GASTOS FIJOS DEL MES PENDIENTES ───────────────── */}

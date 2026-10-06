@@ -11,14 +11,13 @@ export function UndoToast({ label, message, onUndo }: {
 }) {
   return (
     <div className="undo-toast" role="status">
-      <span className={`text-xs text-default-600 ${message ? "max-w-[230px] leading-snug line-clamp-2" : "max-w-[180px] truncate"}`}>
+      <span className={`min-w-0 text-xs text-default-600 ${message ? "leading-snug line-clamp-2" : "truncate"}`}>
         {message ?? <>Se eliminó <span className="font-bold">{label}</span></>}
       </span>
       <Button
-        size="sm"
         variant="flat"
         color="primary"
-        className="font-bold"
+        className="font-bold h-11 min-w-11 shrink-0"
         startContent={<Undo2 size={14} />}
         onPress={onUndo}
       >

@@ -407,8 +407,14 @@ body {
   .undo-toast {
     position: fixed;
     bottom: calc(84px + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
+    /* Centrado sin transform: la animación fadeInUp termina en translateY(0) y pisaba
+       el translateX(-50%), dejando el aviso corrido a la derecha y cortado.
+       left:50% además le daba solo media pantalla de ancho (el mensaje salía truncado). */
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+    width: max-content;
+    max-width: calc(100vw - 32px);
     z-index: 60;
     display: flex;
     align-items: center;

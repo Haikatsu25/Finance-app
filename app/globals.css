@@ -500,6 +500,17 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Gráfica del simulador: ejes y rejilla salen de los tokens (los atributos SVG
+   de recharts quedaban fijos en gris azulado, ilegible en uno de los dos temas) */
+.sim-chart .recharts-cartesian-axis-tick-value,
+.sim-chart .recharts-label {
+  fill: var(--ink-soft);
+}
+
+.sim-chart .recharts-cartesian-grid line {
+  stroke: var(--rule);
+}
+
 .card-face input::placeholder {
   color: var(--face-muted);
   opacity: 1;

@@ -447,6 +447,13 @@ body {
   }
 }
 
+/* Placeholders: el gris por defecto de HeroUI no llega a 4.5:1 sobre papel */
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-soft);
+  opacity: 1;
+}
+
 /* Foco: tinta de 2px con un halo del color del fondo, visible
    tanto sobre papel como sobre la losa verde o roja. */
 :focus-visible {

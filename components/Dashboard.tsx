@@ -99,6 +99,7 @@ import { startTour } from "./Tutorial";
 
 import { TONE, SECTION_TONE, type ToneName } from "./dashboard/tone";
 import { useAnimatedCounter } from "./dashboard/useAnimatedCounter";
+import { QUICK_CATEGORIES, type QuickAddType, type EditKind } from "./dashboard/quickAdd";
 import { StatCard } from "./dashboard/StatCard";
 import { DashboardSkeleton } from "./dashboard/DashboardSkeleton";
 import { BottomNav, type NavTab } from "./dashboard/BottomNav";
@@ -110,14 +111,6 @@ import { SaveIndicator, type SaveStatus } from "./dashboard/SaveIndicator";
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
 // ─────────────────────────────────────────────────────────────────────────────
-type QuickAddType = "asset" | "liability" | "bucket";
-
-const QUICK_CATEGORIES: Record<QuickAddType, string[]> = {
-  asset:     ["Efectivo", "Banco", "Inversión", "Propiedad", "Otros"],
-  liability: ["Tarjeta de Crédito", "Préstamo", "Servicios", "Hogar", "Comida", "Transporte", "Otros"],
-  bucket:    ["Emergencia", "Viaje", "Auto", "Regalos", "Ahorro", "Otros"],
-};
-
 export default function Dashboard() {
   const [assets,        setAssets]        = useState<FinanceItem[]>([]);
   const [liabilities,   setLiabilities]   = useState<FinanceItem[]>([]);
@@ -730,7 +723,6 @@ export default function Dashboard() {
   };
 
   // ── EDICIÓN DE REGISTROS ─────────────────────────────────────
-  type EditKind = "asset" | "liability" | "bucket" | "sub" | "goal";
   const [editTarget, setEditTarget] = useState<{ kind: EditKind; id: string } | null>(null);
   const [eLabel, setELabel] = useState("");
   const [eAmount, setEAmount] = useState("");

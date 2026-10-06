@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
 import { UserRound } from "lucide-react";
 import { AddedBy } from "@/types";
 
 /**
  * Etiqueta "por Fulano" en cuentas compartidas.
  * Solo aparece cuando el registro lo agregó ALGUIEN MÁS (no el que lo
- * está viendo) — así cada quien identifica lo del otro sin ruido propio.
+ * está viendo), así cada quien identifica lo del otro sin ruido propio.
+ * Es una etiqueta de persona, no de dinero: va en neutro (no en un color de marca).
  */
 export default function AddedByBadge({ addedBy, viewerId, dark = false }: {
   addedBy?: AddedBy;
@@ -19,14 +19,14 @@ export default function AddedByBadge({ addedBy, viewerId, dark = false }: {
   const firstName = addedBy.name.split(" ")[0];
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+      className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
         dark
-          ? "bg-white/10 text-white/70 border border-white/15"
-          : "bg-fuchsia-500/12 text-fuchsia-600 dark:text-fuchsia-400"
+          ? "bg-white/10 text-(--face-fg) border-(--face-line)"
+          : "bg-default-100 text-default-800 border-default-300"
       }`}
       title={`Agregado por ${addedBy.name}`}
     >
-      <UserRound size={8} className="shrink-0" />
+      <UserRound size={11} className="shrink-0" aria-hidden />
       {firstName}
     </span>
   );

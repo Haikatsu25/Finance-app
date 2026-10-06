@@ -1306,7 +1306,7 @@ export default function Dashboard() {
                 startBalance={available}
                 transactions={transactions}
               />
-              <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
+              <Analytics history={history} assets={assets} liabilities={liabilities} />
             </div>
           </section>
 

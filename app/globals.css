@@ -280,11 +280,8 @@ body {
     border: 1px solid var(--face-line);
     border-radius: 16px;
     padding: 16px 16px 16px 32px;
-  }
-
-  .card-face input::placeholder {
-    color: var(--face-muted);
-    opacity: 1;
+    display: flex;
+    flex-direction: column;
   }
 
   .card-stripe {
@@ -302,11 +299,13 @@ body {
   .stripe-3 { background: repeating-linear-gradient(0deg, #eceee7 0 3px, transparent 3px 7px); }
   .stripe-4 { background: conic-gradient(#eceee7 25%, transparent 0 50%, #eceee7 0 75%, transparent 0) 0 0 / 10px 10px; }
   .stripe-5 { background: repeating-linear-gradient(90deg, #eceee7 0 2px, transparent 2px 5px); }
-  .stripe-6 { background: repeating-linear-gradient(45deg, #eceee7 0 3px, transparent 3px 7px); }
+  .stripe-6 { background: radial-gradient(circle at 50% 50%, #eceee7 3.4px, transparent 3.9px) 0 0 / 14px 14px; }
   .stripe-7 {
     background:
-      repeating-linear-gradient(0deg, #eceee7 0 2px, transparent 2px 6px),
-      repeating-linear-gradient(90deg, #eceee7 0 2px, transparent 2px 6px);
+      linear-gradient(135deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
+      linear-gradient(225deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
+      linear-gradient(315deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px,
+      linear-gradient(45deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px;
   }
 
   /* ───────────────────────────────────────────
@@ -498,6 +497,11 @@ body {
 input::placeholder,
 textarea::placeholder {
   color: var(--ink-soft);
+  opacity: 1;
+}
+
+.card-face input::placeholder {
+  color: var(--face-muted);
   opacity: 1;
 }
 

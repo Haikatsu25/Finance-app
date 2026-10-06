@@ -61,6 +61,8 @@ export interface CreditCardItem {
     dueDay: number;             // día del mes (1-31)
     apr?: number;               // tasa anual %, para el simulador
     minPayment?: number;
+    /** Fecha límite (YYYY-MM-DD) del último estado de cuenta marcado como pagado con el botón "Pagado" */
+    lastPaidCycle?: string;
     addedBy?: AddedBy;
 }
 

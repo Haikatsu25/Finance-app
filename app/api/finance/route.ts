@@ -139,6 +139,17 @@ function cleanDay(v: unknown): number {
     return Math.max(1, Math.min(31, Math.round(n)));
 }
 
+/** Ciclo pagado de una tarjeta: solo una fecha real YYYY-MM-DD; cualquier otra cosa se descarta. */
+function cleanLastPaidCycle(v: unknown): { lastPaidCycle?: string } {
+    const s = String(v ?? '').trim();
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return {};
+    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    const real = dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+    return real ? { lastPaidCycle: s } : {};
+}
+
 function cleanCreditCards(v: unknown): any[] {
     if (!Array.isArray(v)) return [];
     return v.slice(0, 50).flatMap((raw) => {
@@ -155,6 +166,7 @@ function cleanCreditCards(v: unknown): any[] {
             dueDay: cleanDay(r.dueDay),
             apr: Math.max(0, Math.min(200, cleanAmount(r.apr))),
             minPayment: cleanAmount(r.minPayment),
+            ...cleanLastPaidCycle(r.lastPaidCycle),
             ...cleanAddedBy(r.addedBy),
         }];
     });

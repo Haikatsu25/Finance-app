@@ -56,6 +56,7 @@ const CreditCardItemSchema = new Schema({
     dueDay: Number,
     apr: Number,
     minPayment: Number,
+    lastPaidCycle: String,
     addedBy: AddedBySchema,
 }, { _id: false });
 

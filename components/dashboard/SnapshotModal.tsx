@@ -24,7 +24,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
         {(onClose) => (
           <>
             <ModalHeader className="flex flex-col gap-1">
-              <span className="gradient-text-emerald">Detalles del Snapshot</span>
+              <span className="font-extrabold">Detalles del snapshot</span>
               <span className="text-small font-normal text-default-400">
                 {selectedSnapshot &&
                   new Date(selectedSnapshot.date).toLocaleDateString("es-MX", {
@@ -41,7 +41,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
                         aria-label="Fecha del snapshot"
                         value={parseDate(selectedSnapshot.date.split("T")[0])}
                         isReadOnly
-                        className="shadow-md border border-default-100 rounded-2xl"
+                        className="border border-default-200 rounded-lg"
                       />
                     </div>
                     <div className="flex-grow grid grid-cols-1 gap-3 content-center">

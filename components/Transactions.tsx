@@ -177,24 +177,21 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       {/* Header + navegación de mes */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <ReceiptText className="text-emerald-500 w-5 h-5" />
-          </div>
           <div>
             <h3 className="text-xl font-bold section-title">Movimientos</h3>
-            <p className="text-xs text-default-400 mt-0.5">Cada peso que entra y sale</p>
+            <p className="text-xs text-default-500 mt-0.5">Cada peso que entra y sale</p>
           </div>
         </div>
         {!searching && (
-          <div className="flex items-center gap-1 bg-default-100/70 rounded-xl p-1">
-            <button onClick={() => setMonth(shiftMonth(month, -1))} className="p-1.5 rounded-lg hover:bg-default-200 text-default-500" aria-label="Mes anterior">
+          <div className="flex items-stretch rounded-[10px] border-2 border-foreground overflow-hidden">
+            <button onClick={() => setMonth(shiftMonth(month, -1))} className="px-2.5 py-2 hover:bg-foreground/10 text-foreground" aria-label="Mes anterior">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-xs font-bold px-2 capitalize min-w-[120px] text-center">{monthLabel(month)}</span>
+            <span className="text-[13px] font-bold px-3 capitalize min-w-[130px] text-center self-center">{monthLabel(month)}</span>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
               disabled={month >= maxMonth}
-              className="p-1.5 rounded-lg hover:bg-default-200 text-default-500 disabled:opacity-30"
+              className="px-2.5 py-2 hover:bg-foreground/10 text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
               aria-label="Mes siguiente"
             >
               <ChevronRight size={16} />
@@ -208,23 +205,23 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
 
       {/* Mes futuro: lo que llevas comprometido */}
       {!searching && !filtering && viewingFuture && (
-        <Card className="glass border border-cyan-500/25">
+        <Card className="glass rule-ink shadow-none">
           <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1">
               <p className="text-sm font-bold capitalize">Plan de {monthLabel(month)}</p>
-              <p className="text-xs text-default-400">
-                Gastos que ya sabes que vienen — se suman aquí y a tu proyección de flujo
+              <p className="text-xs text-default-500">
+                Gastos que ya sabes que vienen. Se suman aquí y a tu proyección de flujo
               </p>
             </div>
             <div className="flex gap-4">
               <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Comprometido</p>
-                <p className="text-lg font-black tnum text-rose-500">{money(summary.expense)}</p>
+                <p className="text-xs font-semibold text-default-500">Comprometido</p>
+                <p className="figure text-3xl text-money-out-text">{money(summary.expense)}</p>
               </div>
               {summary.income > 0 && (
                 <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Ingresos esperados</p>
-                  <p className="text-lg font-black tnum text-emerald-500">{money(summary.income)}</p>
+                  <p className="text-xs font-semibold text-default-500">Ingresos esperados</p>
+                  <p className="figure text-3xl text-money-in-text">{money(summary.income)}</p>
                 </div>
               )}
             </div>
@@ -233,7 +230,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       )}
 
       {/* ── Búsqueda y filtros ───────────────────────────────── */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-3 flex flex-col sm:flex-row gap-2">
           <Input
             placeholder="Buscar en todos los meses… (ej. uber, tacos)"
@@ -271,34 +268,34 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       {(searching || filtering) && (
         <div className="flex items-center justify-between gap-2 flex-wrap px-1">
           <p className="text-xs text-default-500">
-            <span className="font-bold text-default-700">{filteredTotals.count}</span> resultado{filteredTotals.count !== 1 && "s"}
-            {searching && <span className="text-default-400"> en todos los meses</span>}
-            {" · "}gastos <span className="font-bold tnum text-rose-500">{money(filteredTotals.exp)}</span>
-            {filteredTotals.inc > 0 && <> · ingresos <span className="font-bold tnum text-emerald-500">{money(filteredTotals.inc)}</span></>}
+            <span className="font-bold text-foreground">{filteredTotals.count}</span> resultado{filteredTotals.count !== 1 && "s"}
+            {searching && <span className="text-default-500"> en todos los meses</span>}
+            {": "}gastos <span className="font-bold tnum text-money-out-text">{money(filteredTotals.exp)}</span>
+            {filteredTotals.inc > 0 && <>, ingresos <span className="font-bold tnum text-money-in-text">{money(filteredTotals.inc)}</span></>}
           </p>
-          <Button size="sm" variant="light" className="text-default-400 h-7" startContent={<X size={12} />} onPress={clearFilters}>
+          <Button size="sm" variant="light" className="text-default-500 h-7" startContent={<X size={12} />} onPress={clearFilters}>
             Limpiar
           </Button>
         </div>
       )}
 
       {/* Captura */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-4">
           <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2">
             <div className="flex gap-1.5 shrink-0">
               <button
                 onClick={() => { setType("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === "expense" ? "bg-rose-500 text-white shadow-md" : "bg-default-100 text-default-500"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  type === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-500"
                 }`}
               >
                 <ArrowDownCircle size={14} /> Gasto
               </button>
               <button
                 onClick={() => { setType("income"); setCategory(INCOME_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === "income" ? "bg-emerald-500 text-white shadow-md" : "bg-default-100 text-default-500"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  type === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-500"
                 }`}
               >
                 <ArrowUpCircle size={14} /> Ingreso
@@ -329,7 +326,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="shadow"
+              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="solid"
                 className="font-bold flex-1 lg:flex-none" isDisabled={!label.trim() || !amountValid}
                 startContent={<Plus size={14} />} onPress={submit}>
                 Registrar
@@ -348,22 +345,22 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
             </div>
           </div>
           {dateIsFuture && (
-            <p className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-2">
-              📅 Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de <span className="capitalize">{monthLabel(monthKey(effectiveDate))}</span>
-              {!date && <> (día 1 — puedes elegir otro día con el campo de fecha)</>}
-              {" "}— aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
+            <p className="text-[11px] text-foreground font-semibold mt-2">
+              Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de <span className="capitalize">{monthLabel(monthKey(effectiveDate))}</span>
+              {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
+              . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
             </p>
           )}
           {!dateIsFuture && !date && month !== currentMonth && !searching && (
-            <p className="text-[11px] text-default-400 font-semibold mt-2">
-              📅 Se registrará en <span className="capitalize">{monthLabel(month)}</span> (día 1) — elige otro día con el campo de fecha si quieres.
+            <p className="text-[11px] text-default-500 font-semibold mt-2">
+              Se registrará en <span className="capitalize">{monthLabel(month)}</span> (día 1). Elige otro día con el campo de fecha si quieres.
             </p>
           )}
         </CardBody>
       </Card>
 
       {/* Lista agrupada por día */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-0">
           {grouped.length === 0 ? (
             <div className="py-14 text-center text-default-400">
@@ -450,20 +447,20 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           {(onClose) => (
             <>
               <ModalHeader className="flex items-center gap-2">
-                <Pencil size={17} className="text-indigo-500" />
+                <Pencil size={17} className="text-foreground" />
                 Editar movimiento
               </ModalHeader>
               <ModalBody>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => { setEType("expense"); if (!EXPENSE_CATEGORIES.includes(eCategory)) setECategory(EXPENSE_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${eType === "expense" ? "bg-rose-500 text-white" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${eType === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-500"}`}
                   >
                     Gasto
                   </button>
                   <button
                     onClick={() => { setEType("income"); if (!INCOME_CATEGORIES.includes(eCategory)) setECategory(INCOME_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${eType === "income" ? "bg-emerald-500 text-white" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${eType === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-500"}`}
                   >
                     Ingreso
                   </button>
@@ -493,7 +490,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="shadow" className="font-bold"
+                <Button color="primary" variant="solid" className="font-bold"
                   isDisabled={!editValid}
                   startContent={<Check size={15} />}
                   onPress={() => { if (saveEdit()) onClose(); }}>

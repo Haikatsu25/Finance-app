@@ -21,6 +21,9 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
 
+/** Solo la primera letra en mayúscula: "octubre de 2026" → "Octubre de 2026" */
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** Exporta los movimientos visibles a CSV (compatible con Excel). */
 function exportCsv(rows: TransactionItem[], accountName: (id?: string) => string | undefined) {
   const esc = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
@@ -187,7 +190,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
             <button onClick={() => setMonth(shiftMonth(month, -1))} className="px-2.5 py-2 hover:bg-foreground/10 text-foreground" aria-label="Mes anterior">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-[13px] font-bold px-3 capitalize min-w-[130px] text-center self-center">{monthLabel(month)}</span>
+            <span className="text-[13px] font-bold px-3 min-w-[130px] text-center self-center">{cap(monthLabel(month))}</span>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
               disabled={month >= maxMonth}
@@ -208,7 +211,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
         <Card className="glass rule-ink shadow-none">
           <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1">
-              <p className="text-sm font-bold capitalize">Plan de {monthLabel(month)}</p>
+              <p className="text-sm font-bold">Plan de {monthLabel(month)}</p>
               <p className="text-xs text-default-500">
                 Gastos que ya sabes que vienen. Se suman aquí y a tu proyección de flujo
               </p>
@@ -346,14 +349,14 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           </div>
           {dateIsFuture && (
             <p className="text-[11px] text-foreground font-semibold mt-2">
-              Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de <span className="capitalize">{monthLabel(monthKey(effectiveDate))}</span>
+              Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de {monthLabel(monthKey(effectiveDate))}
               {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
               . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
             </p>
           )}
           {!dateIsFuture && !date && month !== currentMonth && !searching && (
             <p className="text-[11px] text-default-500 font-semibold mt-2">
-              Se registrará en <span className="capitalize">{monthLabel(month)}</span> (día 1). Elige otro día con el campo de fecha si quieres.
+              Se registrará en {monthLabel(month)} (día 1). Elige otro día con el campo de fecha si quieres.
             </p>
           )}
         </CardBody>
@@ -381,11 +384,11 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 return (
                   <div key={day} className="px-4 py-3">
                     <div className="flex justify-between items-center mb-2">
-                      <p className="text-sm font-bold capitalize">
-                        {new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
+                      <p className="text-sm font-bold">
+                        {cap(new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
                           weekday: "long", day: "numeric", month: "short",
                           ...(searching ? { year: "numeric" } : {}),
-                        })}
+                        }))}
                       </p>
                       <span className={`figure text-xl ${dayTotal >= 0 ? "text-money-in-text" : "text-money-out-text"}`}>
                         {dayTotal >= 0 ? "+" : "−"}{money(Math.abs(dayTotal))}

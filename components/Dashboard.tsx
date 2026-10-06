@@ -116,6 +116,7 @@ import { UndoToast } from "./dashboard/UndoToast";
 import { BalanceHero } from "./dashboard/BalanceHero";
 import { WelcomeCard } from "./dashboard/WelcomeCard";
 import { DemoDataBanner } from "./dashboard/DemoDataBanner";
+import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1217,34 +1218,13 @@ export default function Dashboard() {
 
           {/* ── GASTOS FIJOS DEL MES PENDIENTES ───────────────── */}
           {activeTab === "dashboard" && !planMode && pendingFixed.length > 0 && !fixedDismissed && (
-            <Card className="glass border border-indigo-500/25 animate-fade-in-up">
-              <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-500/12 w-fit shrink-0">
-                  <Repeat size={18} className="text-indigo-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold">
-                    ¿Registro tus gastos fijos de <span className="capitalize">{monthLabel(currentMonthKey).split(" ")[0]}</span>?
-                  </p>
-                  <p className="text-xs text-default-400 truncate">
-                    {pendingFixed.map((s) => s.label).join(" · ")} — total{" "}
-                    <span className="font-bold tnum text-default-600">{money(pendingFixedTotal)}</span>
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button size="sm" variant="light" className="text-default-400" onPress={dismissFixedCharges}>
-                    Este mes no
-                  </Button>
-                  <Button
-                    size="sm" variant="shadow" className="font-bold bg-indigo-500 text-white"
-                    startContent={<Check size={14} />}
-                    onPress={registerFixedCharges}
-                  >
-                    Registrar {pendingFixed.length}
-                  </Button>
-                </div>
-              </CardBody>
-            </Card>
+            <PendingFixedChargesCard
+              pendingFixed={pendingFixed}
+              pendingFixedTotal={pendingFixedTotal}
+              currentMonthKey={currentMonthKey}
+              onDismiss={dismissFixedCharges}
+              onRegister={registerFixedCharges}
+            />
           )}
 
           {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}

@@ -118,6 +118,7 @@ import { WelcomeCard } from "./dashboard/WelcomeCard";
 import { DemoDataBanner } from "./dashboard/DemoDataBanner";
 import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
 import { HistoryTab } from "./dashboard/HistoryTab";
+import { QuickAddModal } from "./dashboard/QuickAddModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1396,84 +1397,20 @@ export default function Dashboard() {
         )}
 
         {/* ── MODAL: captura rápida (FAB) ─────────────────────── */}
-        <Modal isOpen={isQuickAddOpen} onOpenChange={onQuickAddChange} placement="bottom-center" backdrop="blur">
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader className="flex flex-col gap-1">Registro rápido</ModalHeader>
-                <ModalBody className="pb-2">
-                  <div className="flex gap-2">
-                    {([
-                      { id: "asset",     label: "Activo",   cls: "bg-emerald-500" },
-                      { id: "liability", label: "Gasto",    cls: "bg-rose-500" },
-                      { id: "bucket",    label: "Apartado", cls: "bg-amber-500" },
-                    ] as { id: QuickAddType; label: string; cls: string }[]).map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => {
-                          setQuickType(opt.id);
-                          setQuickCategory(QUICK_CATEGORIES[opt.id][0]);
-                        }}
-                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                          quickType === opt.id
-                            ? `${opt.cls} text-white shadow-md`
-                            : "bg-default-100 text-default-500 hover:bg-default-200"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <Input
-                    autoFocus
-                    placeholder="Descripción"
-                    variant="bordered"
-                    value={quickLabel}
-                    onValueChange={setQuickLabel}
-                  />
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      variant="bordered"
-                      startContent={<span className="text-default-400 text-sm font-bold">$</span>}
-                      className="flex-1"
-                      value={quickAmount}
-                      onValueChange={setQuickAmount}
-                    />
-                    <Select
-                      variant="bordered"
-                      aria-label="Categoría"
-                      className="w-[150px]"
-                      selectedKeys={[quickCategory]}
-                      onChange={(e) => setQuickCategory(e.target.value || QUICK_CATEGORIES[quickType][0])}
-                    >
-                      {QUICK_CATEGORIES[quickType].map((cat) => (
-                        <SelectItem key={cat}>{cat}</SelectItem>
-                      ))}
-                    </Select>
-                  </div>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button
-                    color="primary"
-                    variant="shadow"
-                    className="font-bold"
-                    isDisabled={!quickLabel.trim() || !quickAmountValid}
-                    onPress={() => submitQuickAdd(onClose)}
-                    startContent={<Plus size={16} />}
-                  >
-                    Agregar
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
+        <QuickAddModal
+          isOpen={isQuickAddOpen}
+          onOpenChange={onQuickAddChange}
+          onSubmit={submitQuickAdd}
+          quickType={quickType}
+          setQuickType={setQuickType}
+          quickLabel={quickLabel}
+          setQuickLabel={setQuickLabel}
+          quickAmount={quickAmount}
+          setQuickAmount={setQuickAmount}
+          quickCategory={quickCategory}
+          setQuickCategory={setQuickCategory}
+          quickAmountValid={quickAmountValid}
+        />
 
         {/* ── MODAL: transferir entre cuentas ─────────────────── */}
         <Modal isOpen={isTransferOpen} onOpenChange={onTransferChange} backdrop="blur" size="sm">

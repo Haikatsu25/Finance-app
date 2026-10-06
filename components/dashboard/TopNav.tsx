@@ -21,23 +21,23 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
   onStartTour: () => void;
 }) {
   return (
-    <nav className="glass-nav w-full sticky top-0 z-50 transition-all duration-300">
+    <nav className="glass-nav w-full sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex justify-between items-center gap-2">
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-sky-400 shadow-md shadow-blue-500/25 shrink-0">
-            <Wallet className="text-white w-5 h-5" />
+          <div className="p-2 rounded-lg bg-ink shrink-0">
+            <Wallet className="text-cal w-5 h-5" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h1 className="text-base sm:text-lg font-extrabold tracking-tight gradient-text-emerald truncate whitespace-nowrap">
+            <h1 className="text-base sm:text-lg font-extrabold tracking-tight truncate whitespace-nowrap">
               Finance Control
             </h1>
-            <p className="text-[10px] text-default-400 -mt-0.5 hidden sm:block truncate">
+            <p className="text-[11px] text-default-500 -mt-0.5 hidden sm:block truncate">
               Gestión financiera inteligente
             </p>
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-1 bg-default-100/70 rounded-xl p-1">
+        <div className="hidden md:flex items-stretch gap-1 self-stretch">
           {([
             { id: "dashboard",    icon: <LayoutDashboard size={15} />, label: "Inicio" },
             { id: "transactions", icon: <ReceiptText size={15} />,     label: "Movimientos" },
@@ -48,10 +48,11 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
             <button
               key={tab.id}
               onClick={() => onChangeTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              className={`flex items-center gap-1.5 px-3 border-b-[3px] text-[13px] transition-colors ${
                 activeTab === tab.id
-                  ? "bg-white dark:bg-default-100 text-blue-600 dark:text-sky-400 shadow-sm"
-                  : "text-default-500 hover:text-default-700"
+                  ? "border-foreground text-foreground font-bold"
+                  : "border-transparent text-default-500 font-semibold hover:text-foreground"
               }`}
             >
               {tab.icon}
@@ -66,7 +67,7 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
             <Button
               isIconOnly variant="light" size="sm"
               onPress={onVoiceOpen}
-              className="text-default-400 hover:text-sky-500"
+              className="text-default-500 hover:text-foreground"
               aria-label="Asistente de voz"
             >
               <Mic size={18} />
@@ -74,7 +75,7 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
             <Button
               isIconOnly variant="light" size="sm"
               onPress={onTogglePrivacy}
-              className="text-default-400 hover:text-sky-500"
+              className="text-default-500 hover:text-foreground"
               aria-label={privacy ? "Mostrar montos" : "Ocultar montos"}
             >
               {privacy ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -83,7 +84,7 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
           <Button
             isIconOnly variant="light" size="sm"
             onPress={onStartTour}
-            className="text-default-400 hover:text-sky-500"
+            className="text-default-500 hover:text-foreground"
             aria-label="Iniciar tour"
           >
             <HelpCircle size={18} />

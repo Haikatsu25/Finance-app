@@ -58,7 +58,7 @@ export function ThemeSwitcher() {
     <Switch
       isSelected={theme === "dark"}
       onValueChange={(isSelected) => setTheme(isSelected ? "dark" : "light")}
-      color="success"
+      color="primary"
       endContent={<MoonIcon />}
       size="lg"
       startContent={<SunIcon />}

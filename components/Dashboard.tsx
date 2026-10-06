@@ -7,8 +7,6 @@ import {
   Wallet,
   ShieldAlert,
   DollarSign,
-  TrendingDown,
-  TrendingUp,
   ArrowLeftRight,
 } from "lucide-react";
 import {
@@ -56,6 +54,7 @@ import { TopNav } from "./dashboard/TopNav";
 import { HomeViewToggle } from "./dashboard/HomeViewToggle";
 import { UndoToast } from "./dashboard/UndoToast";
 import { BalanceHero } from "./dashboard/BalanceHero";
+import { AllocationStrip } from "./dashboard/AllocationStrip";
 import { WelcomeCard } from "./dashboard/WelcomeCard";
 import { DemoDataBanner } from "./dashboard/DemoDataBanner";
 import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
@@ -456,9 +455,6 @@ export default function Dashboard() {
 
   const animatedAvailable = useAnimatedCounter(afterThisMonth);
   const isPositive        = afterThisMonth >= 0;
-  const balanceProgress   = totalAssets > 0
-    ? Math.max(0, Math.min(100, (afterThisMonth / totalAssets) * 100))
-    : 0;
 
   // ── Deshacer borrados ────────────────────────────────────────
   const scheduleUndo = (label: string, restore: () => void) => {
@@ -1123,7 +1119,7 @@ export default function Dashboard() {
               viewerId={user?.id}
             />
           ) : (
-          <section className="animate-fade-in-up">
+          <section className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
               <BalanceHero
@@ -1135,18 +1131,26 @@ export default function Dashboard() {
                 totalLiabilities={totalLiabilities}
                 totalFixedCosts={totalFixedCosts}
                 totalMsiMonthly={totalMsiMonthly}
-                balanceProgress={balanceProgress}
                 onSaveSnapshot={saveSnapshot}
                 onViewHistory={() => changeTab("history")}
                 onOpenSettings={onDataModalOpen}
               />
 
               <div className="col-span-1 md:col-span-4 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-3">
-                <StatCard label="Total Activos"  value={totalAssets}      icon={<TrendingUp size={20} />}   tone="emerald" delay={100} />
-                <StatCard label="Gastos / Deudas" value={totalLiabilities} icon={<TrendingDown size={20} />} tone="rose"    delay={200} />
-                <StatCard label="Apartados"       value={totalBuckets}     icon={<Wallet size={20} />}       tone="amber"   delay={300} />
+                <StatCard label="Total activos"   value={totalAssets}      tone="emerald" />
+                <StatCard label="Deudas"         value={totalLiabilities} tone="rose" />
+                <StatCard label="Apartados"       value={totalBuckets}     tone="amber" />
               </div>
             </div>
+
+            <AllocationStrip
+              totalAssets={totalAssets}
+              totalLiabilities={totalLiabilities}
+              totalBuckets={totalBuckets}
+              totalFixedCosts={totalFixedCosts}
+              totalMsiMonthly={totalMsiMonthly}
+              remaining={afterThisMonth}
+            />
           </section>
           )}
 
@@ -1180,7 +1184,7 @@ export default function Dashboard() {
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
           <section className={activeTab !== "dashboard" || planMode ? "hidden" : ""} id="management-sections">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-xl font-bold section-title">Mis Finanzas</h2>
+              <h2 className="text-xl font-bold section-title">Mis finanzas</h2>
               {assets.length >= 2 && (
                 <Button size="sm" variant="flat" color="primary" className="font-bold"
                   startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>

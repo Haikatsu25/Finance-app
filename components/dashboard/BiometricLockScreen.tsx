@@ -10,7 +10,7 @@ export function BiometricLockScreen({ unlocking, onUnlock }: {
   return (
     <div className="fixed inset-0 z-[100] hero-card flex flex-col items-center justify-center gap-6 p-6 overflow-hidden overscroll-none touch-none">
       <div className="p-5 rounded-3xl bg-white/5 border border-white/15">
-        <Fingerprint size={44} className="text-sky-400" />
+        <Fingerprint size={44} className="text-cal" />
       </div>
       <div className="text-center">
         <h2 className="text-xl font-black text-white mb-1">Finance Control está bloqueada</h2>

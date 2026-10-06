@@ -12,7 +12,7 @@ import {
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
-  nextOccurrence, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
+  nextOccurrence, paymentDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
 } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
@@ -338,7 +338,7 @@ export default function CreditCards({
             {cards.map((c) => {
               const bd = cardDebtBreakdown(c, installments);
               const util = c.creditLimit > 0 ? Math.min(100, (bd.totalOwed / c.creditLimit) * 100) : 0;
-              const due = nextOccurrence(c.dueDay);
+              const due = paymentDueDate(c);
               const daysLeft = daysUntil(due);
               const cut = nextOccurrence(c.cutoffDay);
               const cutDays = daysUntil(cut);
@@ -541,7 +541,9 @@ export default function CreditCards({
                   {bd.cash > 0 && daysLeft <= 3 && (
                     <p className="mt-3 text-xs flex items-start gap-1.5">
                       <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden />
-                      Paga {money(bd.dueThisMonth)} antes del {due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses
+                      {daysLeft < 0
+                        ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, actualiza tu deuda abajo; si no, paga cuanto antes para frenar intereses.`
+                        : `Paga ${money(bd.dueThisMonth)} antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses`}
                     </p>
                   )}
 

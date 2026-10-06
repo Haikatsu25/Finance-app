@@ -61,6 +61,7 @@ export interface CreditCardItem {
     dueDay: number;             // día del mes (1-31)
     apr?: number;               // tasa anual %, para el simulador
     minPayment?: number;
+    last4?: string;             // últimos 4 dígitos (opcional, solo para identificar la tarjeta)
     addedBy?: AddedBy;
 }
 

@@ -125,6 +125,7 @@ import { SnapshotModal } from "./dashboard/SnapshotModal";
 import { SettingsModal } from "./dashboard/SettingsModal";
 import { ClearHistoryModal } from "./dashboard/ClearHistoryModal";
 import { ImportModal } from "./dashboard/ImportModal";
+import { SyncConflictModal } from "./dashboard/SyncConflictModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1520,25 +1521,7 @@ export default function Dashboard() {
         <ImportModal isOpen={isImportOpen} onOpenChange={onImportChange} importError={importError} importPreview={importPreview} onConfirm={confirmImport} />
 
         {/* ── MODAL: conflicto de sincronización ──────────────── */}
-        <Modal isOpen={conflictData !== null} onOpenChange={() => {}} backdrop="blur" size="sm" hideCloseButton isDismissable={false}>
-          <ModalContent>
-            <ModalHeader className="flex items-center gap-2">
-              <RefreshCw size={18} className="text-indigo-500" />
-              Datos actualizados en otro lugar
-            </ModalHeader>
-            <ModalBody>
-              <p className="text-sm text-default-500">
-                Guardaste cambios desde otro dispositivo o pestaña. Para no perder nada,
-                cargaremos la versión más reciente.
-              </p>
-            </ModalBody>
-            <ModalFooter>
-              <Button color="primary" variant="shadow" className="font-bold w-full" onPress={resolveConflict}>
-                Cargar datos más recientes
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
+        <SyncConflictModal isOpen={conflictData !== null} onResolve={resolveConflict} />
       </SignedIn>
     </div>
   );

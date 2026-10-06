@@ -124,6 +124,7 @@ import { EditModal } from "./dashboard/EditModal";
 import { SnapshotModal } from "./dashboard/SnapshotModal";
 import { SettingsModal } from "./dashboard/SettingsModal";
 import { ClearHistoryModal } from "./dashboard/ClearHistoryModal";
+import { ImportModal } from "./dashboard/ImportModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1516,41 +1517,7 @@ export default function Dashboard() {
         <ClearHistoryModal isOpen={isClearOpen} onOpenChange={onClearChange} historyCount={history.length} onConfirm={confirmClearHistory} />
 
         {/* ── MODAL: confirmar importación ────────────────────── */}
-        <Modal isOpen={isImportOpen} onOpenChange={onImportChange} backdrop="blur" size="sm">
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  {importError
-                    ? <><AlertTriangle size={18} className="text-rose-500" /> Archivo inválido</>
-                    : <><Upload size={18} className="text-indigo-500" /> Importar respaldo</>}
-                </ModalHeader>
-                <ModalBody>
-                  {importError ? (
-                    <p className="text-sm text-default-500">{importError}</p>
-                  ) : (
-                    <>
-                      <p className="text-sm text-default-500">
-                        El respaldo contiene: <span className="font-semibold text-default-700">{importPreview?.counts}</span>
-                      </p>
-                      <p className="text-sm text-rose-500 font-semibold">
-                        Esto reemplazará todos tus datos actuales.
-                      </p>
-                    </>
-                  )}
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>{importError ? "Entendido" : "Cancelar"}</Button>
-                  {!importError && (
-                    <Button color="secondary" variant="shadow" className="font-bold" onPress={() => confirmImport(onClose)}>
-                      Sí, importar
-                    </Button>
-                  )}
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
+        <ImportModal isOpen={isImportOpen} onOpenChange={onImportChange} importError={importError} importPreview={importPreview} onConfirm={confirmImport} />
 
         {/* ── MODAL: conflicto de sincronización ──────────────── */}
         <Modal isOpen={conflictData !== null} onOpenChange={() => {}} backdrop="blur" size="sm" hideCloseButton isDismissable={false}>

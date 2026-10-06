@@ -18,6 +18,47 @@ export function nextOccurrence(dayOfMonth: number, from: Date = new Date()): Dat
     return candidate;
 }
 
+/** Última ocurrencia de un día del mes que ya llegó (hoy cuenta), clampeada a fin de mes. */
+export function previousOccurrence(dayOfMonth: number, from: Date = new Date()): Date {
+    const clamp = (year: number, month: number, day: number) => {
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        return new Date(year, month, Math.min(day, lastDay));
+    };
+    const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    let candidate = clamp(today.getFullYear(), today.getMonth(), dayOfMonth);
+    if (candidate > today) {
+        candidate = clamp(today.getFullYear(), today.getMonth() - 1, dayOfMonth);
+    }
+    return candidate;
+}
+
+/**
+ * Fecha límite del estado de cuenta vigente de una tarjeta. A diferencia de
+ * nextOccurrence, PUEDE estar en el pasado: eso significa pago vencido.
+ *
+ * Un estado de cuenta vence en la primera fecha límite posterior a su corte.
+ * Si la fecha límite más reciente cayó después del último corte y ya pasó
+ * (estrictamente antes de hoy), ese estado de cuenta está vencido. Cuando
+ * llega el siguiente corte empieza otro ciclo y se vuelve a mirar hacia adelante.
+ *
+ * Límite conocido: la app no registra pagos, solo el saldo que escribes. Si ya
+ * pagaste pero el saldo aún incluye compras nuevas, se verá "vencido" hasta el
+ * siguiente corte o hasta que actualices la deuda.
+ */
+export function paymentDueDate(
+    card: Pick<CreditCardItem, "cutoffDay" | "dueDay">,
+    from: Date = new Date(),
+): Date {
+    const next = nextOccurrence(card.dueDay, from);
+    // Sin un día de corte válido no se puede saber el ciclo: comportamiento anterior
+    if (!Number.isFinite(card.cutoffDay) || card.cutoffDay < 1) return next;
+
+    const today = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const lastDue = previousOccurrence(card.dueDay, from);
+    const lastCut = previousOccurrence(card.cutoffDay, from);
+    return lastDue < today && lastDue > lastCut ? lastDue : next;
+}
+
 export function daysUntil(date: Date, from: Date = new Date()): number {
     const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
     const b = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
@@ -55,7 +96,7 @@ export function upcomingPayments(
         // Lo que hay que pagar este corte = contado + mensualidades MSI
         const { dueThisMonth, monthlyInstallment } = cardDebtBreakdown(c, installments);
         if (dueThisMonth <= 0) continue;
-        const dueDate = nextOccurrence(c.dueDay);
+        const dueDate = paymentDueDate(c);
         const daysLeft = daysUntil(dueDate);
         if (daysLeft > horizon) continue;
         out.push({

@@ -6,7 +6,7 @@ import type {
     CreditCardItem, InstallmentPlan, BudgetItem,
 } from "@/types";
 import {
-    cardDebtBreakdown, nextOccurrence, daysUntil,
+    cardDebtBreakdown, nextOccurrence, paymentDueDate, daysUntil,
     monthKey, shiftMonth, summarizeMonth, spentByCategory,
 } from "@/lib/finance-utils";
 
@@ -105,7 +105,7 @@ export function computeHealthScore(d: FinanceData): HealthScore {
     // 6) Pagos vencidos
     const overdue = d.creditCards.filter((c) => {
         const bd = cardDebtBreakdown(c, d.installments);
-        return bd.dueThisMonth > 0 && daysUntil(nextOccurrence(c.dueDay)) < 0;
+        return bd.dueThisMonth > 0 && daysUntil(paymentDueDate(c)) < 0;
     }).length;
     if (overdue > 0) { score -= 15; factors.push({ label: "Pagos vencidos", points: -15, detail: `${overdue} tarjeta${overdue > 1 ? "s" : ""} con pago vencido` }); }
 
@@ -146,8 +146,8 @@ export function computeInsights(d: FinanceData): Insight[] {
     for (const c of d.creditCards) {
         const bd = cardDebtBreakdown(c, d.installments);
         if (bd.dueThisMonth <= 0) continue;
-        const days = daysUntil(nextOccurrence(c.dueDay));
-        if (days < 0) out.push({ id: `over-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pago VENCIDO`, detail: `Debiste pagar ${money0(bd.dueThisMonth)} hace ${Math.abs(days)} día${Math.abs(days) > 1 ? "s" : ""} — ya puede estar generando intereses.` });
+        const days = daysUntil(paymentDueDate(c));
+        if (days < 0) out.push({ id: `over-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pago VENCIDO`, detail: `Debiste pagar ${money0(bd.dueThisMonth)} hace ${Math.abs(days)} día${Math.abs(days) > 1 ? "s" : ""} — ya puede estar generando intereses. Si ya pagaste, actualiza la deuda de la tarjeta.` });
         else if (days <= 3) out.push({ id: `due-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pagas en ${days === 0 ? "HOY" : `${days} día${days > 1 ? "s" : ""}`}`, detail: `Paga ${money0(bd.dueThisMonth)} para no generar intereses.` });
     }
 

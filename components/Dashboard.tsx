@@ -112,6 +112,7 @@ import { BiometricLockScreen } from "./dashboard/BiometricLockScreen";
 import { LoadErrorView } from "./dashboard/LoadErrorView";
 import { TopNav } from "./dashboard/TopNav";
 import { HomeViewToggle } from "./dashboard/HomeViewToggle";
+import { UndoToast } from "./dashboard/UndoToast";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1620,21 +1621,7 @@ export default function Dashboard() {
 
         {/* ── TOAST DESHACER ──────────────────────────────────── */}
         {pendingUndo && (
-          <div className="undo-toast" role="status">
-            <span className="text-xs text-default-600 max-w-[180px] truncate">
-              Se eliminó <span className="font-bold">{pendingUndo.label}</span>
-            </span>
-            <Button
-              size="sm"
-              variant="flat"
-              color="primary"
-              className="font-bold"
-              startContent={<Undo2 size={14} />}
-              onPress={handleUndo}
-            >
-              Deshacer
-            </Button>
-          </div>
+          <UndoToast label={pendingUndo.label} onUndo={handleUndo} />
         )}
 
         {/* ── MODAL: captura rápida (FAB) ─────────────────────── */}

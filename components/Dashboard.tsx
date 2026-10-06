@@ -107,7 +107,7 @@ export default function Dashboard() {
   const [leaveArmed,   setLeaveArmed]   = useState(false);
   const [codeCopied,   setCodeCopied]   = useState(false);
 
-  const { user } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const isSharedMember = !!(docOwnerId && user?.id && docOwnerId !== user.id);
 
   // Autoría: se sella en cada registro nuevo (visible en cuentas compartidas)
@@ -131,6 +131,8 @@ export default function Dashboard() {
   const [pendingUndo, setPendingUndo] = useState<{
     label: string;
     restore: () => void;
+    /** Texto completo del toast; si falta, dice "Se eliminó {label}" */
+    message?: string;
   } | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -184,6 +186,22 @@ export default function Dashboard() {
     setLocked(enabled);
     biometricsAvailable().then(setBioAvailable);
     getPushStatus().then(setPushStatus);
+  }, []);
+
+  // Carga de datos. Espera a que Clerk termine de cargar: antes se pedía /api/finance
+  // al montar, cuando Clerk aún no sabía quién eres, y el servidor respondía 401
+  // (dos por carga). La ref evita repetir la petición con el doble montaje de
+  // StrictMode o con re-renders de la misma sesión.
+  const userId = user?.id;
+  const fetchedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isLoaded) return;
+    // Sin sesión se muestra la pantalla de entrada: no hay nada que pedir. isLoading se
+    // queda en true a propósito: el guardado automático exige !isLoading, y sin sesión
+    // dispararía un POST /api/finance (otro 401).
+    if (!isSignedIn || !userId) return;
+    if (fetchedFor.current === userId) return;
+    fetchedFor.current = userId;
 
     const fetchData = async () => {
       try {
@@ -233,7 +251,7 @@ export default function Dashboard() {
       }
     };
     fetchData();
-  }, [applyServerData]);
+  }, [isLoaded, isSignedIn, userId, applyServerData]);
 
   const togglePrivacy = () => {
     const next = !privacy;
@@ -457,9 +475,9 @@ export default function Dashboard() {
   const isPositive        = afterThisMonth >= 0;
 
   // ── Deshacer borrados ────────────────────────────────────────
-  const scheduleUndo = (label: string, restore: () => void) => {
+  const scheduleUndo = (label: string, restore: () => void, message?: string) => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    setPendingUndo({ label, restore });
+    setPendingUndo({ label, restore, message });
     undoTimerRef.current = setTimeout(() => setPendingUndo(null), 5000);
   };
 
@@ -487,10 +505,13 @@ export default function Dashboard() {
     setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: 0, lastPaidCycle: paidCycle } : c)));
     if (linked.length) setLiabilities((prev) => prev.filter((l) => l.cardId !== cardId));
 
+    const [py, pm, pd] = paidCycle.split("-").map(Number);
+    const cycleLabel = new Date(py, pm - 1, pd).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
     scheduleUndo(`Pago de ${card.label}`, () => {
       setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: prevBalance, lastPaidCycle: prevPaidCycle } : c)));
       if (linked.length) setLiabilities((prev) => [...prev, ...linked]);
-    });
+    }, `Marcaste pagado el ciclo del ${cycleLabel} (${card.label})`);
   };
 
   /** Suma (o resta con signo negativo) a la deuda de contado de una tarjeta */
@@ -1343,7 +1364,7 @@ export default function Dashboard() {
 
         {/* ── TOAST DESHACER ──────────────────────────────────── */}
         {pendingUndo && (
-          <UndoToast label={pendingUndo.label} onUndo={handleUndo} />
+          <UndoToast label={pendingUndo.label} message={pendingUndo.message} onUndo={handleUndo} />
         )}
 
         {/* ── MODAL: captura rápida (FAB) ─────────────────────── */}

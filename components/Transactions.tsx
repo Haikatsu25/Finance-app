@@ -304,7 +304,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 <ArrowUpCircle size={14} /> Ingreso
               </button>
             </div>
-            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="flex-1 min-w-[180px] basis-[180px]" value={label} onValueChange={setLabel} />
+            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="lg:flex-1 lg:min-w-[180px] lg:basis-[180px]" value={label} onValueChange={setLabel} />
             <div className="flex gap-2 flex-wrap">
               <Input
                 type="number" min="0" inputMode="decimal" placeholder="0.00" size="sm" variant="bordered"

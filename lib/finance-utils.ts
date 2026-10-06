@@ -32,20 +32,33 @@ export function previousOccurrence(dayOfMonth: number, from: Date = new Date()):
     return candidate;
 }
 
+/** YYYY-MM-DD en hora LOCAL (toISOString usaría UTC y podría correrse un día). */
+export function isoDate(d: Date): string {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+/** Fecha YYYY-MM-DD que existe de verdad (rechaza "2026-13-45", que cumple el formato). */
+function isRealIsoDate(s: unknown): s is string {
+    if (typeof s !== "string") return false;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (!m) return false;
+    const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    const dt = new Date(y, mo - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d;
+}
+
 /**
- * Fecha límite del estado de cuenta vigente de una tarjeta. A diferencia de
- * nextOccurrence, PUEDE estar en el pasado: eso significa pago vencido.
+ * Fecha límite del estado de cuenta en curso, SIN considerar si ya se pagó.
+ * Puede estar en el pasado (la fecha ya llegó y el estado sigue sin cerrarse
+ * por un siguiente corte).
  *
  * Un estado de cuenta vence en la primera fecha límite posterior a su corte.
  * Si la fecha límite más reciente cayó después del último corte y ya pasó
- * (estrictamente antes de hoy), ese estado de cuenta está vencido. Cuando
- * llega el siguiente corte empieza otro ciclo y se vuelve a mirar hacia adelante.
- *
- * Límite conocido: la app no registra pagos, solo el saldo que escribes. Si ya
- * pagaste pero el saldo aún incluye compras nuevas, se verá "vencido" hasta el
- * siguiente corte o hasta que actualices la deuda.
+ * (estrictamente antes de hoy), esa es la del estado en curso. Cuando llega el
+ * siguiente corte empieza otro ciclo y se vuelve a mirar hacia adelante.
  */
-export function paymentDueDate(
+export function statementDueDate(
     card: Pick<CreditCardItem, "cutoffDay" | "dueDay">,
     from: Date = new Date(),
 ): Date {
@@ -57,6 +70,43 @@ export function paymentDueDate(
     const lastDue = previousOccurrence(card.dueDay, from);
     const lastCut = previousOccurrence(card.cutoffDay, from);
     return lastDue < today && lastDue > lastCut ? lastDue : next;
+}
+
+/**
+ * Clave del ciclo que escribe el botón "Pagado" en la tarjeta (lastPaidCycle):
+ * la fecha límite del estado de cuenta en curso, YYYY-MM-DD. Ignora lo que ya
+ * esté pagado, así que volver a marcar el mismo ciclo no lo adelanta.
+ */
+export function cycleKey(
+    card: Pick<CreditCardItem, "cutoffDay" | "dueDay">,
+    from: Date = new Date(),
+): string {
+    return isoDate(statementDueDate(card, from));
+}
+
+/**
+ * Fecha límite que sigue pendiente de pago. Es la del estado en curso
+ * (statementDueDate) salvo que ese ciclo ya esté marcado como pagado
+ * (lastPaidCycle >= su fecha): entonces cuenta el siguiente.
+ *
+ * Puede estar en el pasado: eso significa pago vencido = la fecha pasó Y no
+ * está pagado este ciclo.
+ */
+export function paymentDueDate(
+    card: Pick<CreditCardItem, "cutoffDay" | "dueDay" | "lastPaidCycle">,
+    from: Date = new Date(),
+): Date {
+    let due = statementDueDate(card, from);
+    const paid = card.lastPaidCycle;
+    if (isRealIsoDate(paid)) {
+        // Tope de 3 saltos: un valor corrupto o muy futuro no puede mandarnos años adelante
+        for (let i = 0; i < 3 && isoDate(due) <= paid; i++) {
+            const y = due.getFullYear(), m = due.getMonth() + 1;
+            const lastDay = new Date(y, m + 1, 0).getDate();
+            due = new Date(y, m, Math.min(card.dueDay, lastDay));
+        }
+    }
+    return due;
 }
 
 export function daysUntil(date: Date, from: Date = new Date()): number {

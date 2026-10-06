@@ -828,7 +828,7 @@ export default function Dashboard() {
         : a.id === to.id ? { ...a, amount: round2(a.amount - amount) }
         : a,
       ));
-    });
+    }, `Transferiste ${money(amount)} de ${from.label} a ${to.label}`);
     setTAmount("");
     close();
   };

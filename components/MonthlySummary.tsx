@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Card, CardBody } from "@heroui/react";
-import { TrendingUp, TrendingDown, Crown, Zap } from "lucide-react";
 import { money } from "@/lib/format";
 import { MonthSummary } from "@/lib/finance-utils";
 
@@ -12,7 +11,7 @@ function Delta({ current, previous }: { current: number; previous: number }) {
   if (!Number.isFinite(pct) || Math.abs(pct) < 1) return null;
   const up = pct > 0;
   return (
-    <span className={`text-[10px] font-bold ${up ? "text-rose-400" : "text-emerald-400"}`}>
+    <span className={`text-[11px] font-bold ${up ? "text-money-out-text" : "text-money-in-text"}`}>
       {up ? "▲" : "▼"} {Math.abs(pct).toFixed(0)}% vs mes anterior
     </span>
   );
@@ -25,53 +24,41 @@ export default function MonthlySummary({ summary, prevSummary }: {
   if (summary.count === 0) return null;
 
   return (
-    <Card className="hero-card glow-hero-positive border-0 overflow-hidden relative animate-fade-in-scale">
-      <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full border border-white/10" />
-      <CardBody className="relative z-10 p-5">
-        <p className="text-white/50 font-semibold text-[10px] tracking-[0.2em] uppercase mb-3 flex items-center gap-1.5">
-          <Zap size={11} className="text-emerald-400" /> Tu mes en números
-        </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <Card className="glass rule-ink shadow-none">
+      <CardBody className="p-5">
+        <h4 className="text-sm font-bold mb-3">Tu mes en números</h4>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5">
           <div>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <TrendingUp size={13} className="text-emerald-400" />
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Entró</p>
-            </div>
-            <p className="text-xl font-black tnum text-emerald-400">{money(summary.income)}</p>
+            <p className="text-xs font-semibold text-default-500 mb-1">Entró</p>
+            <p className="figure text-[2rem] text-money-in-text">{money(summary.income)}</p>
           </div>
           <div>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <TrendingDown size={13} className="text-rose-400" />
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Salió</p>
-            </div>
-            <p className="text-xl font-black tnum text-rose-400">{money(summary.expense)}</p>
+            <p className="text-xs font-semibold text-default-500 mb-1">Salió</p>
+            <p className="figure text-[2rem] text-money-out-text">{money(summary.expense)}</p>
             <Delta current={summary.expense} previous={prevSummary.expense} />
           </div>
           <div>
-            <p className="text-[10px] text-white/50 uppercase tracking-wider mb-0.5">Balance del mes</p>
-            <p className={`text-xl font-black tnum ${summary.net >= 0 ? "text-white" : "text-rose-400"}`}>
+            <p className="text-xs font-semibold text-default-500 mb-1">Balance del mes</p>
+            <p className={`figure text-[2rem] ${summary.net >= 0 ? "text-foreground" : "text-money-out-text"}`}>
               {summary.net < 0 && "−"}{money(Math.abs(summary.net))}
             </p>
           </div>
           <div>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Crown size={13} className="text-amber-400" />
-              <p className="text-[10px] text-white/50 uppercase tracking-wider">Top categoría</p>
-            </div>
+            <p className="text-xs font-semibold text-default-500 mb-1">Categoría con más gasto</p>
             {summary.topCategory ? (
               <>
-                <p className="text-sm font-bold text-white truncate">{summary.topCategory.category}</p>
-                <p className="text-[11px] tnum text-white/60">{money(summary.topCategory.amount)}</p>
+                <p className="text-sm font-bold truncate">{summary.topCategory.category}</p>
+                <p className="text-xs tnum text-default-500">{money(summary.topCategory.amount)}</p>
               </>
             ) : (
-              <p className="text-sm text-white/40">—</p>
+              <p className="text-sm text-default-500">Sin datos</p>
             )}
           </div>
         </div>
         {summary.biggestExpense && (
-          <p className="mt-3 text-[11px] text-white/50">
-            Tu gasto más grande: <span className="text-white/80 font-semibold">{summary.biggestExpense.label}</span>{" "}
-            <span className="tnum text-white/80 font-bold">({money(summary.biggestExpense.amount)})</span>
+          <p className="mt-4 text-xs text-default-500">
+            Tu gasto más grande: <span className="text-foreground font-semibold">{summary.biggestExpense.label}</span>{" "}
+            <span className="tnum text-foreground font-bold">({money(summary.biggestExpense.amount)})</span>
           </p>
         )}
       </CardBody>

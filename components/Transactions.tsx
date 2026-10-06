@@ -7,7 +7,7 @@ import {
 } from "@heroui/react";
 import {
   ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight,
-  Plus, Trash2, ReceiptText, ScanLine, Search, X, Pencil, Check, Download, Landmark,
+  Plus, Trash2, ReceiptText, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
 } from "lucide-react";
 import { TransactionItem, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
@@ -375,48 +375,45 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               )}
             </div>
           ) : (
-            <div className="divide-y divide-default-100/60">
+            <div className="divide-y divide-default-200">
               {grouped.map(([day, items]) => {
                 const dayTotal = items.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
                 return (
                   <div key={day} className="px-4 py-3">
                     <div className="flex justify-between items-center mb-2">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-default-400">
+                      <p className="text-sm font-bold capitalize">
                         {new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
                           weekday: "long", day: "numeric", month: "short",
                           ...(searching ? { year: "numeric" } : {}),
                         })}
                       </p>
-                      <span className={`text-[11px] font-bold tnum ${dayTotal >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                      <span className={`figure text-xl ${dayTotal >= 0 ? "text-money-in-text" : "text-money-out-text"}`}>
                         {dayTotal >= 0 ? "+" : "−"}{money(Math.abs(dayTotal))}
                       </span>
                     </div>
-                    <div className="space-y-1">
+                    <div>
                       {items.map((t) => (
-                        <div key={t.id} className="group flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-default-100/50 transition-colors">
-                          <div className={`p-1.5 rounded-lg shrink-0 ${t.type === "income" ? "bg-emerald-500/12 text-emerald-500" : "bg-rose-500/12 text-rose-500"}`}>
-                            {t.type === "income" ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
-                          </div>
+                        <div key={t.id} className="group flex items-center gap-3 py-2.5 border-b border-default-200 last:border-b-0">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-default-700 truncate">{t.label}</p>
-                            <p className="text-[10px] text-default-400 flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold truncate">{t.label}</p>
+                            <p className="text-[11px] text-default-500 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
                               {t.category || "Sin categoría"}
-                              {t.source === "scan" && " · 📷 escaneado"}
-                              {t.source === "fixed" && " · 🔁 fijo"}
+                              {t.source === "scan" && <span className="inline-flex items-center gap-1"><ScanLine size={11} aria-hidden /> escaneado</span>}
+                              {t.source === "fixed" && <span className="inline-flex items-center gap-1"><Repeat size={11} aria-hidden /> fijo</span>}
                               {t.accountId && accountName(t.accountId) && (
-                                <span className="text-cyan-600 dark:text-cyan-400 font-semibold">· {accountName(t.accountId)}</span>
+                                <span className="inline-flex items-center gap-1 font-semibold text-foreground"><Landmark size={11} aria-hidden /> {accountName(t.accountId)}</span>
                               )}
                               <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
                             </p>
                           </div>
-                          <span className={`tnum font-bold text-sm shrink-0 ${t.type === "income" ? "text-emerald-500" : "text-default-700"}`}>
+                          <span className={`figure text-[1.35rem] shrink-0 ${t.type === "income" ? "text-money-in-text" : "text-foreground"}`}>
                             {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
                           </span>
                           <div className="flex items-center shrink-0">
                             {onUpdate && (
                               <button
                                 onClick={() => openEdit(t)}
-                                className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1"
+                                className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-foreground/10"
                                 aria-label={`Editar ${t.label}`}
                               >
                                 <Pencil size={13} />
@@ -424,7 +421,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                             )}
                             <button
                               onClick={() => onRemove(t.id)}
-                              className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                              className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-money-out-text transition-colors p-1.5 rounded-md hover:bg-money-out/10"
                               aria-label={`Eliminar ${t.label}`}
                             >
                               <Trash2 size={13} />

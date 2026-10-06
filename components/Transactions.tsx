@@ -21,8 +21,6 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
 
-const ALL_CATEGORIES = Array.from(new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]));
-
 /** Exporta los movimientos visibles a CSV (compatible con Excel). */
 function exportCsv(rows: TransactionItem[], accountName: (id?: string) => string | undefined) {
   const esc = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
@@ -100,13 +98,17 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
     setEditTx(t);
   };
 
-  const saveEdit = () => {
-    if (!editTx || !onUpdate) return;
-    const parsed = round2(parseFloat(eAmount));
-    if (!eLabel.trim() || !Number.isFinite(parsed) || parsed <= 0 || !eDate) return;
+  const editParsed = round2(parseFloat(eAmount));
+  const editValid = !!eLabel.trim() && Number.isFinite(editParsed) && editParsed > 0 && !!eDate;
+
+  /** Devuelve true solo si guardó; así el modal no se cierra con datos inválidos */
+  const saveEdit = (): boolean => {
+    if (!editTx || !onUpdate || !editValid) return false;
+    const parsed = editParsed;
     const editFuture = eDate > todayIso;
     onUpdate(editTx.id, { label: eLabel.trim(), amount: parsed, date: eDate, type: eType, category: eCategory, accountId: (eAccountId === "none" || editFuture) ? undefined : eAccountId });
     setEditTx(null);
+    return true;
   };
 
   const cats = type === "expense" ? expenseCats : incomeCats;
@@ -492,8 +494,9 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>Cancelar</Button>
                 <Button color="primary" variant="shadow" className="font-bold"
+                  isDisabled={!editValid}
                   startContent={<Check size={15} />}
-                  onPress={() => { saveEdit(); onClose(); }}>
+                  onPress={() => { if (saveEdit()) onClose(); }}>
                   Guardar cambios
                 </Button>
               </ModalFooter>

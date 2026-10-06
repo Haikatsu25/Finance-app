@@ -145,7 +145,7 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
                       {r.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
                     </p>
                     <p className="text-[9px] text-default-400">
-                      {r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft}d`}
+                      {r.daysLeft < 0 ? `vencido hace ${Math.abs(r.daysLeft)}d` : r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft}d`}
                     </p>
                   </div>
                   {/* En pantallas chicas el concepto va arriba y los montos abajo:

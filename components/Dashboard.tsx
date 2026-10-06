@@ -120,6 +120,7 @@ import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
 import { HistoryTab } from "./dashboard/HistoryTab";
 import { QuickAddModal } from "./dashboard/QuickAddModal";
 import { TransferModal } from "./dashboard/TransferModal";
+import { EditModal } from "./dashboard/EditModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1428,79 +1429,28 @@ export default function Dashboard() {
         />
 
         {/* ── MODAL: editar registro ──────────────────────────── */}
-        <Modal isOpen={editTarget !== null} onOpenChange={(o) => { if (!o) setEditTarget(null); }} backdrop="blur">
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <Pencil size={17} className="text-indigo-500" />
-                  Editar registro
-                </ModalHeader>
-                <ModalBody>
-                  <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel} />
-
-                  {(editTarget?.kind === "asset" || editTarget?.kind === "liability" || editTarget?.kind === "bucket") && (
-                    <>
-                      <div className="flex gap-2">
-                        <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                          startContent={<span className="text-default-400 text-xs">$</span>}
-                          value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                        <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
-                      </div>
-                      <Select label="Categoría" variant="bordered"
-                        selectedKeys={eCategory ? [eCategory] : []}
-                        onChange={(e) => setECategory(e.target.value)}>
-                        {QUICK_CATEGORIES[editTarget.kind].map((c) => <SelectItem key={c}>{c}</SelectItem>)}
-                      </Select>
-                      {editTarget.kind === "liability" &&
-                        liabilities.find((l) => l.id === editTarget.id)?.cardId && (
-                        <p className="text-[11px] text-cyan-500">
-                          Este gasto está ligado a una tarjeta: al cambiar el monto, la deuda de la tarjeta se ajusta por la diferencia.
-                        </p>
-                      )}
-                    </>
-                  )}
-
-                  {editTarget?.kind === "sub" && (
-                    <div className="flex gap-2">
-                      <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                        startContent={<span className="text-default-400 text-xs">$</span>}
-                        value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                      <Select label="Ciclo" variant="bordered" className="w-[140px]"
-                        selectedKeys={[eCycle]}
-                        onChange={(e) => { const v = e.target.value; if (v === "mensual" || v === "anual") setECycle(v); }}>
-                        <SelectItem key="mensual">Mensual</SelectItem>
-                        <SelectItem key="anual">Anual</SelectItem>
-                      </Select>
-                    </div>
-                  )}
-
-                  {editTarget?.kind === "goal" && (
-                    <>
-                      <div className="flex gap-2">
-                        <Input label="Monto meta" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                          startContent={<span className="text-default-400 text-xs">$</span>}
-                          value={eTarget} onValueChange={setETarget} className="flex-1" />
-                        <Input label="Llevo ahorrado" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                          startContent={<span className="text-default-400 text-xs">$</span>}
-                          value={eCurrent} onValueChange={setECurrent} className="flex-1" />
-                      </div>
-                      <Input label="Fecha límite" type="date" variant="bordered" value={eDeadline} onValueChange={setEDeadline} />
-                    </>
-                  )}
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button color="primary" variant="shadow" className="font-bold"
-                    startContent={<Check size={15} />}
-                    onPress={() => { saveEdit(); onClose(); }}>
-                    Guardar cambios
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
+        <EditModal
+          editTarget={editTarget}
+          setEditTarget={setEditTarget}
+          liabilities={liabilities}
+          onSave={saveEdit}
+          eLabel={eLabel}
+          setELabel={setELabel}
+          eAmount={eAmount}
+          setEAmount={setEAmount}
+          eDate={eDate}
+          setEDate={setEDate}
+          eCategory={eCategory}
+          setECategory={setECategory}
+          eCycle={eCycle}
+          setECycle={setECycle}
+          eTarget={eTarget}
+          setETarget={setETarget}
+          eCurrent={eCurrent}
+          setECurrent={setECurrent}
+          eDeadline={eDeadline}
+          setEDeadline={setEDeadline}
+        />
 
         {/* ── MODAL: escáner de tickets (IA gratuita) ─────────── */}
         <TicketScanner

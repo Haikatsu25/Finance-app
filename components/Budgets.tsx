@@ -21,7 +21,7 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
   viewerId?: string;
 }) {
   const catList = [...EXPENSE_CATEGORIES.slice(0, -1), ...extraCategories, "Otros"];
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState("");
   const [limit, setLimit] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -39,14 +39,17 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
   );
 
   const available = catList.filter((c) => !budgets.some((b) => b.category === c));
+  // La categoría elegida solo vale si sigue libre; si no (por ejemplo al recargar, cuando
+  // Comida ya tiene presupuesto), se usa la primera libre. Antes el selector se veía vacío
+  // pero conservaba "Comida" y "Crear" duplicaba el presupuesto.
+  const effectiveCategory = available.includes(category) ? category : (available[0] ?? "");
   const limitValid = limit !== "" && Number.isFinite(parseFloat(limit)) && parseFloat(limit) > 0;
 
   const submit = () => {
-    if (!limitValid || !category) return;
-    onAdd({ category, monthlyLimit: round2(parseFloat(limit)) });
+    if (!limitValid || !effectiveCategory) return;
+    if (budgets.some((b) => b.category === effectiveCategory)) return;
+    onAdd({ category: effectiveCategory, monthlyLimit: round2(parseFloat(limit)) });
     setLimit("");
-    const next = available.filter((c) => c !== category);
-    if (next.length) setCategory(next[0]);
   };
 
   return (
@@ -151,13 +154,16 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
 
         <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-default-200">
           <Select size="md" variant="bordered" aria-label="Categoría" className="flex-1"
-            selectedKeys={category ? [category] : []} onChange={(e) => setCategory(e.target.value)}>
-            {(available.length ? available : catList).map((c) => <SelectItem key={c}>{c}</SelectItem>)}
+            isDisabled={available.length === 0}
+            placeholder={available.length === 0 ? "Ya tienes presupuesto en todas" : undefined}
+            selectedKeys={effectiveCategory ? [effectiveCategory] : []}
+            onChange={(e) => { if (e.target.value) setCategory(e.target.value); }}>
+            {available.map((c) => <SelectItem key={c}>{c}</SelectItem>)}
           </Select>
           <Input type="number" min="0" inputMode="decimal" placeholder="Límite mensual $" size="md" variant="bordered"
             aria-label="Límite mensual" className="w-full sm:w-44" value={limit} onValueChange={setLimit} />
           <Button color="primary" variant="solid" className="font-bold h-12 sm:h-auto min-h-11"
-            isDisabled={!limitValid} startContent={<Plus size={16} />} onPress={submit}>
+            isDisabled={!limitValid || !effectiveCategory} startContent={<Plus size={16} />} onPress={submit}>
             Crear presupuesto
           </Button>
         </div>

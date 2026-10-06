@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Card, CardBody } from "@heroui/react";
 import { CalendarRange, CreditCard as CreditCardIcon, Repeat, AlertTriangle, ReceiptText, TrendingUp } from "lucide-react";
 import { CreditCardItem, SubscriptionItem, InstallmentPlan, TransactionItem } from "@/types";
@@ -98,92 +98,88 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
   const firstNegative = withBalance.find((r) => r.after < 0);
   const hasPlanned = rows.some((r) => r.kind === "planned" || r.kind === "income");
 
+  const closing = withBalance[withBalance.length - 1].after;
+
   return (
-    <Card className="glass card-hover border border-cyan-500/20">
+    <Card className="glass card-hover rule-ink shadow-none">
       <CardBody className="p-5">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="p-2 rounded-xl bg-cyan-500/12">
-            <CalendarRange size={16} className="text-cyan-500" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold tracking-tight">Proyección de flujo — próximos {HORIZON_DAYS} días</h3>
-            <p className="text-[11px] text-default-400">
-              Empiezas con <span className="font-bold tnum text-default-600">{money(startBalance)}</span> disponibles;
-              así queda tu saldo después de cada movimiento
-              {hasPlanned && <> — incluye tus gastos e ingresos planeados</>}
-            </p>
-          </div>
+        <div className="mb-1">
+          <h3 className="text-sm font-bold tracking-tight flex items-center gap-2">
+            <CalendarRange size={16} className="shrink-0" aria-hidden />
+            Proyección de flujo a {HORIZON_DAYS} días
+          </h3>
+          <p className="text-xs text-default-600 mt-0.5">
+            Empiezas con <span className="font-bold tnum text-foreground">{money(startBalance)}</span> disponibles;
+            así queda tu saldo después de cada movimiento
+            {hasPlanned && <>. Incluye tus gastos e ingresos planeados</>}
+          </p>
         </div>
 
         {firstNegative && (
-          <div className="mt-2 mb-1 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center gap-2">
-            <AlertTriangle size={14} className="text-rose-500 shrink-0" />
-            <p className="text-[11px] text-default-600">
+          <div className="mt-2 mb-1 p-3 rounded-lg bg-money-out/10 border border-money-out/30 flex items-start gap-2">
+            <AlertTriangle size={14} className="text-money-out-text shrink-0 mt-0.5" aria-hidden />
+            <p className="text-xs text-default-700">
               Te quedas en negativo el{" "}
               <span className="font-bold">{firstNegative.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</span>{" "}
-              con <span className="font-bold">{firstNegative.label}</span> — necesitarás ingresos antes de esa fecha.
+              con <span className="font-bold">{firstNegative.label}</span>. Necesitarás ingresos antes de esa fecha.
             </p>
           </div>
         )}
 
         <div className="mt-3 relative">
           {/* línea vertical */}
-          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-default-200/60" />
-          <div className="space-y-2.5">
+          <div className="absolute left-[7px] top-2 bottom-2 w-px bg-default-300" aria-hidden />
+          <ol className="space-y-3">
             {withBalance.map((r) => {
               const negative = r.after < 0;
               const isIncome = r.kind === "income";
               return (
-                <div key={r.id} className="flex items-center gap-2 sm:gap-3 relative">
+                <li key={r.id} className="flex items-center gap-2 sm:gap-3 relative">
+                  {/* Marca: relleno de salida si el saldo se va a negativo, de entrada si es un ingreso */}
                   <span className={`w-[15px] h-[15px] rounded-full border-2 shrink-0 z-10 ${
-                    negative ? "bg-rose-500 border-rose-300/50"
-                    : isIncome ? "bg-emerald-500 border-emerald-300/50"
-                    : "bg-default-100 border-default-300"
-                  }`} />
-                  <div className="w-[56px] sm:w-[74px] shrink-0">
-                    <p className="text-[11px] font-bold text-default-600 capitalize leading-tight">
+                    negative ? "bg-money-out border-money-out"
+                    : isIncome ? "bg-money-in border-money-in"
+                    : "bg-background border-default-400"
+                  }`} aria-hidden />
+                  <div className="w-[58px] sm:w-[78px] shrink-0">
+                    <p className="text-xs font-bold leading-tight">
                       {r.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
                     </p>
-                    <p className="text-[9px] text-default-400">
-                      {r.daysLeft < 0 ? `vencido hace ${Math.abs(r.daysLeft)}d` : r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft}d`}
+                    <p className="text-[11px] text-default-600">
+                      {r.daysLeft < 0 ? `venció hace ${Math.abs(r.daysLeft)} d` : r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft} d`}
                     </p>
                   </div>
                   {/* En pantallas chicas el concepto va arriba y los montos abajo:
                       en una sola linea se encimaban con textos largos o fuente grande. */}
                   <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-3">
                     <div className="flex items-center gap-1.5 min-w-0 sm:flex-1">
-                      {r.kind === "card" ? <CreditCardIcon size={12} className="text-default-400 shrink-0" />
-                        : r.kind === "planned" ? <ReceiptText size={12} className="text-cyan-500 shrink-0" />
-                        : r.kind === "income" ? <TrendingUp size={12} className="text-emerald-500 shrink-0" />
-                        : <Repeat size={12} className="text-default-400 shrink-0" />}
-                      <span className="text-xs font-semibold text-default-700 truncate">{r.label}</span>
-                      {r.note && (
-                        <span className={`text-[8px] font-bold uppercase shrink-0 ${
-                          isIncome ? "text-emerald-500" : r.kind === "planned" ? "text-cyan-500" : "text-indigo-500"
-                        }`}>{r.note}</span>
-                      )}
+                      {r.kind === "card" ? <CreditCardIcon size={13} className="text-default-600 shrink-0" aria-hidden />
+                        : r.kind === "planned" ? <ReceiptText size={13} className="text-default-600 shrink-0" aria-hidden />
+                        : r.kind === "income" ? <TrendingUp size={13} className="text-money-in-text shrink-0" aria-hidden />
+                        : <Repeat size={13} className="text-default-600 shrink-0" aria-hidden />}
+                      <span className="text-sm font-semibold truncate">{r.label}</span>
+                      {r.note && <span className="text-[11px] text-default-600 shrink-0">({r.note})</span>}
                     </div>
-                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 shrink-0">
-                      <span className={`tnum text-xs font-bold whitespace-nowrap ${isIncome ? "text-emerald-500" : "text-rose-500"}`}>
+                    <div className="flex items-baseline justify-between sm:justify-end gap-2 sm:gap-4 shrink-0">
+                      {/* La fila es neutra: solo el ingreso lleva color. El saldo que corre es un agregado: rojo si es negativo. */}
+                      <span className={`figure text-[1.15rem] whitespace-nowrap ${isIncome ? "text-money-in-text" : ""}`}>
                         {isIncome ? "+" : "−"}{money(Math.abs(r.amount))}
                       </span>
-                      <span className={`tnum text-xs font-black whitespace-nowrap sm:w-[86px] text-right ${
-                        negative ? "text-rose-500" : "text-emerald-600 dark:text-emerald-400"
-                      }`}>
+                      <span className={`figure text-[1.3rem] whitespace-nowrap sm:w-[96px] text-right ${negative ? "text-money-out-text" : ""}`}>
                         {negative && "−"}{money(Math.abs(r.after))}
                       </span>
                     </div>
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ol>
         </div>
 
-        <p className={`mt-3 text-[11px] font-semibold ${endsNegative ? "text-rose-500" : "text-default-400"}`}>
+        <p className={`mt-4 text-xs font-semibold ${endsNegative ? "text-money-out-text" : "text-default-600"}`}>
           {endsNegative
-            ? `Al final de los ${HORIZON_DAYS} días quedarías en negativo — planea ingresos o recorta gastos.`
-            : `Cierras los ${HORIZON_DAYS} días con ${money(withBalance[withBalance.length - 1].after)}${hasPlanned ? "" : " — sin contar ingresos que recibas"}.`}
+            ? `Al final de los ${HORIZON_DAYS} días quedarías en negativo: planea ingresos o recorta gastos.`
+            : `Cierras los ${HORIZON_DAYS} días con ${money(closing)}${hasPlanned ? "." : ". No cuenta ingresos que recibas."}`}
         </p>
       </CardBody>
     </Card>

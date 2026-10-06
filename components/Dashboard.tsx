@@ -119,6 +119,7 @@ import { DemoDataBanner } from "./dashboard/DemoDataBanner";
 import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
 import { HistoryTab } from "./dashboard/HistoryTab";
 import { QuickAddModal } from "./dashboard/QuickAddModal";
+import { TransferModal } from "./dashboard/TransferModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN DASHBOARD
@@ -1413,55 +1414,18 @@ export default function Dashboard() {
         />
 
         {/* ── MODAL: transferir entre cuentas ─────────────────── */}
-        <Modal isOpen={isTransferOpen} onOpenChange={onTransferChange} backdrop="blur" size="sm">
-          <ModalContent>
-            {(onClose) => {
-              const from = assets.find((a) => a.id === tFrom);
-              const parsed = parseFloat(tAmount);
-              const valid = tFrom && tTo && tFrom !== tTo && Number.isFinite(parsed) && parsed > 0 && from && parsed <= from.amount;
-              return (
-                <>
-                  <ModalHeader className="flex items-center gap-2">
-                    <ArrowLeftRight size={17} className="text-emerald-500" />
-                    Transferir entre cuentas
-                  </ModalHeader>
-                  <ModalBody>
-                    <Select label="De" variant="bordered" selectedKeys={tFrom ? [tFrom] : []}
-                      onChange={(e) => setTFrom(e.target.value)}>
-                      {assets.map((a) => (
-                        <SelectItem key={a.id} textValue={a.label}>{`${a.label} — ${money(a.amount)}`}</SelectItem>
-                      ))}
-                    </Select>
-                    <Select label="Hacia" variant="bordered" selectedKeys={tTo ? [tTo] : []}
-                      onChange={(e) => setTTo(e.target.value)}>
-                      {assets.filter((a) => a.id !== tFrom).map((a) => (
-                        <SelectItem key={a.id} textValue={a.label}>{`${a.label} — ${money(a.amount)}`}</SelectItem>
-                      ))}
-                    </Select>
-                    <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>}
-                      value={tAmount} onValueChange={setTAmount} />
-                    {from && Number.isFinite(parsed) && parsed > from.amount && (
-                      <p className="text-[11px] text-rose-500 font-semibold">
-                        {from.label} solo tiene {money(from.amount)}.
-                      </p>
-                    )}
-                    <p className="text-[11px] text-default-400">
-                      Mueve el saldo entre tus cuentas — no cuenta como gasto ni ingreso.
-                    </p>
-                  </ModalBody>
-                  <ModalFooter>
-                    <Button variant="light" onPress={onClose}>Cancelar</Button>
-                    <Button color="primary" variant="shadow" className="font-bold" isDisabled={!valid}
-                      startContent={<ArrowLeftRight size={15} />} onPress={() => doTransfer(onClose)}>
-                      Transferir
-                    </Button>
-                  </ModalFooter>
-                </>
-              );
-            }}
-          </ModalContent>
-        </Modal>
+        <TransferModal
+          isOpen={isTransferOpen}
+          onOpenChange={onTransferChange}
+          onTransfer={doTransfer}
+          assets={assets}
+          tFrom={tFrom}
+          setTFrom={setTFrom}
+          tTo={tTo}
+          setTTo={setTTo}
+          tAmount={tAmount}
+          setTAmount={setTAmount}
+        />
 
         {/* ── MODAL: editar registro ──────────────────────────── */}
         <Modal isOpen={editTarget !== null} onOpenChange={(o) => { if (!o) setEditTarget(null); }} backdrop="blur">

@@ -62,6 +62,8 @@ export interface CreditCardItem {
     apr?: number;               // tasa anual %, para el simulador
     minPayment?: number;
     last4?: string;             // últimos 4 dígitos (opcional, solo para identificar la tarjeta)
+    /** Fecha límite (YYYY-MM-DD) del último estado de cuenta marcado como pagado con el botón "Pagado" */
+    lastPaidCycle?: string;
     addedBy?: AddedBy;
 }
 

@@ -57,6 +57,7 @@ const CreditCardItemSchema = new Schema({
     apr: Number,
     minPayment: Number,
     last4: String,
+    lastPaidCycle: String,
     addedBy: AddedBySchema,
 }, { _id: false });
 

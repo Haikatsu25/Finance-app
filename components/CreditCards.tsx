@@ -12,7 +12,7 @@ import {
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
-  nextOccurrence, paymentDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
+  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
 } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
@@ -440,7 +440,7 @@ export default function CreditCards({
                   </div>
 
                   <div className="flex items-center justify-between gap-2 flex-wrap mt-4">
-                    {bd.cash > 0 && onMarkPaid ? (
+                    {bd.dueThisMonth > 0 && onMarkPaid ? (
                       <button
                         onClick={() => setCardToPay(c)}
                         className={`${FACE_BTN} bg-(--face-fg) text-(--face-bg) border-transparent hover:bg-(--face-fg)/90`}
@@ -538,11 +538,11 @@ export default function CreditCards({
                     </div>
                   )}
 
-                  {bd.cash > 0 && daysLeft <= 3 && (
+                  {bd.dueThisMonth > 0 && daysLeft <= 3 && (
                     <p className="mt-3 text-xs flex items-start gap-1.5">
                       <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden />
                       {daysLeft < 0
-                        ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, actualiza tu deuda abajo; si no, paga cuanto antes para frenar intereses.`
+                        ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, toca Pagado; si no, paga cuanto antes para frenar intereses.`
                         : `Paga ${money(bd.dueThisMonth)} antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses`}
                     </p>
                   )}
@@ -684,6 +684,12 @@ export default function CreditCards({
                     La deuda de contado de <span className="font-bold">{cardToPay?.label}</span>{" "}
                     (<span className="font-bold tnum">{money(bd?.cash || 0)}</span>) quedará en <span className="font-bold">$0</span>.
                   </p>
+                  {cardToPay && (
+                    <p className="text-xs text-default-600">
+                      Se marcará como pagado el estado de cuenta que vence el{" "}
+                      <span className="font-bold">{statementDueDate(cardToPay).toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</span>.
+                    </p>
+                  )}
                   {linked.length > 0 && (
                     <p className="text-xs text-default-500">
                       También se quitarán sus <span className="font-bold">{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</span> de

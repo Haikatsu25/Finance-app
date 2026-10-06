@@ -23,7 +23,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, monthKey, shiftMonth } from "@/lib/finance-utils";
+import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -471,21 +471,24 @@ export default function Dashboard() {
 
   // ── Handlers ─────────────────────────────────────────────────
   /**
-   * Botón "Pagado": la deuda de contado queda en $0 y los gastos
-   * vinculados a esa tarjeta salen de la lista (ya se pagaron).
-   * Todo reversible con Deshacer.
+   * Botón "Pagado": la deuda de contado queda en $0, los gastos vinculados
+   * a esa tarjeta salen de la lista (ya se pagaron) y el estado de cuenta en
+   * curso se anota como pagado (lastPaidCycle) para que no se marque vencido
+   * ni se te avise de él. Todo reversible con Deshacer.
    */
   const markCardPaid = (cardId: string) => {
     const card = creditCards.find((c) => c.id === cardId);
     if (!card) return;
     const prevBalance = card.balance || 0;
+    const prevPaidCycle = card.lastPaidCycle;
+    const paidCycle = cycleKey(card);
     const linked = liabilities.filter((l) => l.cardId === cardId);
 
-    setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: 0 } : c)));
+    setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: 0, lastPaidCycle: paidCycle } : c)));
     if (linked.length) setLiabilities((prev) => prev.filter((l) => l.cardId !== cardId));
 
     scheduleUndo(`Pago de ${card.label}`, () => {
-      setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: prevBalance } : c)));
+      setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: prevBalance, lastPaidCycle: prevPaidCycle } : c)));
       if (linked.length) setLiabilities((prev) => [...prev, ...linked]);
     });
   };

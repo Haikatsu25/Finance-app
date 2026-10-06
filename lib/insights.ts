@@ -147,7 +147,7 @@ export function computeInsights(d: FinanceData): Insight[] {
         const bd = cardDebtBreakdown(c, d.installments);
         if (bd.dueThisMonth <= 0) continue;
         const days = daysUntil(paymentDueDate(c));
-        if (days < 0) out.push({ id: `over-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pago VENCIDO`, detail: `Debiste pagar ${money0(bd.dueThisMonth)} hace ${Math.abs(days)} día${Math.abs(days) > 1 ? "s" : ""} — ya puede estar generando intereses. Si ya pagaste, actualiza la deuda de la tarjeta.` });
+        if (days < 0) out.push({ id: `over-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pago VENCIDO`, detail: `Debiste pagar ${money0(bd.dueThisMonth)} hace ${Math.abs(days)} día${Math.abs(days) > 1 ? "s" : ""} — ya puede estar generando intereses. Si ya pagaste, toca Pagado en la tarjeta.` });
         else if (days <= 3) out.push({ id: `due-${c.id}`, severity: "alert", icon: "pay", title: `${c.label}: pagas en ${days === 0 ? "HOY" : `${days} día${days > 1 ? "s" : ""}`}`, detail: `Paga ${money0(bd.dueThisMonth)} para no generar intereses.` });
     }
 

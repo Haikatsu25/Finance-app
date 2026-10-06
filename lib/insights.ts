@@ -1,7 +1,7 @@
 // Motor de insights y score de salud financiera — 100% local y determinista.
 // Reglas explicables: cada punto que suma o resta tiene una razón visible.
 
-import {
+import type {
     FinanceItem, SubscriptionItem, GoalItem, TransactionItem,
     CreditCardItem, InstallmentPlan, BudgetItem,
 } from "@/types";

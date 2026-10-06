@@ -1,4 +1,4 @@
-import { TransactionItem, CreditCardItem, SubscriptionItem, InstallmentPlan } from "@/types";
+import type { TransactionItem, CreditCardItem, SubscriptionItem, InstallmentPlan } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────
 // FECHAS DE PAGO DE TARJETAS

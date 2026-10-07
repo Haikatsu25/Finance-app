@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ClerkProvider } from '@clerk/nextjs'
 import { PWARegister } from '@/components/PWARegister'
 
-// Una sola familia con eje de ancho: condensada para los montos, normal para el resto
-const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
+// Plus Jakarta Sans en todo (400–800); los montos usan cifras tabulares
+const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--font-jakarta", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Finance Control — Gestión Financiera Inteligente",
@@ -29,8 +29,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eceee7" },
-    { media: "(prefers-color-scheme: dark)", color: "#16131a" }
+    { media: "(prefers-color-scheme: light)", color: "#f5f6fa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0c12" }
   ],
   width: "device-width",
   initialScale: 1,
@@ -45,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="es" className={archivo.variable} suppressHydrationWarning>
+      <html lang="es" className={jakarta.variable} suppressHydrationWarning>
         <body>
           <Providers>
             {children}

@@ -8,20 +8,12 @@ export function HomeViewToggle({ planMode, setPlanMode, planMonthKey }: {
   planMonthKey: string;
 }) {
   return (
-    <div className="flex justify-start relative z-10">
-      <div className="inline-flex items-stretch rounded-[10px] border-2 border-foreground overflow-hidden" role="tablist" aria-label="Vista de Inicio">
-        <button
-          role="tab" aria-selected={!planMode}
-          onClick={() => setPlanMode(false)}
-          className={`px-4 min-h-10 text-[13px] font-bold transition-colors ${!planMode ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
-        >
+    <div className="wide flex justify-start">
+      <div className="seg" role="group" aria-label="Vista de Inicio">
+        <button type="button" aria-pressed={!planMode} onClick={() => setPlanMode(false)}>
           Este mes
         </button>
-        <button
-          role="tab" aria-selected={planMode}
-          onClick={() => setPlanMode(true)}
-          className={`px-4 min-h-10 text-[13px] font-bold transition-colors flex items-center gap-1 ${planMode ? "bg-foreground text-background" : "text-foreground hover:bg-foreground/10"}`}
-        >
+        <button type="button" aria-pressed={planMode} onClick={() => setPlanMode(true)}>
           Plan <span className="capitalize">{monthLabel(planMonthKey).split(" de ")[0]}</span> ›
         </button>
       </div>

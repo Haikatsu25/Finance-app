@@ -1,11 +1,12 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@import "./pop.css";
 
-/* Los tokens de dinero y la tinta se exponen como colores de Tailwind
-   (text-money-in, bg-money-out/10, border-money-hold, text-ink…) para que
-   el color de un monto salga SIEMPRE de un token y no de un verde suelto. */
+/* Los tokens de dinero, la tinta y la marca se exponen como colores de Tailwind
+   (text-money-in, bg-money-out/10, bg-brand-soft, text-ink…) para que el color
+   de un monto salga SIEMPRE de un token. */
 @theme inline {
-  --font-sans: var(--font-archivo), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
 
   --color-money-in: var(--money-in);
   --color-money-out: var(--money-out);
@@ -15,71 +16,127 @@
   --color-money-hold-text: var(--money-hold-text);
   --color-ink: var(--ink);
   --color-cal: var(--cal);
+  --color-navy: var(--navy);
+  --color-brand-token: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
+  --color-track: var(--track);
+  --color-pop1: var(--pop1);
+  --color-pop2: var(--pop2);
+  --color-pop3: var(--pop3);
+  --color-pop4: var(--pop4);
 }
 
 /* ─────────────────────────────────────────────
-   DESIGN TOKENS — "Rotulado"
-   Tinta sobre cal. El color significa dinero y
-   nada más: verde entra, rojo sale, ámbar se
-   aparta. Superficies planas, sin sombras
-   difusas ni cristal.
+   DESIGN TOKENS — "Pop"
+   Fondo suave, tarjetas redondas, héroe marino con
+   círculos de color. pop1–4 son decoración y reparto
+   (no significan nada); el color de dinero (entra,
+   sale, apartado) solo va en montos, chips de estado
+   y barras de presupuesto o gasto.
+   Especificación: docs/design-pop/README.md
 ───────────────────────────────────────────── */
 :root {
-  --cal: #eceee7;            /* fondo: cal verde-grisácea */
-  --paper: #f7f8f4;          /* paneles */
-  --ink: #1f1a24;            /* tinta ciruela: texto y botón primario */
-  --ink-soft: #5a5560;       /* texto secundario (6.3:1 sobre cal) */
+  --cal: #f5f6fa;            /* fondo */
+  --paper: #ffffff;          /* tarjeta */
+  --ink: #0e1a33;            /* texto */
+  --ink-soft: #6b7590;       /* texto secundario */
 
   --background: var(--cal);
   --foreground: var(--ink);
 
   --card-bg: var(--paper);
-  --card-border: rgba(31, 26, 36, 0.16);
-  --rule: rgba(31, 26, 36, 0.12);
+  --card-border: rgba(14, 26, 51, 0.07);
+  --rule: rgba(14, 26, 51, 0.07);
 
-  --nav-bg: rgba(236, 238, 231, 0.92);
-  --nav-border: rgba(31, 26, 36, 0.16);
+  --navy: #0b1f4d;
+  --navy2: #0a1a40;
+  --logo-dot: #0b1f4d;
+  --brand: #2f9e8f;
+  --brand-soft: rgba(47, 158, 143, 0.14);
+  --brand-text: #1f7a6e;     /* marca para texto pequeño (AA sobre tarjeta) */
+  --pop1: #2f9e8f;
+  --pop2: #f2b53a;
+  --pop3: #3b82f6;
+  --pop4: #e7772b;
+  --track: #e8ebf2;
+  --sheet: #ffffff;
+  --scrim: rgba(14, 26, 51, 0.45);
+  --sh: 0 2px 4px rgba(14, 26, 51, 0.04), 0 16px 36px -18px rgba(14, 26, 51, 0.2);
 
-  /* Semántico — dinero (valores originales, sin cambios) */
-  --money-in: #059669;
-  --money-out: #e11d48;
-  --money-hold: #d97706;
+  --hero-fg: #ffffff;
+  --hero-mute: rgba(255, 255, 255, 0.7);
 
-  /* Para TEXTO pequeño sobre papel: el token puro no llega a 4.5:1 */
-  --money-in-text: #047857;
-  --money-out-text: #be123c;
-  --money-hold-text: #b45309;
+  --nav-bg: rgba(255, 255, 255, 0.88);
+  --nav-border: rgba(14, 26, 51, 0.07);
 
-  --money-in-wash: color-mix(in srgb, var(--money-in) 12%, transparent);
-  --money-out-wash: color-mix(in srgb, var(--money-out) 11%, transparent);
-  --money-hold-wash: color-mix(in srgb, var(--money-hold) 14%, transparent);
+  /* Dinero. Los tokens "-text" son para texto pequeño: el token puro no llega a 4.5:1 sobre tarjeta */
+  --money-in: #1f8c7d;
+  --money-out: #d9473f;
+  --money-hold: #c98f12;
+  --money-in-text: #17695f;
+  --money-out-text: #b3342d;
+  --money-hold-text: #8a6008;
 
-  /* Texto sobre la losa del héroe (contraste calculado por estado) */
-  --slab-in-fg: var(--ink);       /* tinta sobre verde: 4.6:1 */
-  --slab-out-fg: #ffffff;         /* blanco sobre rojo: 4.7:1 */
+  --money-in-soft: rgba(47, 158, 143, 0.14);
+  --money-out-soft: rgba(229, 87, 79, 0.14);
+  --money-hold-soft: rgba(242, 181, 58, 0.2);
+  --money-in-wash: var(--money-in-soft);
+  --money-out-wash: var(--money-out-soft);
+  --money-hold-wash: var(--money-hold-soft);
+
+  /* Texto sobre un relleno de dinero */
+  --slab-in-fg: #ffffff;
+  --slab-out-fg: #ffffff;
+
+  /* Resorte y suavizado de las animaciones */
+  --spring: cubic-bezier(0.22, 1.1, 0.3, 1);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   --neural-primary: var(--ink);
 }
 
 :root[class~="dark"],
 .dark {
-  --cal: #16131a;
-  --paper: #201c27;
-  --ink: #eceee7;
-  --ink-soft: #a29dab;
+  --cal: #0a0c12;
+  --paper: #15181f;
+  --ink: #f1f3f8;
+  --ink-soft: #8d95a8;
 
-  --card-border: rgba(236, 238, 231, 0.16);
-  --rule: rgba(236, 238, 231, 0.12);
+  --card-border: rgba(255, 255, 255, 0.06);
+  --rule: rgba(255, 255, 255, 0.06);
 
-  --nav-bg: rgba(22, 19, 26, 0.92);
-  --nav-border: rgba(236, 238, 231, 0.16);
+  --navy: #171b25;
+  --navy2: #10131a;
+  --logo-dot: #ffffff;
+  --brand: #d8f26a;
+  --brand-soft: rgba(216, 242, 106, 0.14);
+  --brand-text: #d8f26a;
+  --pop1: #d8f26a;
+  --pop2: #c7b8ff;
+  --pop3: #7dd3fc;
+  --pop4: #ff8a65;
+  --track: rgba(255, 255, 255, 0.08);
+  --sheet: #15181f;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --sh: 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 40px -22px rgba(0, 0, 0, 0.9);
 
-  --money-in-text: #34d399;
-  --money-out-text: #fb7185;
-  --money-hold-text: #fbbf24;
+  --nav-bg: rgba(10, 12, 18, 0.9);
+  --nav-border: rgba(255, 255, 255, 0.06);
 
-  --slab-in-fg: #16131a;
-  --slab-out-fg: #ffffff;
+  --money-in: #5fd3a8;
+  --money-out: #ff6f66;
+  --money-hold: #ffd166;
+  --money-in-text: #5fd3a8;
+  --money-out-text: #ff6f66;
+  --money-hold-text: #ffd166;
+
+  --money-in-soft: rgba(95, 211, 168, 0.14);
+  --money-out-soft: rgba(255, 111, 102, 0.14);
+  --money-hold-soft: rgba(255, 209, 102, 0.16);
+
+  --slab-in-fg: #0a0c12;
+  --slab-out-fg: #0a0c12;
 }
 
 /* ─────────────────────────────────────────────
@@ -88,8 +145,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans);
-  font-feature-settings: "tnum" 1;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
@@ -98,105 +154,108 @@ body {
 }
 
 ::selection {
-  background: var(--ink);
+  background: var(--brand);
   color: var(--cal);
 }
+
+/* Íconos: el trazo lo pone cada ícono (lucide). Nada global sobre `svg`, para no
+   heredarle el stroke a las gráficas de Recharts. */
 
 @layer components {
 
   /* ───────────────────────────────────────────
      SUPERFICIES
-     .glass conserva su nombre (lo usan todos los
-     componentes) pero es un panel plano: papel,
-     filo fino de tinta, sin sombra.
+     .glass conserva su nombre (lo usan todos los componentes):
+     tarjeta blanca, radio 24, sombra suave.
   ─────────────────────────────────────────── */
   .glass {
     background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: 10px;
+    border: 0;
+    border-radius: 24px;
+    box-shadow: var(--sh);
   }
 
-  /* Antes elevaba la tarjeta al pasar el mouse: ahora solo
-     oscurece el filo, que es lo único que cambia de verdad. */
   .card-hover {
-    transition: border-color 0.15s ease;
-  }
-
-  .card-hover:hover {
-    border-color: var(--ink);
+    transition: transform 0.18s var(--spring), box-shadow 0.2s;
   }
 
   .glass-nav {
     background: var(--nav-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--nav-border);
   }
 
-  /* Filo superior del panel: lleva el color del flujo que contiene */
-  .rule-in   { border-top: 3px solid var(--money-in); }
-  .rule-out  { border-top: 3px solid var(--money-out); }
-  .rule-hold { border-top: 3px solid var(--money-hold); }
-  .rule-ink  { border-top: 3px solid var(--ink); }
+  /* Los filos de color ya no existen: el color de dinero va solo en montos, chips y barras */
+  .rule-in, .rule-out, .rule-hold, .rule-ink { border-top: 0; }
 
   /* ───────────────────────────────────────────
-     LOSA DEL HÉROE
-     Un campo plano del color del saldo: verde si
-     te queda dinero, rojo si te falta. Es lo único
-     saturado de la pantalla.
+     HÉROE
+     Marino con tres círculos recortados por el borde;
+     de noche, halos lima y lavanda.
   ─────────────────────────────────────────── */
   .hero-slab {
-    --slab-bg: var(--money-in);
-    --slab-fg: var(--slab-in-fg);
-    border-radius: 20px;
-    padding: 22px 22px 24px;
-    background: var(--slab-bg);
-    color: var(--slab-fg);
+    --slab-fg: var(--hero-fg);
+    --slab-bg: var(--navy);
+    position: relative;
+    overflow: hidden;
+    border-radius: 28px;
+    padding: 22px 20px 20px;
+    color: var(--hero-fg);
+    background: linear-gradient(160deg, var(--navy), var(--navy2));
+    box-shadow: var(--sh);
   }
 
-  .hero-slab[data-state="out"] {
-    --slab-bg: var(--money-out);
-    --slab-fg: var(--slab-out-fg);
+  .hero-slab::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 104% -6%, var(--pop3) 0 118px, transparent 119px),
+      radial-gradient(circle at 92% 14%, var(--pop2) 0 54px, transparent 55px),
+      radial-gradient(circle at -4% 106%, var(--pop1) 0 90px, transparent 91px);
   }
 
-  @media (min-width: 640px) {
-    .hero-slab { padding: 28px 32px 30px; }
+  .dark .hero-slab::before {
+    background:
+      radial-gradient(ellipse at 100% 0%, rgba(216, 242, 106, 0.5), transparent 55%),
+      radial-gradient(ellipse at 0% 100%, rgba(199, 184, 255, 0.42), transparent 55%);
   }
 
-  /* Botones de la losa: contorno en el color del texto; el principal va relleno */
+  .hero-slab > * { position: relative; }
+
+  /* Botones píldora del héroe; el principal va en blanco */
   .slab-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 14px;
-    border-radius: 8px;
-    border: 2px solid var(--slab-fg);
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    white-space: nowrap;
     font-size: 0.8125rem;
     font-weight: 700;
-    background: transparent;
-    color: var(--slab-fg);
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--hero-fg);
     cursor: pointer;
-    transition: background-color 0.15s ease;
-  }
-
-  .slab-btn:hover {
-    background: color-mix(in srgb, var(--slab-fg) 16%, transparent);
+    transition: transform 0.18s var(--spring), background-color 0.2s;
   }
 
   .slab-btn[data-solid="true"] {
-    background: var(--slab-fg);
-    color: var(--slab-bg);
+    background: #ffffff;
+    color: var(--navy);
+    border-color: transparent;
   }
 
-  .slab-btn[data-solid="true"]:hover {
-    background: color-mix(in srgb, var(--slab-fg) 88%, var(--slab-bg));
-  }
+  .dark .slab-btn[data-solid="true"] { color: #0a0c12; }
 
-  /* Superficie oscura fija (bienvenida y candado): tinta plana */
+  /* Superficie marino fija (bienvenida y candado) */
   .hero-card {
-    background: #1f1a24;
-    color: #eceee7;
+    background: linear-gradient(160deg, var(--navy), var(--navy2));
+    color: #ffffff;
     border: 0;
   }
 
@@ -222,23 +281,24 @@ body {
 
   /* ───────────────────────────────────────────
      TEXTO
-     Los montos van en Archivo condensado (ancho 62,
-     peso 800): se leen de lejos y caben en móvil.
-     El resto de la interfaz usa el ancho normal.
+     Plus Jakarta Sans en todo; los montos con cifras
+     tabulares y peso 800.
   ─────────────────────────────────────────── */
   .figure {
     font-weight: 800;
-    font-variation-settings: "wdth" 62;
-    font-stretch: 62%;
-    font-feature-settings: "tnum" 1;
-    letter-spacing: -0.01em;
-    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
   }
 
   .figure-xl {
-    font-size: clamp(4.5rem, 24vw, 9.5rem);
-    line-height: 0.82;
-    letter-spacing: -0.02em;
+    font-size: 46px;
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+
+  @media (min-width: 900px) {
+    .figure-xl { font-size: 54px; }
   }
 
   .figure-md {
@@ -246,11 +306,10 @@ body {
   }
 
   .section-title {
-    letter-spacing: -0.015em;
-    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-weight: 800;
   }
 
-  /* El texto con degradado ya no existe: queda en tinta */
   .gradient-text-emerald,
   .gradient-text-purple {
     background: none;
@@ -263,119 +322,274 @@ body {
   }
 
   /* ───────────────────────────────────────────
-     CARA DE TARJETA
-     Tinta fija en ambos temas (como un plástico real). Trae su propia
-     paleta porque el rojo/verde de los tokens no llegan a 4.5:1 sobre ella.
-     La franja izquierda identifica cada tarjeta por TRAMA, no por color.
+     TARJETA DE CRÉDITO
+     Marino con un círculo pop2 en la esquina. Se identifica por
+     su nombre y sus últimos 4 dígitos.
   ─────────────────────────────────────────── */
   .card-face {
-    --face-bg: #1f1a24;
-    --face-fg: #eceee7;
-    --face-muted: #b8b5bd;
-    --face-line: rgba(236, 238, 231, 0.22);
+    --face-bg: var(--navy);
+    --face-fg: #ffffff;
+    --face-muted: rgba(255, 255, 255, 0.7);
+    --face-line: rgba(255, 255, 255, 0.16);
     position: relative;
     overflow: hidden;
-    background: var(--face-bg);
+    background: linear-gradient(135deg, var(--navy), #12306e);
     color: var(--face-fg);
-    border: 1px solid var(--face-line);
-    border-radius: 16px;
-    padding: 16px 16px 16px 32px;
+    border: 0;
+    border-radius: 28px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--sh);
   }
 
-  .card-stripe {
+  .dark .card-face { background: linear-gradient(135deg, #1b1f2b, #262b3a); }
+
+  .card-face::after {
+    content: "";
     position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 14px;
-    border-right: 1px solid var(--face-line);
+    right: -50px;
+    top: -50px;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: var(--pop2);
+    opacity: 0.9;
+    pointer-events: none;
   }
 
-  .stripe-0 { background: #eceee7; }
-  .stripe-1 { background: repeating-linear-gradient(135deg, #eceee7 0 3px, transparent 3px 7px); }
-  .stripe-2 { background: radial-gradient(circle at 50% 50%, #eceee7 1.7px, transparent 2.1px) 0 0 / 7px 7px; }
-  .stripe-3 { background: repeating-linear-gradient(0deg, #eceee7 0 3px, transparent 3px 7px); }
-  .stripe-4 { background: conic-gradient(#eceee7 25%, transparent 0 50%, #eceee7 0 75%, transparent 0) 0 0 / 10px 10px; }
-  .stripe-5 { background: repeating-linear-gradient(90deg, #eceee7 0 2px, transparent 2px 5px); }
-  .stripe-6 { background: radial-gradient(circle at 50% 50%, #eceee7 3.4px, transparent 3.9px) 0 0 / 14px 14px; }
-  .stripe-7 {
-    background:
-      linear-gradient(135deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
-      linear-gradient(225deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
-      linear-gradient(315deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px,
-      linear-gradient(45deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px;
+  .dark .card-face::after {
+    background: radial-gradient(circle, var(--pop2), transparent 70%);
+    opacity: 0.5;
   }
+
+  .card-face > * { position: relative; z-index: 1; }
+
+  /* La franja por trama de Rotulado ya no se usa */
+  .card-stripe { display: none; }
 
   /* ───────────────────────────────────────────
      TIRA DE REPARTO
-     Cada tramo se dibuja una vez al cargar.
-     Los tramos que no son «dinero libre» llevan
-     trama, para no depender solo del color.
+     Cada tramo se anima al cargar; los colores son pop1–4.
   ─────────────────────────────────────────── */
   .strip-seg {
     height: 100%;
     min-width: 2px;
     transform-origin: left center;
-    animation: stripGrow 0.7s cubic-bezier(0.2, 0, 0, 1) both;
+    animation: stripGrow 0.7s var(--ease) both;
     animation-delay: calc(var(--i, 0) * 90ms);
   }
 
-  .seg-in   { background: var(--money-in); }
-  .seg-out  { background: var(--money-out); }
-  .seg-hold { background: var(--money-hold); }
-
-  .seg-fixed {
-    background:
-      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.55) 4px 6px),
-      var(--money-out);
-  }
-
-  .seg-msi {
-    background:
-      radial-gradient(circle at 3px 3px, rgba(255, 255, 255, 0.7) 1.2px, transparent 1.6px) 0 0 / 7px 7px,
-      var(--money-out);
-  }
+  .seg-in   { background: var(--pop1); }
+  .seg-out  { background: var(--pop4); }
+  .seg-hold { background: var(--pop3); }
+  .seg-fixed { background: var(--pop4); }
+  .seg-msi  { background: var(--pop2); }
 
   /* ───────────────────────────────────────────
-     NAVEGACIÓN MÓVIL
+     NAVEGACIÓN
+     Móvil: barra flotante de cristal. Escritorio (≥900px): riel
+     izquierdo de 232px (248px desde 1200px) con el nombre arriba.
   ─────────────────────────────────────────── */
-  .bottom-nav {
+  .app-nav {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(100% - 24px, 406px);
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 50;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 6px;
     background: var(--nav-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid var(--nav-border);
-    padding-bottom: env(safe-area-inset-bottom);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--nav-border);
+    border-radius: 28px;
+    box-shadow: var(--sh);
   }
+
+  .app-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 52px;
+    min-height: 44px;
+    padding: 4px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+  }
+
+  .app-nav button[aria-current="page"] { color: var(--brand-text); }
+  .app-nav button:active { transform: scale(0.88); }
+  .app-nav-brand { display: none; }
 
   .fab {
     position: fixed;
-    bottom: calc(76px + env(safe-area-inset-bottom));
-    right: 16px;
+    bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    right: 18px;
     z-index: 50;
     width: 56px;
     height: 56px;
-    border-radius: 16px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    background: var(--navy);
+    box-shadow: 0 14px 28px -10px rgba(11, 31, 77, 0.6);
+    transition: transform 0.25s var(--spring), box-shadow 0.25s;
+  }
+
+  .dark .fab {
+    color: #0a0c12;
+    background: var(--brand);
+    box-shadow: 0 14px 28px -10px rgba(216, 242, 106, 0.5);
+  }
+
+  .fab:active { transform: scale(0.9); }
+
+  .fab-open { transform: rotate(45deg); }
+
+  /* Entre 431 y 899px la app es una columna de 430px: el botón flotante queda en su esquina */
+  @media (min-width: 431px) and (max-width: 899px) {
+    .fab { right: auto; left: calc(50% + 215px - 74px); }
+  }
+
+  @media (min-width: 900px) {
+    .app-nav {
+      left: 0;
+      top: 0;
+      bottom: 0;
+      transform: none;
+      width: 232px;
+      height: 100dvh;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: 4px;
+      padding: 28px 16px;
+      border-width: 0 1px 0 0;
+      border-radius: 0;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: var(--card-bg);
+      box-shadow: none;
+    }
+
+    .app-nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px 22px;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .app-nav button {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 12px;
+      min-width: 0;
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+
+    .app-nav button[aria-current="page"] { background: var(--brand-soft); }
+    .app-nav button:active { transform: scale(0.98); }
+
+    .fab { right: 28px; bottom: 28px; width: 60px; height: 60px; }
+  }
+
+  @media (min-width: 1200px) {
+    .app-nav { width: 248px; }
+  }
+
+  /* ───────────────────────────────────────────
+     ENCABEZADO Y VISTAS
+  ─────────────────────────────────────────── */
+  .app-shell { min-height: 100dvh; }
+
+  /* Columna de app: en móvil 430px centrada; en escritorio hasta 1120px */
+  .app-col { max-width: 430px; margin-inline: auto; }
+
+  .top {
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: var(--cal);
-    background: var(--ink);
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 16px 0;
   }
 
-  .fab:active {
-    transform: scale(0.94);
+  .greet { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .greet .av {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 16px;
+    background: linear-gradient(135deg, var(--pop1), var(--pop3));
   }
 
-  .fab-open {
-    transform: rotate(45deg);
+  .dark .greet .av { color: #0a0c12; }
+  .greet small { display: block; font-size: 13px; color: var(--ink-soft); }
+  .greet b { font-size: 19px; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; }
+
+  .icons { display: flex; align-items: center; gap: 2px; flex: none; }
+
+  .top-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+
+  .top-icon:hover { background: var(--brand-soft); }
+  .top-icon[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-text); }
+
+  /* Cada pestaña es una "vista": columna en móvil, dos columnas en escritorio */
+  .view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 14px 14px 120px;
+  }
+
+  .view[hidden] { display: none; }
+
+  .view .wide { grid-column: 1 / -1; }
+
+  @media (min-width: 900px) {
+    .app-shell { padding-left: 232px; }
+    .app-col { max-width: 1120px; padding-inline: 28px; }
+    .top { padding: 22px 0 0; }
+    .view {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+      grid-auto-flow: dense;
+      padding: 18px 0 60px;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .app-shell { padding-left: 248px; }
   }
 
   /* ───────────────────────────────────────────
@@ -384,8 +598,8 @@ body {
   .skeleton {
     position: relative;
     overflow: hidden;
-    background: var(--rule);
-    border-radius: 10px;
+    background: var(--track);
+    border-radius: 18px;
   }
 
   .skeleton::after {
@@ -393,7 +607,7 @@ body {
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
     animation: shimmer 1.4s infinite;
   }
 
@@ -406,29 +620,35 @@ body {
   ─────────────────────────────────────────── */
   .undo-toast {
     position: fixed;
-    bottom: calc(84px + env(safe-area-inset-bottom));
-    /* Centrado sin transform: la animación fadeInUp termina en translateY(0) y pisaba
-       el translateX(-50%), dejando el aviso corrido a la derecha y cortado.
-       left:50% además le daba solo media pantalla de ancho (el mensaje salía truncado). */
+    bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    /* Centrado sin transform: la animación de entrada termina en translateY(0) y pisaría un translateX(-50%) */
     left: 0;
     right: 0;
     margin-inline: auto;
-    width: max-content;
-    max-width: calc(100vw - 32px);
+    width: min(100% - 32px, 398px);
     z-index: 60;
     display: flex;
     align-items: center;
     gap: 12px;
-    background: var(--card-bg);
-    border: 2px solid var(--ink);
-    border-radius: 12px;
-    padding: 10px 14px 10px 18px;
-    animation: fadeInUp 0.25s cubic-bezier(0.2, 0, 0, 1) both;
+    background: var(--navy);
+    color: #ffffff;
+    border-radius: 18px;
+    padding: 12px 12px 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: var(--sh);
+    animation: toastIn 0.4s var(--spring) both;
   }
 
-  @media (min-width: 768px) {
+  .dark .undo-toast { background: #262b3a; }
+
+  @media (min-width: 900px) {
     .undo-toast {
-      bottom: 24px;
+      bottom: 104px;
+      left: auto;
+      right: 28px;
+      margin-inline: 0;
+      width: 380px;
     }
   }
 
@@ -437,18 +657,18 @@ body {
   }
 
   /* ───────────────────────────────────────────
-     ANIMACIONES DE ENTRADA — cortas, una vez
+     ANIMACIONES DE ENTRADA
   ─────────────────────────────────────────── */
   .animate-fade-in-up {
-    animation: fadeInUp 0.4s cubic-bezier(0.2, 0, 0, 1) both;
+    animation: fadeInUp 0.55s var(--spring) both;
   }
 
   .animate-fade-in-scale {
-    animation: fadeInScale 0.3s cubic-bezier(0.2, 0, 0, 1) both;
+    animation: fadeInScale 0.3s var(--ease) both;
   }
 
   .animate-slide-in-left {
-    animation: slideInLeft 0.25s cubic-bezier(0.2, 0, 0, 1) both;
+    animation: slideInLeft 0.25s var(--ease) both;
   }
 
   .delay-300 {
@@ -457,8 +677,13 @@ body {
 }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
 }
 
 @keyframes fadeInScale {
@@ -499,25 +724,27 @@ body {
   }
 }
 
-/* Placeholders: el gris por defecto de HeroUI no llega a 4.5:1 sobre papel */
+/* Placeholders: el gris por defecto de HeroUI no llega a 4.5:1 */
 input::placeholder,
 textarea::placeholder {
   color: var(--ink-soft);
   opacity: 1;
 }
 
-/* Gráficas (recharts): ejes, rejilla y leyenda salen de los tokens. Los atributos
-   SVG quedaban fijos en gris azulado, ilegible en uno de los dos temas. */
+/* Gráficas (recharts): ejes, rejilla y leyenda salen de los tokens, con la fuente de la app y
+   fill de token. Los ejes no heredan stroke de nada: se les quita explícitamente. */
 .chart-tokens .recharts-cartesian-axis-tick-value,
 .chart-tokens .recharts-label {
   fill: var(--ink-soft);
+  stroke: none;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-weight: 600;
 }
 
 .chart-tokens .recharts-cartesian-grid line {
   stroke: var(--rule);
 }
 
-/* La leyenda pinta cada texto del color de su serie (rojo sobre papel no llega a 4.5:1) */
 .chart-tokens .recharts-legend-item-text {
   color: var(--foreground) !important;
 }
@@ -527,23 +754,11 @@ textarea::placeholder {
   opacity: 1;
 }
 
-/* Botón de cerrar de TODOS los modales (HeroUI lo dibuja de 32px): 44px, como el resto de
-   acciones. Va fuera de @layer: la clase de utilidad de HeroUI está en una capa y ganaría. */
-[role="dialog"] > button[aria-label="Close"],
-[role="dialog"] > button[aria-label="Cerrar"] {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-}
-
-/* Foco: tinta de 2px con un halo del color del fondo, visible
-   tanto sobre papel como sobre la losa verde o roja. */
+/* Foco: anillo de marca de 2px, visible sobre tarjeta, héroe y fondo */
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--cal);
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 ::-webkit-scrollbar {
@@ -562,8 +777,19 @@ textarea::placeholder {
   background: transparent;
 }
 
+/* Presión: todo botón, tarjeta y fila se hunde al tocarlo */
+button, [role="button"], .card-face, .hero-slab {
+  transition: transform 0.18s var(--spring), background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+button:active:not(:disabled), [role="button"]:active, .card-face:active {
+  transform: scale(0.96);
+}
+
+.hero-slab:active { transform: scale(0.985); }
+
 /* Áreas táctiles: todo botón visible mide al menos 36px y los de acción principal (relleno sólido,
-   botones de la losa, botón flotante) al menos 44px. Va fuera de @layer para ganarle a las clases
+   botones del héroe, botón flotante) al menos 44px. Va fuera de @layer para ganarle a las clases
    de tamaño "sm" de HeroUI. Se excluyen los botones solo para lectores de pantalla (1x1). */
 :where(button:not(.sr-only):not([aria-label="Descartar"]):not([aria-label="Dismiss"]), [role="button"]:not(.sr-only)) {
   min-height: 36px;

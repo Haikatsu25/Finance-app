@@ -147,10 +147,10 @@ export default function PlanView({
   const mw = (key: string) => monthLabel(key).split(" de ")[0];
 
   // Botones de icono a 44px; los de +/- de mensualidades a 36px
-  const ICON_BTN = "w-11 h-11 grid place-items-center rounded-lg text-default-500 transition-colors hover:bg-foreground/10";
-  const STEP_BTN = "w-9 h-9 rounded-lg border border-default-300 hover:bg-foreground/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex items-center justify-center";
-  const ACTION_BTN = "h-11 px-3.5 rounded-lg border-2 border-foreground text-[13px] font-bold inline-flex items-center gap-1.5 transition-colors hover:bg-foreground/10";
-  const EMPTY = "text-xs text-default-600 py-4 text-center border-2 border-dashed border-default-300 rounded-lg";
+  const ICON_BTN = "size-11 grid place-items-center rounded-full text-default-600 transition-colors hover:bg-brand-soft";
+  const STEP_BTN = "size-9 rounded-full bg-(--track) hover:bg-brand-soft disabled:opacity-30 transition-colors flex items-center justify-center";
+  const ACTION_BTN = "h-11 px-4 rounded-full bg-brand-soft text-brand-text text-[13px] font-bold inline-flex items-center gap-1.5 transition-colors";
+  const EMPTY = "text-xs text-default-600 py-4 text-center border-2 border-dashed border-(--rule) rounded-[18px]";
 
   // Funciones de render (no componentes): si fueran componentes internos se
   // remontarían en cada tecleo y los inputs perderían el foco.
@@ -261,7 +261,7 @@ export default function PlanView({
   return (
     <div className="space-y-4" id="plan-view">
       {/* Navegación de mes: mismo patrón que Movimientos */}
-      <div className="flex items-stretch justify-between rounded-[10px] border-2 border-foreground overflow-hidden">
+      <div className="flex items-stretch justify-between rounded-[24px] bg-(--card-bg) shadow-pop overflow-hidden">
         <button onClick={() => onMonthChange(shiftMonth(month, -1))} disabled={month <= minMonth}
           className="px-3.5 min-h-11 hover:bg-foreground/10 text-foreground disabled:opacity-30 disabled:hover:bg-transparent" aria-label="Mes anterior">
           <ChevronLeft size={18} />
@@ -285,7 +285,7 @@ export default function PlanView({
             <p id="plan-balance-label" className="text-base font-bold flex items-center gap-2">
               <Target size={16} aria-hidden /> Balance planeado de {mw(month)}
             </p>
-            <span className="text-xs font-bold border-2 border-current rounded-md px-1.5 py-0.5" aria-label="Pesos mexicanos">MXN</span>
+            <span className="text-xs font-bold border-2 border-current rounded-full px-2.5 py-[3px]" aria-label="Pesos mexicanos">MXN</span>
           </div>
           <h2 className="figure figure-xl tnum mt-3 sm:mt-4 mb-4 sm:mb-5">
             {!positive && "−"}{p.int}
@@ -340,7 +340,7 @@ export default function PlanView({
               <div className="flex gap-2 flex-wrap">
                 <Button color="primary" variant="solid" className="font-bold h-11" startContent={<Plus size={16} />} onPress={() => openAdd("income")}>Ingreso</Button>
                 {prevIncomeCount > 0 && (
-                  <Button variant="bordered" className="font-bold h-11 border-2 border-foreground" startContent={<Copy size={14} />} onPress={() => copyFromPrev("income")}>
+                  <Button variant="flat" radius="full" className="font-bold h-11 bg-brand-soft text-brand-text" startContent={<Copy size={14} />} onPress={() => copyFromPrev("income")}>
                     Copiar de {mw(prevMonth)}
                   </Button>
                 )}
@@ -426,7 +426,7 @@ export default function PlanView({
                   Gasto de {mw(month)}
                 </Button>
                 {prevExpenseCount > 0 && (
-                  <Button variant="bordered" className="font-bold h-11 border-2 border-foreground" startContent={<Copy size={14} />} onPress={() => copyFromPrev("expense")}>
+                  <Button variant="flat" radius="full" className="font-bold h-11 bg-brand-soft text-brand-text" startContent={<Copy size={14} />} onPress={() => copyFromPrev("expense")}>
                     Copiar gastos de {mw(prevMonth)}
                   </Button>
                 )}

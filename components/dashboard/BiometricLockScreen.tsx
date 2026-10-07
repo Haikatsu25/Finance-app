@@ -17,7 +17,7 @@ export function BiometricLockScreen({ unlocking, onUnlock }: {
         <p className="text-sm text-white/50">Usa tu huella o rostro para entrar</p>
       </div>
       <Button
-        size="lg"
+        size="lg" radius="full"
         className="bg-white text-black font-bold px-8"
         startContent={<Lock size={17} />}
         isLoading={unlocking}

@@ -13,8 +13,8 @@ export function LoadErrorView() {
           Revisa tu conexión a internet. Tus datos siguen seguros en el servidor.
         </p>
         <Button
-          color="primary"
-          variant="shadow"
+          color="primary" radius="full"
+          variant="solid"
           startContent={<RefreshCw size={16} />}
           onPress={() => window.location.reload()}
         >

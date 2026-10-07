@@ -1,16 +1,15 @@
 "use client";
 
-import { Save, History, Database } from "lucide-react";
 import { TransactionItem } from "@/types";
 import { money, moneyParts } from "@/lib/format";
 import { summarizeMonth } from "@/lib/finance-utils";
 
-// Losa plana del color del saldo: verde si te queda dinero, roja si te falta.
-// Es lo único saturado de la pantalla; todo lo demás es tinta sobre cal.
+// Héroe marino con tres círculos de color. El saldo lleva el signo si es déficit; el anillo muestra
+// qué parte de tus activos queda disponible.
 export function BalanceHero({
   isPositive, animatedAvailable, transactions, currentMonthKey,
   totalAssets, totalLiabilities, totalFixedCosts, totalMsiMonthly,
-  onSaveSnapshot, onViewHistory, onOpenSettings,
+  onSaveSnapshot, onViewHistory,
 }: {
   isPositive: boolean;
   animatedAvailable: number;
@@ -22,70 +21,66 @@ export function BalanceHero({
   totalMsiMonthly: number;
   onSaveSnapshot: () => void;
   onViewHistory: () => void;
-  onOpenSettings: () => void;
 }) {
   const p = moneyParts(Math.abs(animatedAvailable));
   const ms = summarizeMonth(transactions, currentMonthKey);
-  const hasMonthActivity = ms.income !== 0 || ms.expense !== 0;
+  const pct = totalAssets > 0 ? Math.max(0, Math.min(100, (animatedAvailable / totalAssets) * 100)) : 0;
+  const ringProps = {
+    style: { ["--p" as string]: Math.round(pct) },
+    role: "img" as const,
+    "aria-label": `Disponible real: ${Math.round(pct)}% de tus activos`,
+  };
 
   return (
     <section
       id="balance-card"
       data-state={isPositive ? "in" : "out"}
-      className="hero-slab col-span-1 md:col-span-8 flex flex-col"
+      className="hero-slab"
       aria-labelledby="balance-label"
     >
-      <div className="flex items-start justify-between gap-3">
-        <p id="balance-label" className="text-base font-bold">
-          {isPositive ? "Disponible real este mes" : "Déficit este mes"}
-        </p>
-        <span className="text-xs font-bold border-2 border-current rounded-md px-1.5 py-0.5" aria-label="Pesos mexicanos">
-          MXN
-        </span>
+      <div className="flex items-center justify-between gap-3 text-[14px] font-medium text-(--hero-mute)">
+        <p id="balance-label">{isPositive ? "Disponible real este mes" : "Déficit este mes"}</p>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border border-white/30 text-white" aria-label="Pesos mexicanos">
+            MXN
+          </span>
+          {/* En móvil el anillo vive arriba, junto al chip; en escritorio, abajo con los botones */}
+          <div className="ring ring-sm min-[431px]:hidden" {...ringProps}>
+            <span>{Math.round(pct)}%</span>
+          </div>
+        </div>
       </div>
 
-      <h2 className="figure figure-xl tnum mt-3 sm:mt-4 mb-4 sm:mb-5">
+      <h2 className="figure figure-xl tnum mt-2.5 mb-2">
         {!isPositive && "−"}{p.int}
         {!p.masked && p.cents && (
-          <span className="text-[0.4em] align-top ml-1 inline-block pt-[0.18em]">{p.cents}</span>
+          <span className="text-[24px] align-top ml-0.5 inline-block pt-[2px]">{p.cents}</span>
         )}
       </h2>
 
-      <div className="space-y-1 text-sm font-medium max-w-[46ch]">
-        {(totalFixedCosts > 0 || totalMsiMonthly > 0) && (
-          <p className="tnum">
-            Ya descontado: {money(totalLiabilities)} de deudas
-            {totalFixedCosts > 0 && `, ${money(totalFixedCosts)} de fijos`}
-            {totalMsiMonthly > 0 && ` y ${money(totalMsiMonthly)} de MSI`},
-            de {money(totalAssets)} en activos.
-          </p>
-        )}
-        {hasMonthActivity && (
-          <p className="tnum">
-            En {monthPhrase(ms.net)}
-            {ms.expense > 0 && `, ${money(ms.expense)} gastados`}.
-          </p>
-        )}
-      </div>
+      {(totalFixedCosts > 0 || totalMsiMonthly > 0 || totalLiabilities > 0 || ms.expense > 0) && (
+        <p className="text-[13px] leading-[1.45] text-(--hero-mute) max-w-[32ch] md:max-w-[46ch] tnum">
+          Ya descontado:{" "}
+          {totalLiabilities > 0 && <><strong className="text-white font-bold">{money(totalLiabilities)}</strong> de deudas, </>}
+          <strong className="text-white font-bold">{money(totalFixedCosts)}</strong> fijos y{" "}
+          <strong className="text-white font-bold">{money(totalMsiMonthly)}</strong> de MSI, de {money(totalAssets)} en activos.
+          {ms.expense > 0 && <> Este mes llevas <strong className="text-white font-bold">{money(ms.expense)}</strong> gastados.</>}
+        </p>
+      )}
 
-      <div className="flex gap-2.5 flex-wrap mt-6 sm:mt-7">
-        <button id="save-snapshot-btn" type="button" className="slab-btn" data-solid="true" onClick={onSaveSnapshot}>
-          <Save size={16} aria-hidden />
-          Guardar snapshot
-        </button>
-        <button type="button" className="slab-btn" onClick={onViewHistory}>
-          <History size={16} aria-hidden />
-          Ver historial
-        </button>
-        <button type="button" className="slab-btn" onClick={onOpenSettings}>
-          <Database size={16} aria-hidden />
-          Ajustes
-        </button>
+      <div className="flex items-center justify-between gap-2.5 mt-3.5">
+        <div className="flex flex-wrap gap-2">
+          <button id="save-snapshot-btn" type="button" className="slab-btn" data-solid="true" onClick={onSaveSnapshot}>
+            Guardar snapshot
+          </button>
+          <button type="button" className="slab-btn" onClick={onViewHistory}>
+            Ver historial
+          </button>
+        </div>
+        <div className="ring max-[430px]:hidden" {...ringProps}>
+          <span>{Math.round(pct)}%</span>
+        </div>
       </div>
     </section>
   );
-
-  function monthPhrase(net: number) {
-    return `${net >= 0 ? "+" : "−"}${money(Math.abs(net))} netos este mes`;
-  }
 }

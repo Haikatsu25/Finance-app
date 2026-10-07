@@ -42,7 +42,9 @@ import { useAnimatedCounter } from "./dashboard/useAnimatedCounter";
 import { QUICK_CATEGORIES, type QuickAddType, type EditKind } from "./dashboard/quickAdd";
 import { StatCard } from "./dashboard/StatCard";
 import { DashboardSkeleton } from "./dashboard/DashboardSkeleton";
-import { BottomNav, type NavTab } from "./dashboard/BottomNav";
+import { AppNav, NAV_ORDER, type NavTab } from "./dashboard/AppNav";
+import { TabView, type TabDirection } from "./dashboard/TabView";
+import { SuccessReveal } from "./ui/SuccessReveal";
 import { Section } from "./dashboard/Section";
 import { SubscriptionsSection } from "./dashboard/SubscriptionsSection";
 import { GoalsSection } from "./dashboard/GoalsSection";
@@ -1009,7 +1011,7 @@ export default function Dashboard() {
           `${(data.subscriptions || []).length} fijos`,
           `${(data.goals || []).length} metas`,
           `${(data.history || []).length} snapshots`,
-        ].join(" · ");
+        ].join(", ");
         setImportError(null);
         setImportPreview({ data, counts });
         onImportOpen();
@@ -1076,31 +1078,31 @@ export default function Dashboard() {
   };
 
   // ── Navegación entre tabs ────────────────────────────────────
+  // La vista nueva entra desde el lado que corresponde al orden de las pestañas
+  const [tabDir, setTabDir] = useState<TabDirection>("up");
   const changeTab = (tab: NavTab) => {
+    setTabDir(tab === activeTab ? "up" : NAV_ORDER.indexOf(tab) > NAV_ORDER.indexOf(activeTab) ? "l" : "r");
     setActiveTab(tab);
-    setTimeout(() => {
-      if (tab === "dashboard") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      } else {
-        document.getElementById("tab-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 50);
+    window.scrollTo({ top: 0 });
   };
 
   if (!mounted) return <DashboardSkeleton />;
 
   return (
-    <div className="min-h-screen text-foreground font-sans">
+    <div className="app-shell text-foreground font-sans">
+      <SignedIn>
+        <AppNav active={activeTab} onChange={changeTab} />
+      </SignedIn>
 
-      {/* ── TOP NAV ──────────────────────────────────────────── */}
+      <div className="app-col">
+      {/* ── ENCABEZADO: saludo y atajos ──────────────────────── */}
       <TopNav
-        activeTab={activeTab}
-        onChangeTab={changeTab}
         saveStatus={saveStatus}
         privacy={privacy}
         onTogglePrivacy={togglePrivacy}
         onVoiceOpen={onVoiceOpen}
         onStartTour={handleStartTour}
+        onOpenSettings={onDataModalOpen}
       />
 
       {/* ── SIGNED OUT ────────────────────────────────────────── */}
@@ -1110,204 +1112,191 @@ export default function Dashboard() {
 
       {/* ── SIGNED IN ─────────────────────────────────────────── */}
       <SignedIn>
-        {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
-        {locked && (
-          <BiometricLockScreen unlocking={unlocking} onUnlock={handleUnlock} />
-        )}
-
         {isLoading ? (
           <DashboardSkeleton />
         ) : loadError ? (
           <LoadErrorView />
         ) : (
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-8 pb-28 md:pb-8">
+        <main>
 
-          {/* ── ESTE MES | PLAN ───────────────────────────────── */}
-          {activeTab === "dashboard" && (
+          {/* ── INICIO ────────────────────────────────────────── */}
+          <TabView active={activeTab === "dashboard"} direction={tabDir}>
+            {/* Bienvenida / datos de ejemplo */}
+            {!planMode && isEmpty && !demoDismissed && (
+              <WelcomeCard onLoadDemo={loadDemoData} onDismiss={() => setDemoDismissed(true)} />
+            )}
+
+            {appSettings.demoData && (
+              <DemoDataBanner onClear={clearDemoData} />
+            )}
+
             <HomeViewToggle planMode={planMode} setPlanMode={setPlanMode} planMonthKey={planMonthKey} />
-          )}
 
-          {planMode && activeTab === "dashboard" ? (
-            <PlanView
-              month={planMonthKey}
-              onMonthChange={setPlanMonthKey}
-              minMonth={shiftMonth(currentMonthKey, 1)}
-              maxMonth={shiftMonth(currentMonthKey, 3)}
-              transactions={transactions}
-              subscriptions={subscriptions}
-              installments={installments}
-              cards={creditCards}
-              accounts={assets}
-              startBalance={afterThisMonth}
-              onAddTransaction={addTransaction}
-              onRemoveTransaction={removeTransaction}
-              onUpdateTransaction={updateTransaction}
-              onUpdateInstallment={updateInstallmentInfo}
-              extraExpenseCats={customExpenseCats}
-              extraIncomeCats={customIncomeCats}
-              viewerId={user?.id}
-            />
-          ) : (
-          <section className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-
-              <BalanceHero
-                isPositive={isPositive}
-                animatedAvailable={animatedAvailable}
-                transactions={transactions}
-                currentMonthKey={currentMonthKey}
-                totalAssets={totalAssets}
-                totalLiabilities={totalLiabilities}
-                totalFixedCosts={totalFixedCosts}
-                totalMsiMonthly={totalMsiMonthly}
-                onSaveSnapshot={saveSnapshot}
-                onViewHistory={() => changeTab("history")}
-                onOpenSettings={onDataModalOpen}
-              />
-
-              <div className="col-span-1 md:col-span-4 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-3">
-                <StatCard label="Total activos"   value={totalAssets}      tone="emerald" />
-                <StatCard label="Deudas"         value={totalLiabilities} tone="rose" />
-                <StatCard label="Apartados"       value={totalBuckets}     tone="amber" />
+            {planMode ? (
+              <div className="wide">
+                <PlanView
+                  month={planMonthKey}
+                  onMonthChange={setPlanMonthKey}
+                  minMonth={shiftMonth(currentMonthKey, 1)}
+                  maxMonth={shiftMonth(currentMonthKey, 3)}
+                  transactions={transactions}
+                  subscriptions={subscriptions}
+                  installments={installments}
+                  cards={creditCards}
+                  accounts={assets}
+                  startBalance={afterThisMonth}
+                  onAddTransaction={addTransaction}
+                  onRemoveTransaction={removeTransaction}
+                  onUpdateTransaction={updateTransaction}
+                  onUpdateInstallment={updateInstallmentInfo}
+                  extraExpenseCats={customExpenseCats}
+                  extraIncomeCats={customIncomeCats}
+                  viewerId={user?.id}
+                />
               </div>
-            </div>
+            ) : (
+              <>
+                <BalanceHero
+                  isPositive={isPositive}
+                  animatedAvailable={animatedAvailable}
+                  transactions={transactions}
+                  currentMonthKey={currentMonthKey}
+                  totalAssets={totalAssets}
+                  totalLiabilities={totalLiabilities}
+                  totalFixedCosts={totalFixedCosts}
+                  totalMsiMonthly={totalMsiMonthly}
+                  onSaveSnapshot={saveSnapshot}
+                  onViewHistory={() => changeTab("history")}
+                />
 
-            <AllocationStrip
-              totalAssets={totalAssets}
-              totalLiabilities={totalLiabilities}
-              totalBuckets={totalBuckets}
-              totalFixedCosts={totalFixedCosts}
-              totalMsiMonthly={totalMsiMonthly}
-              remaining={afterThisMonth}
-            />
-          </section>
-          )}
+                <div className="tiles">
+                  <StatCard label="Total activos" value={totalAssets}      tone="emerald" />
+                  <StatCard label="Deudas"        value={totalLiabilities} tone="rose" />
+                  <StatCard label="Apartados"     value={totalBuckets}     tone="amber" />
+                </div>
 
-          <div id="tab-content" style={{ scrollMarginTop: "72px" }} />
+                <AllocationStrip
+                  totalAssets={totalAssets}
+                  totalLiabilities={totalLiabilities}
+                  totalBuckets={totalBuckets}
+                  totalFixedCosts={totalFixedCosts}
+                  totalMsiMonthly={totalMsiMonthly}
+                  remaining={afterThisMonth}
+                />
 
-          {/* ── BIENVENIDA / DATOS DE EJEMPLO ─────────────────── */}
-          {activeTab === "dashboard" && !planMode && isEmpty && !demoDismissed && (
-            <WelcomeCard onLoadDemo={loadDemoData} onDismiss={() => setDemoDismissed(true)} />
-          )}
+                {/* Por pagar (siempre visible en Inicio) */}
+                <UpcomingPayments cards={creditCards} subscriptions={subscriptions} installments={installments} />
 
-          {appSettings.demoData && (
-            <DemoDataBanner onClear={clearDemoData} />
-          )}
+                {/* Gastos fijos del mes pendientes */}
+                {pendingFixed.length > 0 && !fixedDismissed && (
+                  <PendingFixedChargesCard
+                    pendingFixed={pendingFixed}
+                    pendingFixedTotal={pendingFixedTotal}
+                    currentMonthKey={currentMonthKey}
+                    onDismiss={dismissFixedCharges}
+                    onRegister={registerFixedCharges}
+                  />
+                )}
 
-          {/* ── GASTOS FIJOS DEL MES PENDIENTES ───────────────── */}
-          {activeTab === "dashboard" && !planMode && pendingFixed.length > 0 && !fixedDismissed && (
-            <PendingFixedChargesCard
-              pendingFixed={pendingFixed}
-              pendingFixedTotal={pendingFixedTotal}
-              currentMonthKey={currentMonthKey}
-              onDismiss={dismissFixedCharges}
-              onRegister={registerFixedCharges}
-            />
-          )}
-
-          {/* ── POR PAGAR (siempre visible en Inicio) ─────────── */}
-          {activeTab === "dashboard" && !planMode && (
-            <UpcomingPayments cards={creditCards} subscriptions={subscriptions} installments={installments} />
-          )}
-
-          {/* ── MIS FINANZAS ──────────────────────────────────── */}
-          <section className={activeTab !== "dashboard" || planMode ? "hidden" : ""} id="management-sections">
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-xl font-bold section-title">Mis finanzas</h2>
-              {assets.length >= 2 && (
-                <Button size="sm" variant="flat" color="primary" className="font-bold min-h-11"
-                  startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>
-                  Transferir entre cuentas
-                </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-              <Section
-                title="Ingresos & Activos"
-                description="Cuentas, efectivo, inversiones"
-                icon={<DollarSign size={18} />}
-                items={assets}
-                total={totalAssets}
-                color="success"
-                categories={QUICK_CATEGORIES.asset}
-                onAdd={(l, a, d, c) => handleAddItem("asset", l, a, d, c)}
-                onRemove={(id) => removeItem(id, "asset")}
-                viewerId={user?.id}
-                onEdit={(id) => openEditItem("asset", id)}
-              />
-              <Section
-                title="Gastos & Deudas"
-                description="Tarjetas, préstamos, pendientes"
-                icon={<ShieldAlert size={18} />}
-                items={liabilities}
-                total={totalLiabilities}
-                color="danger"
-                categories={QUICK_CATEGORIES.liability}
-                onAdd={(l, a, d, c, cardId) => handleAddItem("liability", l, a, d, c, cardId)}
-                onRemove={(id) => removeItem(id, "liability")}
-                cards={creditCards}
-                msiMonthly={msiMonthlyByCard}
-                viewerId={user?.id}
-                onEdit={(id) => openEditItem("liability", id)}
-              />
-              <Section
-                title="Apartados & Ahorro"
-                description="Fondos reservados, sobres"
-                icon={<Wallet size={18} />}
-                items={buckets}
-                total={totalBuckets}
-                color="warning"
-                categories={QUICK_CATEGORIES.bucket}
-                onAdd={(l, a, d, c) => handleAddItem("bucket", l, a, d, c)}
-                onRemove={(id) => removeItem(id, "bucket")}
-                viewerId={user?.id}
-                onEdit={(id) => openEditItem("bucket", id)}
-              />
-              <SubscriptionsSection
-                items={subscriptions}
-                total={totalFixedCosts}
-                onAdd={handleAddSubscription}
-                onRemove={removeSubscription}
-                viewerId={user?.id}
-                onEdit={openEditSub}
-              />
-              <CreditCards
-                cards={creditCards}
-                installments={installments}
-                liabilities={liabilities}
-                onAdd={addCreditCard}
-                onRemove={removeCreditCard}
-                onUpdateBalance={updateCardBalance}
-                onAddInstallment={addInstallment}
-                onRemoveInstallment={removeInstallment}
-                onMarkPaid={markCardPaid}
-                onUpdateCard={updateCreditCardInfo}
-                onUpdateInstallment={updateInstallmentInfo}
-                viewerId={user?.id}
-              />
-              <Budgets
-                budgets={budgets}
-                transactions={transactions}
-                onAdd={addBudget}
-                onRemove={removeBudget}
-                onUpdateLimit={updateBudgetLimit}
-                extraCategories={customExpenseCats}
-                viewerId={user?.id}
-              />
-              <GoalsSection
-                items={goals}
-                onAdd={handleAddGoal}
-                onRemove={removeGoal}
-                onUpdateProgress={updateGoalProgress}
-                viewerId={user?.id}
-                onEdit={openEditGoal}
-              />
-            </div>
-          </section>
+                {/* Mis finanzas */}
+                <div className="wide flex items-center justify-between gap-2 mt-1 px-0.5" id="management-sections">
+                  <h2 className="text-xl font-extrabold section-title">Mis finanzas</h2>
+                  {assets.length >= 2 && (
+                    <Button size="sm" variant="flat" color="secondary" radius="full"
+                      className="font-bold min-h-11 bg-brand-soft text-brand-text"
+                      startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>
+                      Transferir
+                    </Button>
+                  )}
+                </div>
+                <Section
+                  title="Ingresos y activos"
+                  description="Cuentas, efectivo, inversiones"
+                  icon={<DollarSign size={18} />}
+                  items={assets}
+                  total={totalAssets}
+                  color="success"
+                  categories={QUICK_CATEGORIES.asset}
+                  onAdd={(l, a, d, c) => handleAddItem("asset", l, a, d, c)}
+                  onRemove={(id) => removeItem(id, "asset")}
+                  viewerId={user?.id}
+                  onEdit={(id) => openEditItem("asset", id)}
+                />
+                <Section
+                  title="Gastos y deudas"
+                  description="Préstamos, pendientes"
+                  icon={<ShieldAlert size={18} />}
+                  items={liabilities}
+                  total={totalLiabilities}
+                  color="danger"
+                  categories={QUICK_CATEGORIES.liability}
+                  onAdd={(l, a, d, c, cardId) => handleAddItem("liability", l, a, d, c, cardId)}
+                  onRemove={(id) => removeItem(id, "liability")}
+                  cards={creditCards}
+                  msiMonthly={msiMonthlyByCard}
+                  viewerId={user?.id}
+                  onEdit={(id) => openEditItem("liability", id)}
+                />
+                <Section
+                  title="Apartados y ahorro"
+                  description="Fondos reservados, sobres"
+                  icon={<Wallet size={18} />}
+                  items={buckets}
+                  total={totalBuckets}
+                  color="warning"
+                  categories={QUICK_CATEGORIES.bucket}
+                  onAdd={(l, a, d, c) => handleAddItem("bucket", l, a, d, c)}
+                  onRemove={(id) => removeItem(id, "bucket")}
+                  viewerId={user?.id}
+                  onEdit={(id) => openEditItem("bucket", id)}
+                />
+                <SubscriptionsSection
+                  items={subscriptions}
+                  total={totalFixedCosts}
+                  onAdd={handleAddSubscription}
+                  onRemove={removeSubscription}
+                  viewerId={user?.id}
+                  onEdit={openEditSub}
+                />
+                <div className="wide">
+                  <CreditCards
+                    cards={creditCards}
+                    installments={installments}
+                    liabilities={liabilities}
+                    onAdd={addCreditCard}
+                    onRemove={removeCreditCard}
+                    onUpdateBalance={updateCardBalance}
+                    onAddInstallment={addInstallment}
+                    onRemoveInstallment={removeInstallment}
+                    onMarkPaid={markCardPaid}
+                    onUpdateCard={updateCreditCardInfo}
+                    onUpdateInstallment={updateInstallmentInfo}
+                    viewerId={user?.id}
+                  />
+                </div>
+                <Budgets
+                  budgets={budgets}
+                  transactions={transactions}
+                  onAdd={addBudget}
+                  onRemove={removeBudget}
+                  onUpdateLimit={updateBudgetLimit}
+                  extraCategories={customExpenseCats}
+                  viewerId={user?.id}
+                />
+                <GoalsSection
+                  items={goals}
+                  onAdd={handleAddGoal}
+                  onRemove={removeGoal}
+                  onUpdateProgress={updateGoalProgress}
+                  viewerId={user?.id}
+                  onEdit={openEditGoal}
+                />
+              </>
+            )}
+          </TabView>
 
           {/* ── MOVIMIENTOS ───────────────────────────────────── */}
-          <section className={activeTab !== "transactions" ? "hidden" : ""}>
-            <Divider className="my-2" />
+          <TabView active={activeTab === "transactions"} direction={tabDir}>
             <Transactions
               transactions={transactions}
               onAdd={addTransaction}
@@ -1319,53 +1308,54 @@ export default function Dashboard() {
               extraExpenseCats={customExpenseCats}
               extraIncomeCats={customIncomeCats}
             />
-          </section>
+          </TabView>
 
-          {/* ── ANALYTICS ─────────────────────────────────────── */}
-          <section className={activeTab !== "analytics" ? "hidden" : ""}>
-            <Divider className="my-2" />
-            <div className="space-y-4">
-              <CashflowTimeline
-                cards={creditCards}
-                subscriptions={subscriptions}
-                installments={installments}
-                startBalance={available}
-                transactions={transactions}
-              />
-              <Analytics history={history} assets={assets} transactions={transactions} />
-            </div>
-          </section>
+          {/* ── ANÁLISIS ──────────────────────────────────────── */}
+          <TabView active={activeTab === "analytics"} direction={tabDir}>
+            <Analytics history={history} assets={assets} transactions={transactions} />
+            <CashflowTimeline
+              cards={creditCards}
+              subscriptions={subscriptions}
+              installments={installments}
+              startBalance={available}
+              transactions={transactions}
+            />
+          </TabView>
 
           {/* ── FINANCE AI ────────────────────────────────────── */}
-          <section className={activeTab !== "ai" ? "hidden" : ""}>
-            <Divider className="my-2" />
-            <div className="space-y-4">
-              <AIInsights
-                data={{ assets, liabilities, buckets, subscriptions, goals, transactions, creditCards, installments, budgets }}
-                onAskAI={(p) => setAiPrompt(p)}
-              />
-              <AIChat queuedPrompt={aiPrompt} onPromptConsumed={() => setAiPrompt(null)} />
-            </div>
-          </section>
+          <TabView active={activeTab === "ai"} direction={tabDir}>
+            <AIInsights
+              data={{ assets, liabilities, buckets, subscriptions, goals, transactions, creditCards, installments, budgets }}
+              onAskAI={(p) => setAiPrompt(p)}
+            />
+            <AIChat queuedPrompt={aiPrompt} onPromptConsumed={() => setAiPrompt(null)} />
+          </TabView>
 
           {/* ── HISTORIAL ─────────────────────────────────────── */}
-          <HistoryTab activeTab={activeTab} history={history} onClearOpen={onClearOpen} onOpenDetails={openHistoryDetails} />
+          <TabView active={activeTab === "history"} direction={tabDir}>
+            <HistoryTab history={history} onClearOpen={onClearOpen} onOpenDetails={openHistoryDetails} onSaveSnapshot={saveSnapshot} />
+          </TabView>
         </main>
         )}
+      </SignedIn>
+      </div>
 
-        {/* ── FAB → captura rápida ────────────────────────────── */}
+      <SignedIn>
+        {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
+        {locked && (
+          <BiometricLockScreen unlocking={unlocking} onUnlock={handleUnlock} />
+        )}
+
+        {/* ── FAB → registro rápido ───────────────────────────── */}
         {!isLoading && !loadError && (
           <button
-            className="fab md:hidden"
+            className="fab"
             onClick={onQuickAddOpen}
             aria-label="Agregar registro rápido"
           >
-            <Plus size={24} />
+            <Plus size={26} strokeWidth={2.5} />
           </button>
         )}
-
-        {/* ── BOTTOM NAV ──────────────────────────────────────── */}
-        <BottomNav active={activeTab} onChange={changeTab} />
 
         {/* ── TOAST DESHACER ──────────────────────────────────── */}
         {pendingUndo && (
@@ -1456,12 +1446,16 @@ export default function Dashboard() {
           isOpen={isDataModalOpen}
           onOpenChange={onDataModalChange}
           onClearOpen={onClearOpen}
+          onVoiceOpen={onVoiceOpen}
+          onStartTour={handleStartTour}
           lockOn={lockOn}
           bioAvailable={bioAvailable}
           toggleBiometricLock={toggleBiometricLock}
           pushStatus={pushStatus}
           pushBusy={pushBusy}
           togglePush={togglePush}
+          privacy={privacy}
+          onTogglePrivacy={togglePrivacy}
           isSharedMember={isSharedMember}
           shareBusy={shareBusy}
           leaveShared={leaveShared}
@@ -1498,6 +1492,7 @@ export default function Dashboard() {
         {/* ── MODAL: conflicto de sincronización ──────────────── */}
         <SyncConflictModal isOpen={conflictData !== null} onResolve={resolveConflict} />
       </SignedIn>
+      <SuccessReveal />
     </div>
   );
 }

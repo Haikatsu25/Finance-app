@@ -51,16 +51,14 @@ for (const theme of THEMES) {
     await goTab(page, "inicio");
     const modal = (name: string) => inspect(page, info, `modal-${name}`, theme, false);
 
-    // registro rápido: solo existe en móvil (botón flotante)
-    const fab = page.getByRole("button", { name: "Agregar registro rápido" });
-    if (await fab.isVisible()) {
-      await fab.click();
-      await expect(page.getByRole("dialog").getByText("Registro rápido")).toBeVisible();
-      await modal("registro-rapido");
-      await closeDialogs(page);
-    }
+    // registro rápido (botón flotante, en móvil y escritorio) con el teclado numérico
+    await page.getByRole("button", { name: "Agregar registro rápido" }).click();
+    await expect(page.getByRole("dialog").getByText("Registro rápido")).toBeVisible();
+    for (const k of ["1", "2", "5", "0"]) await page.getByRole("dialog").getByRole("button", { name: k, exact: true }).click();
+    await modal("registro-rapido");
+    await closeDialogs(page);
 
-    await page.getByRole("button", { name: "Transferir entre cuentas" }).click();
+    await page.getByRole("button", { name: "Transferir", exact: true }).click();
     await expect(page.getByRole("dialog").getByText("Transferir entre cuentas")).toBeVisible();
     await modal("transferir");
     await closeDialogs(page);

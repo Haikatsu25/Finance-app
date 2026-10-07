@@ -22,7 +22,7 @@ export function SaveIndicator({ status }: { status: SaveStatus }) {
       className={`items-center gap-1.5 whitespace-nowrap ${m.cls} ${
         // Un fallo de guardado se ve siempre (también en móvil) y con peso propio: contorno de 2px + texto en negrita
         m.loud
-          ? "flex text-xs font-bold border-2 border-current rounded-md px-2 py-0.5"
+          ? "flex text-xs font-bold border-2 border-current rounded-full px-2.5 py-0.5"
           : "hidden sm:flex text-[11px] font-semibold"
       }`}
       role={m.loud ? "alert" : undefined}

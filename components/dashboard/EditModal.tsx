@@ -1,7 +1,7 @@
 "use client";
 
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Input, Button, Select, SelectItem } from "@heroui/react";
-import { Pencil, Check } from "lucide-react";
+import { Check } from "lucide-react";
+import { Sheet } from "@/components/ui/Sheet";
 import { FinanceItem } from "@/types";
 import { QUICK_CATEGORIES, type EditKind } from "./quickAdd";
 
@@ -31,79 +31,83 @@ export function EditModal({
   eDeadline: string;
   setEDeadline: (v: string) => void;
 }) {
+  const close = () => setEditTarget(null);
+  const kind = editTarget?.kind;
+
   return (
-    <Modal isOpen={editTarget !== null} onOpenChange={(o) => { if (!o) setEditTarget(null); }} backdrop="blur">
-      <ModalContent>
-        {(onClose) => (
+    <Sheet open={editTarget !== null} onOpenChange={(o) => { if (!o) close(); }} title="Editar registro">
+      <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); onSave(); close(); }}>
+        <div className="f">
+          <label htmlFor="ed-label">Descripción</label>
+          <input id="ed-label" value={eLabel} onChange={(e) => setELabel(e.target.value)} />
+        </div>
+
+        {(kind === "asset" || kind === "liability" || kind === "bucket") && (
           <>
-            <ModalHeader className="flex items-center gap-2">
-              <Pencil size={17} className="text-foreground" />
-              Editar registro
-            </ModalHeader>
-            <ModalBody>
-              <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel} />
-
-              {(editTarget?.kind === "asset" || editTarget?.kind === "liability" || editTarget?.kind === "bucket") && (
-                <>
-                  <div className="flex gap-2">
-                    <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>}
-                      value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                    <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
-                  </div>
-                  <Select label="Categoría" variant="bordered"
-                    selectedKeys={eCategory ? [eCategory] : []}
-                    onChange={(e) => setECategory(e.target.value)}>
-                    {QUICK_CATEGORIES[editTarget.kind].map((c) => <SelectItem key={c}>{c}</SelectItem>)}
-                  </Select>
-                  {editTarget.kind === "liability" &&
-                    liabilities.find((l) => l.id === editTarget.id)?.cardId && (
-                    <p className="text-[11px] text-default-600">
-                      Este gasto está ligado a una tarjeta: al cambiar el monto, la deuda de la tarjeta se ajusta por la diferencia.
-                    </p>
-                  )}
-                </>
-              )}
-
-              {editTarget?.kind === "sub" && (
-                <div className="flex gap-2">
-                  <Input label="Monto" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>}
-                    value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                  <Select label="Ciclo" variant="bordered" className="w-[140px]"
-                    selectedKeys={[eCycle]}
-                    onChange={(e) => { const v = e.target.value; if (v === "mensual" || v === "anual") setECycle(v); }}>
-                    <SelectItem key="mensual">Mensual</SelectItem>
-                    <SelectItem key="anual">Anual</SelectItem>
-                  </Select>
-                </div>
-              )}
-
-              {editTarget?.kind === "goal" && (
-                <>
-                  <div className="flex gap-2">
-                    <Input label="Monto meta" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>}
-                      value={eTarget} onValueChange={setETarget} className="flex-1" />
-                    <Input label="Llevo ahorrado" type="number" min="0" step="0.01" inputMode="decimal" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>}
-                      value={eCurrent} onValueChange={setECurrent} className="flex-1" />
-                  </div>
-                  <Input label="Fecha límite" type="date" variant="bordered" value={eDeadline} onValueChange={setEDeadline} />
-                </>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="light" onPress={onClose}>Cancelar</Button>
-              <Button color="primary" variant="shadow" className="font-bold"
-                startContent={<Check size={15} />}
-                onPress={() => { onSave(); onClose(); }}>
-                Guardar cambios
-              </Button>
-            </ModalFooter>
+            <div className="row2">
+              <div className="f">
+                <label htmlFor="ed-amount">Monto</label>
+                <input id="ed-amount" type="number" min="0" step="0.01" inputMode="decimal" value={eAmount} onChange={(e) => setEAmount(e.target.value)} />
+              </div>
+              <div className="f">
+                <label htmlFor="ed-date">Fecha</label>
+                <input id="ed-date" type="date" value={eDate} onChange={(e) => setEDate(e.target.value)} />
+              </div>
+            </div>
+            <div className="f">
+              <label htmlFor="ed-cat">Categoría</label>
+              <select id="ed-cat" value={eCategory} onChange={(e) => setECategory(e.target.value)}>
+                {QUICK_CATEGORIES[kind].map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            {kind === "liability" && editTarget && liabilities.find((l) => l.id === editTarget.id)?.cardId && (
+              <p className="callout">
+                Este gasto está ligado a una tarjeta: al cambiar el monto, la deuda de la tarjeta se ajusta por la diferencia.
+              </p>
+            )}
           </>
         )}
-      </ModalContent>
-    </Modal>
+
+        {kind === "sub" && (
+          <div className="row2">
+            <div className="f">
+              <label htmlFor="ed-amount">Monto</label>
+              <input id="ed-amount" type="number" min="0" step="0.01" inputMode="decimal" value={eAmount} onChange={(e) => setEAmount(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="ed-cycle">Ciclo</label>
+              <select id="ed-cycle" value={eCycle} onChange={(e) => setECycle(e.target.value === "anual" ? "anual" : "mensual")}>
+                <option value="mensual">Mensual</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+          </div>
+        )}
+
+        {kind === "goal" && (
+          <>
+            <div className="row2">
+              <div className="f">
+                <label htmlFor="ed-target">Monto de la meta</label>
+                <input id="ed-target" type="number" min="0" step="0.01" inputMode="decimal" value={eTarget} onChange={(e) => setETarget(e.target.value)} />
+              </div>
+              <div className="f">
+                <label htmlFor="ed-current">Llevo ahorrado</label>
+                <input id="ed-current" type="number" min="0" step="0.01" inputMode="decimal" value={eCurrent} onChange={(e) => setECurrent(e.target.value)} />
+              </div>
+            </div>
+            <div className="f">
+              <label htmlFor="ed-deadline">Fecha límite</label>
+              <input id="ed-deadline" type="date" value={eDeadline} onChange={(e) => setEDeadline(e.target.value)} />
+            </div>
+          </>
+        )}
+
+        <div className="ft">
+          <button type="button" className="btn soft" onClick={close}>Cancelar</button>
+          <button type="submit" className="btn"><Check size={16} aria-hidden /> Guardar cambios</button>
+        </div>
+      </form>
+    </Sheet>
   );
 }

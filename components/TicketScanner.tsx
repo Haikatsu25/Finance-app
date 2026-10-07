@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input, Select, SelectItem, Spinner,
-} from "@heroui/react";
+import { Spinner } from "@heroui/react";
+import { Sheet } from "@/components/ui/Sheet";
 import { ScanLine, Camera, Check, AlertTriangle } from "lucide-react";
 import { TransactionItem } from "@/types";
 import { round2 } from "@/lib/format";
@@ -101,76 +100,73 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
     close();
   };
 
+  const close = () => { onOpenChange(false); reset(); };
+
   return (
-    <Modal isOpen={isOpen} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }} backdrop="blur" placement="center">
-      <ModalContent>
-        {(onClose) => (
-          <>
-            <ModalHeader className="flex items-center gap-2">
-              <ScanLine size={18} aria-hidden />
-              Escanear ticket
-            </ModalHeader>
-            <ModalBody className="pb-2">
-              {state === "idle" && (
-                <label className="flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-default-400 rounded-lg cursor-pointer hover:border-foreground hover:bg-foreground/5 focus-within:border-foreground focus-within:bg-foreground/5 transition-colors">
-                  <Camera size={30} aria-hidden />
-                  <div className="text-center">
-                    <p className="text-sm font-bold">Toma o sube la foto del ticket</p>
-                    <p className="text-xs text-default-600 mt-1">La IA lee el comercio, el total y la fecha por ti</p>
-                  </div>
-                  {/* sr-only (no hidden): así el selector de archivo también se alcanza con teclado */}
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Foto del ticket" onChange={handleFile} />
-                </label>
-              )}
+    <Sheet open={isOpen} onOpenChange={(o) => { if (!o) close(); else onOpenChange(o); }} title="Escanear ticket">
+      {state === "idle" && (
+        <label className="empty flex flex-col items-center justify-center gap-3 cursor-pointer focus-within:border-(--brand)" style={{ padding: "36px 12px" }}>
+          <Camera size={32} aria-hidden />
+          <span className="text-center">
+            <b className="block text-sm text-foreground">Toma o sube la foto del ticket</b>
+            <span className="block text-xs mt-1">La IA lee el comercio, el total y la fecha por ti</span>
+          </span>
+          {/* sr-only (no hidden): así el selector de archivo también se alcanza con teclado */}
+          <input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Foto del ticket" onChange={handleFile} />
+        </label>
+      )}
 
-              {state === "processing" && (
-                <div className="flex flex-col items-center gap-3 py-10">
-                  <Spinner color="current" className="text-foreground" />
-                  <p className="text-sm text-default-700" role="status">Leyendo tu ticket…</p>
-                </div>
-              )}
+      {state === "processing" && (
+        <div className="flex flex-col items-center gap-3 py-10">
+          <Spinner color="current" className="text-foreground" />
+          <p className="text-sm" role="status">Leyendo tu ticket…</p>
+        </div>
+      )}
 
-              {state === "error" && (
-                <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <AlertTriangle size={28} aria-hidden />
-                  <p className="text-sm text-default-700 max-w-[280px]" role="alert">{errorMsg}</p>
-                  <Button variant="bordered" className="h-11 font-bold border-2 border-foreground" onPress={reset}>Intentar de nuevo</Button>
-                </div>
-              )}
+      {state === "error" && (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <AlertTriangle size={28} aria-hidden />
+          <p className="text-sm max-w-[280px]" role="alert">{errorMsg}</p>
+          <button type="button" className="btn soft" onClick={reset}>Intentar de nuevo</button>
+        </div>
+      )}
 
-              {state === "review" && (
-                <div className="space-y-3">
-                  <p className="text-xs text-default-700 flex items-center gap-1.5 font-semibold">
-                    <Check size={14} aria-hidden /> Ticket leído. Revisa y confirma
-                  </p>
-                  <Input label="Comercio" size="md" variant="bordered" value={label} onValueChange={setLabel} />
-                  <div className="flex gap-2">
-                    <Input label="Total" type="number" min="0" inputMode="decimal" size="md" variant="bordered"
-                      startContent={<span className="text-default-500 text-xs">$</span>}
-                      value={amount} onValueChange={setAmount} className="flex-1" />
-                    <Input label="Fecha" type="date" size="md" variant="bordered" value={date} onValueChange={setDate} className="w-[160px]" />
-                  </div>
-                  <Select label="Categoría" size="md" variant="bordered"
-                    selectedKeys={[category]} onChange={(e) => setCategory(e.target.value || "Otros")}>
-                    {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c}>{c}</SelectItem>)}
-                  </Select>
-                </div>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cancelar</Button>
-              {state === "review" && (
-                <Button color="primary" variant="solid" className="font-bold h-11"
-                  isDisabled={!label.trim() || !amountValid}
-                  startContent={<Check size={15} />}
-                  onPress={() => confirm(onClose)}>
-                  Registrar gasto
-                </Button>
-              )}
-            </ModalFooter>
-          </>
+      {state === "review" && (
+        <div className="flex flex-col gap-3">
+          <p className="callout brand flex items-center gap-1.5 font-semibold">
+            <Check size={14} aria-hidden /> Ticket leído. Revisa y confirma
+          </p>
+          <div className="f">
+            <label htmlFor="scan-label">Comercio</label>
+            <input id="scan-label" value={label} onChange={(e) => setLabel(e.target.value)} />
+          </div>
+          <div className="row2">
+            <div className="f">
+              <label htmlFor="scan-amount">Total</label>
+              <input id="scan-amount" type="number" min="0" inputMode="decimal" placeholder="$ 0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="scan-date">Fecha</label>
+              <input id="scan-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="f">
+            <label htmlFor="scan-cat">Categoría</label>
+            <select id="scan-cat" value={category} onChange={(e) => setCategory(e.target.value || "Otros")}>
+              {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="ft">
+        <button type="button" className="btn soft" onClick={close}>Cancelar</button>
+        {state === "review" && (
+          <button type="button" className="btn" disabled={!label.trim() || !amountValid} onClick={() => confirm(() => onOpenChange(false))}>
+            <Check size={16} aria-hidden /> Registrar gasto
+          </button>
         )}
-      </ModalContent>
-    </Modal>
+      </div>
+    </Sheet>
   );
 }

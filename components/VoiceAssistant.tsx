@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button,
-} from "@heroui/react";
+import { Sheet } from "@/components/ui/Sheet";
 import { Mic, MicOff, Check, CreditCard as CreditCardIcon, Volume2, AlertTriangle } from "lucide-react";
 import { CreditCardItem, TransactionItem, InstallmentPlan } from "@/types";
 import { money, round2 } from "@/lib/format";
@@ -254,117 +252,88 @@ export default function VoiceAssistant({ isOpen, onOpenChange, cards, installmen
     setPendingTx(null);
   };
 
+  const close = () => { onOpenChange(false); stopListening(); reset(); };
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onOpenChange={(o) => { onOpenChange(o); if (!o) { stopListening(); reset(); } }}
-      backdrop="blur" placement="center"
-    >
-      <ModalContent>
-        {(onClose) => (
-          <>
-            <ModalHeader className="flex items-center gap-2">
-              <Volume2 size={18} aria-hidden />
-              Asistente de voz
-            </ModalHeader>
-            <ModalBody className="pb-2">
-              {!supported ? (
-                <p className="text-sm text-default-700 py-4 text-center">
-                  Tu navegador no soporta reconocimiento de voz. Usa Chrome, Edge o Safari.
-                </p>
-              ) : (
-                <>
-                  {/* Micrófono: en reposo va relleno de tinta; al escuchar pasa a contorno y pulsa
-                      (el estado se distingue por forma, no por otro color) */}
-                  <div className="flex flex-col items-center gap-3 py-2">
-                    <button
-                      onClick={listening ? stopListening : startListening}
-                      className={`w-20 h-20 rounded-full flex items-center justify-center transition-colors ${
-                        listening
-                          ? "bg-background text-foreground border-4 border-foreground animate-pulse"
-                          : "bg-foreground text-background hover:opacity-90"
-                      }`}
-                      aria-label={listening ? "Detener" : "Hablar"}
-                      aria-pressed={listening}
-                    >
-                      {listening ? <MicOff size={30} /> : <Mic size={30} />}
-                    </button>
-                    <p className="text-sm font-semibold" role="status">
-                      {listening ? "Escuchando… habla ahora" : "Toca y di algo como:"}
-                    </p>
-                    {!listening && !transcript && (
-                      <ul className="flex flex-wrap gap-1.5 justify-center">
-                        {["“Gasté 250 en tacos”", "“Quiero gastar 5 mil, ¿qué tarjeta me conviene?”", "“¿Cuánto tengo disponible?”"].map((s) => (
-                          <li key={s} className="text-xs px-2.5 py-1 rounded-full border border-default-300 text-default-700">{s}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+    <Sheet open={isOpen} onOpenChange={(o) => { if (!o) close(); else onOpenChange(o); }} title="Asistente de voz">
+      {!supported ? (
+        <p className="callout text-center">
+          Tu navegador no soporta reconocimiento de voz. Usa Chrome, Edge o Safari.
+        </p>
+      ) : (
+        <>
+          {/* Micrófono: en reposo va relleno; al escuchar pasa a contorno y pulsa (el estado se
+              distingue por forma, no solo por color) */}
+          <div className="flex flex-col items-center gap-3 py-2">
+            <button
+              onClick={listening ? stopListening : startListening}
+              className={`size-20 rounded-full grid place-items-center transition-colors ${
+                listening
+                  ? "bg-(--card-bg) text-foreground border-4 border-(--brand) animate-pulse"
+                  : "bg-(--navy) text-white dark:bg-(--brand) dark:text-[#0a0c12]"
+              }`}
+              aria-label={listening ? "Detener" : "Hablar"}
+              aria-pressed={listening}
+            >
+              {listening ? <MicOff size={30} aria-hidden /> : <Mic size={30} aria-hidden />}
+            </button>
+            <p className="text-sm font-semibold" role="status">
+              {listening ? "Escuchando… habla ahora" : "Toca y di algo como:"}
+            </p>
+            {!listening && !transcript && (
+              <ul className="chips justify-center">
+                {["“Gasté 250 en tacos”", "“Quiero gastar 5 mil, ¿qué tarjeta me conviene?”", "“¿Cuánto tengo disponible?”"].map((s) => (
+                  <li key={s} className="list-none text-xs px-3 py-1.5 rounded-full bg-(--cal)">{s}</li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-                  {/* Transcripción */}
-                  {transcript && (
-                    <div className="px-3 py-2.5 rounded-lg bg-default-100 border border-default-200 text-sm text-default-700 italic">
-                      "{transcript}"
+          {/* Transcripción */}
+          {transcript && <div className="callout italic">&ldquo;{transcript}&rdquo;</div>}
+
+          {/* Respuesta */}
+          {response && <div className="callout font-semibold" role="status">{response}</div>}
+
+          {/* Ranking de tarjetas: la mejor, resaltada; el resto, sin énfasis */}
+          {recommendations && recommendations.length > 0 && (
+            <ul className="list">
+              {recommendations.map((r, i) => {
+                const best = i === 0 && r.fits;
+                return (
+                  <li key={r.card.id} className="it" style={best ? { outline: "2px solid var(--brand)" } : undefined}>
+                    <i aria-hidden><CreditCardIcon size={18} /></i>
+                    <div className="t" style={{ whiteSpace: "normal" }}>
+                      <b className="flex items-center gap-2 flex-wrap" style={{ whiteSpace: "normal" }}>
+                        {r.card.label}
+                        {best && <span className="pill soon">Mejor opción</span>}
+                      </b>
+                      <small>
+                        Pagas hasta el {fmtDate(r.dueDate)}. <b className="text-foreground">{r.floatDays} días</b> de financiamiento
+                      </small>
+                      {!r.fits && (
+                        <p className="text-xs text-money-out-text font-bold mt-0.5 flex items-center gap-1">
+                          <AlertTriangle size={12} aria-hidden /> Crédito insuficiente ({money(r.availableCredit)} disponibles)
+                        </p>
+                      )}
                     </div>
-                  )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
 
-                  {/* Respuesta */}
-                  {response && (
-                    <div className="px-3 py-2.5 rounded-lg border-2 border-foreground text-sm" role="status">
-                      {response}
-                    </div>
-                  )}
-
-                  {/* Ranking de tarjetas: la mejor, con contorno y etiqueta; el resto, sin énfasis */}
-                  {recommendations && recommendations.length > 0 && (
-                    <ul className="space-y-2">
-                      {recommendations.map((r, i) => {
-                        const best = i === 0 && r.fits;
-                        return (
-                          <li key={r.card.id} className={`flex items-start gap-3 p-3 rounded-lg border ${
-                            best ? "border-2 border-foreground" : "border-default-300"
-                          }`}>
-                            <CreditCardIcon size={16} className="shrink-0 mt-0.5" aria-hidden />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold flex items-center gap-2 flex-wrap">
-                                {r.card.label}
-                                {best && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-foreground text-background">Mejor opción</span>}
-                              </p>
-                              <p className="text-xs text-default-700 mt-0.5">
-                                Pagas hasta el {fmtDate(r.dueDate)}. <span className="font-bold text-foreground">{r.floatDays} días</span> de financiamiento
-                              </p>
-                              {!r.fits && (
-                                <p className="text-xs text-money-out-text font-bold mt-0.5 flex items-center gap-1">
-                                  <AlertTriangle size={12} aria-hidden /> Crédito insuficiente ({money(r.availableCredit)} disponibles)
-                                </p>
-                              )}
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-
-                  {/* Confirmar registro dictado */}
-                  {pendingTx && (
-                    <Button
-                      color={pendingTx.type === "expense" ? "danger" : "success"}
-                      variant="solid" className="font-bold h-11"
-                      startContent={<Check size={16} />}
-                      onPress={confirmTx}
-                    >
-                      Sí, registrar {pendingTx.type === "expense" ? "gasto" : "ingreso"} de {money(pendingTx.amount)}
-                    </Button>
-                  )}
-                </>
-              )}
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cerrar</Button>
-            </ModalFooter>
-          </>
-        )}
-      </ModalContent>
-    </Modal>
+          {/* Confirmar registro dictado */}
+          {pendingTx && (
+            <button type="button" className={`btn ${pendingTx.type === "expense" ? "danger" : ""}`} onClick={confirmTx}>
+              <Check size={16} aria-hidden /> Sí, registrar {pendingTx.type === "expense" ? "gasto" : "ingreso"} de {money(pendingTx.amount)}
+            </button>
+          )}
+        </>
+      )}
+      <div className="ft">
+        <button type="button" className="btn soft" onClick={close}>Cerrar</button>
+      </div>
+    </Sheet>
   );
 }

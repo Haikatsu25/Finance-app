@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardHeader, CardBody, Input, Button, Select, SelectItem } from "@heroui/react";
-import { Plus, Trash2, Pencil, Calendar } from "lucide-react";
+import { Trash2, Pencil, Tv } from "lucide-react";
 import { SubscriptionItem } from "@/types";
 import { moneyExact, moneySmart } from "@/lib/format";
 import AddedByBadge from "../AddedByBadge";
-import { TONE } from "./tone";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SUBSCRIPTIONS SECTION
+// GASTOS FIJOS — suscripciones y cobros recurrentes
 // ─────────────────────────────────────────────────────────────────────────────
 export function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, onEdit }: {
   items: SubscriptionItem[]; total: number;
@@ -22,7 +20,6 @@ export function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, 
   const [amount, setAmount] = useState("");
   const [billingCycle, setBillingCycle] = useState<"mensual" | "anual">("mensual");
 
-  const t = TONE.indigo;
   const amountValid = amount !== "" && Number.isFinite(parseFloat(amount)) && parseFloat(amount) > 0;
 
   const handleAdd = () => {
@@ -33,124 +30,65 @@ export function SubscriptionsSection({ items, total, onAdd, onRemove, viewerId, 
   };
 
   return (
-    <Card className={`glass card-hover ${t.rule} h-full shadow-none`}>
-      <CardHeader className="flex items-start justify-between w-full px-5 pt-4 pb-0 gap-3">
-        <div className="min-w-0">
-          <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
-            <Calendar size={18} className={`${t.text} shrink-0`} aria-hidden />
-            Gastos fijos
-          </h3>
-          <p className="text-xs text-default-500 mt-0.5">Suscripciones y cobros recurrentes</p>
-        </div>
-        <div className="text-right shrink-0">
-          <span className={`figure text-[1.65rem] block ${t.text}`}>
-            {moneyExact(total)}
-          </span>
-          <p className="text-[11px] text-default-500">al mes, equivalente</p>
-        </div>
-      </CardHeader>
+    <section className="pop-card">
+      <div className="sec-h">
+        <h2 className="sec">Gastos fijos</h2>
+        <span className="chip tnum">{moneyExact(total)} al mes</span>
+      </div>
 
-      <CardBody className="px-5 py-4 flex flex-col gap-3">
-        <div className="flex-grow min-h-[80px]">
-          {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-300 rounded-lg text-default-500 gap-1">
-              <p className="text-xs font-semibold">Sin gastos fijos</p>
-              <p className="text-[11px]">Netflix, renta, gimnasio…</p>
-            </div>
-          ) : (
-            items.map((item) => (
-              <div
-                key={item.id}
-                className="group flex justify-between items-center gap-2 py-2.5 border-b border-default-200 last:border-b-0"
-              >
-                <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold truncate">{item.label}</span>
-                  <div className="flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap">
-                    {item.category && (
-                      <span className="text-[11px] text-default-500">
-                        {item.category}
-                      </span>
-                    )}
-                    <span className="text-[11px] text-default-500 font-semibold">{item.billingCycle}</span>
-                    <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <span className={`figure text-[1.35rem] mr-1 ${t.text}`}>
-                    {moneySmart(item.amount)}
-                  </span>
-                  {onEdit && (
-                    <button
-                      onClick={() => onEdit(item.id)}
-                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-foreground/10"
-                      aria-label={`Editar ${item.label}`}
-                    >
-                      <Pencil size={13} />
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onRemove(item.id)}
-                    className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-money-out-text transition-colors p-1.5 rounded-md hover:bg-money-out/10"
-                    aria-label={`Eliminar ${item.label}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+      {items.length === 0 ? (
+        <div className="empty">Sin gastos fijos. Netflix, renta, gimnasio…</div>
+      ) : (
+        <div className="list">
+          {items.map((item) => (
+            <div key={item.id} className="it">
+              <i aria-hidden><Tv size={18} /></i>
+              <div className="t">
+                <b>{item.label}</b>
+                <small className="flex items-center gap-x-2 flex-wrap">
+                  <span>{item.category ? `${item.category}, ` : ""}{item.billingCycle}</span>
+                  <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
+                </small>
               </div>
-            ))
-          )}
+              <div className="amt">{moneySmart(item.amount)}</div>
+              <div className="acts">
+                {onEdit && (
+                  <button onClick={() => onEdit(item.id)} aria-label={`Editar ${item.label}`}>
+                    <Pencil size={15} aria-hidden />
+                  </button>
+                )}
+                <button onClick={() => onRemove(item.id)} aria-label={`Eliminar ${item.label}`}>
+                  <Trash2 size={15} aria-hidden />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
+      )}
 
-        <div className="flex flex-col gap-2 pt-2 border-t border-default-200/50">
-          <Input
-            placeholder="Ej. Netflix, Gimnasio"
-            size="sm"
-            variant="bordered"
-            value={label}
-            onValueChange={setLabel}
+      <div className="mt-3 flex flex-col gap-2">
+        <input
+          className="field-pill" placeholder="Ej. Netflix, Gimnasio" aria-label="Descripción"
+          value={label} onChange={(e) => setLabel(e.target.value)}
+        />
+        <div className="grid gap-2" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
+          <input
+            className="field-pill" type="number" min="0" step="0.01" inputMode="decimal"
+            placeholder="$ 0.00" aria-label="Monto"
+            value={amount} onChange={(e) => setAmount(e.target.value)}
           />
-          <div className="flex gap-2">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="0.00"
-              size="sm"
-              variant="bordered"
-              startContent={<span className="text-default-400 text-xs font-bold">$</span>}
-              className="flex-1"
-              value={amount}
-              onValueChange={setAmount}
-            />
-            <Select
-              size="sm"
-              variant="bordered"
-              aria-label="Ciclo de cobro"
-              className="w-[120px]"
-              selectedKeys={[billingCycle]}
-              onSelectionChange={(keys) => {
-                const k = Array.from(keys)[0];
-                if (k === "mensual" || k === "anual") setBillingCycle(k);
-              }}
-            >
-              <SelectItem key="mensual">Mensual</SelectItem>
-              <SelectItem key="anual">Anual</SelectItem>
-            </Select>
-          </div>
-          <Button
-            fullWidth
-            variant="solid"
-            onPress={handleAdd}
-            className="font-bold text-sm bg-foreground text-background"
-            size="sm"
-            isDisabled={!label.trim() || !amountValid}
-            startContent={<Plus size={15} />}
+          <select
+            className="field-pill" aria-label="Ciclo de cobro"
+            value={billingCycle} onChange={(e) => setBillingCycle(e.target.value === "anual" ? "anual" : "mensual")}
           >
-            Agregar Fijo
-          </Button>
+            <option value="mensual">Mensual</option>
+            <option value="anual">Anual</option>
+          </select>
         </div>
-      </CardBody>
-    </Card>
+        <button type="button" className="btn sm" onClick={handleAdd} disabled={!label.trim() || !amountValid}>
+          Agregar fijo
+        </button>
+      </div>
+    </section>
   );
 }

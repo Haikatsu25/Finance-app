@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Card, CardHeader, CardBody, Input, Button, Select, SelectItem,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure,
-} from "@heroui/react";
+import { useDisclosure } from "@heroui/react";
+import { Sheet } from "@/components/ui/Sheet";
+import { celebrate, originOf } from "@/components/ui/SuccessReveal";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
   Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil, Minus, Scissors,
@@ -12,33 +11,11 @@ import {
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
-  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus, todayIso } from "@/lib/finance-utils";
+  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus, todayIso, isoDate } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
 
 const TERMS = [3, 6, 9, 12, 18, 24];
-
-// ─────────────────────────────────────────────────────────────────
-// FRANJA LATERAL — cada tarjeta se reconoce por su trama, no por color.
-// La trama sale de un hash del id (estable aunque cambie el orden) y, si ya
-// la usa otra tarjeta, avanza a la siguiente libre. Con más de 8 se repiten.
-// ─────────────────────────────────────────────────────────────────
-const STRIPE_COUNT = 8;
-
-function assignStripes(cards: CreditCardItem[]): Map<string, number> {
-  const taken = new Set<number>();
-  const out = new Map<string, number>();
-  for (const c of cards) {
-    let h = 0;
-    for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    let i = h % STRIPE_COUNT;
-    for (let k = 0; k < STRIPE_COUNT && taken.has(i); k++) i = (i + 1) % STRIPE_COUNT;
-    taken.add(i);
-    out.set(c.id, i);
-    if (taken.size === STRIPE_COUNT) taken.clear();
-  }
-  return out;
-}
 
 const fmtShort = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
@@ -50,28 +27,21 @@ function whenText(days: number): string {
   return `en ${days} días`;
 }
 
-/** Urgencia por FORMA (relleno, contorno, texto), no por color. */
+/** Estado del pago: "late" va en el chip rojo; el resto, en el chip neutro */
 type PayLevel = "late" | "soon" | "calm";
 
 function payInfo(days: number, date: Date): { text: string; level: PayLevel } {
   if (days < 0) return { text: `Pago vencido ${whenText(days)}`, level: "late" };
-  if (days === 0) return { text: `Pagas HOY (${fmtShort(date)})`, level: "late" };
+  if (days === 0) return { text: `Pagas hoy (${fmtShort(date)})`, level: "late" };
   const text = `Pagas el ${fmtShort(date)}, ${whenText(days)}`;
   return { text, level: days <= 3 ? "soon" : "calm" };
 }
 
 function cutText(days: number, date: Date): string {
-  return days === 0 ? `Corta HOY (${fmtShort(date)})` : `Corta el ${fmtShort(date)}, ${whenText(days)}`;
+  return days === 0 ? `Corta hoy (${fmtShort(date)})` : `Corta el ${fmtShort(date)}, ${whenText(days)}`;
 }
 
-const PAY_CLS: Record<PayLevel, string> = {
-  late: "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold bg-(--face-fg) text-(--face-bg)",
-  soon: "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold border-2 border-(--face-fg)",
-  calm: "inline-flex items-center gap-1.5 text-[13px] text-(--face-muted)",
-};
-
-const FACE_BTN = "h-11 min-w-11 px-3.5 rounded-lg text-[13px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors border border-(--face-line) hover:bg-white/10";
-const FACE_ICON_BTN = "w-11 h-11 grid place-items-center rounded-lg text-(--face-muted) transition-colors hover:bg-white/10";
+const FACE_ICON_BTN = "size-11 grid place-items-center rounded-full text-(--face-muted) transition-colors hover:bg-white/10 hover:text-(--face-fg)";
 
 // ─────────────────────────────────────────────────────────────────
 // ACTUALIZAR DEUDA — formulario real con botón (antes solo Enter)
@@ -94,38 +64,30 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
   return (
     <div className="mt-auto pt-4">
       <div className="pt-4 border-t border-(--face-line)">
-      <p className="text-xs font-semibold text-(--face-muted) mb-2">Reemplazar deuda de contado</p>
-      <div className="flex items-center gap-2">
-        <Input
-          size="md"
-          variant="flat"
-          type="number"
-          min="0"
-          inputMode="decimal"
-          placeholder={`Saldo actual: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
-          aria-label="Reemplazar deuda de contado"
-          value={value}
-          onValueChange={setValue}
-          onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
-          startContent={<span className="text-(--face-muted) text-sm font-bold">$</span>}
-          classNames={{
-            inputWrapper: "bg-white/10 hover:bg-white/15 data-[hover=true]:bg-white/15 h-11 min-h-11",
-            input: "text-(--face-fg) text-sm",
-          }}
-        />
-        <Button
-          isIconOnly
-          className="h-11 w-11 min-w-11 shrink-0 font-bold bg-(--face-fg) text-(--face-bg)"
-          isDisabled={!valid && !saved}
-          onPress={commit}
-          aria-label="Guardar nueva deuda"
-        >
-          <Check size={18} />
-        </Button>
-      </div>
-      <p className="text-xs text-(--face-muted) mt-1.5" aria-live="polite">
-        {saved ? "Actualizado" : "Escribe el saldo que ves en tu app del banco"}
-      </p>
+        <p className="text-xs font-semibold text-(--face-muted) mb-2">Reemplazar deuda de contado</p>
+        <div className="flex items-center gap-2">
+          <input
+            type="number" min="0" inputMode="decimal"
+            className="h-11 min-w-0 flex-1 rounded-full bg-white/10 px-4 text-sm text-(--face-fg) placeholder:text-(--face-muted)"
+            placeholder={`Saldo actual: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
+            aria-label="Reemplazar deuda de contado"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
+          />
+          <button
+            type="button"
+            className="size-11 shrink-0 grid place-items-center rounded-full bg-white text-(--navy) disabled:opacity-40"
+            disabled={!valid && !saved}
+            onClick={commit}
+            aria-label="Guardar nueva deuda"
+          >
+            <Check size={18} aria-hidden />
+          </button>
+        </div>
+        <p className="text-xs text-(--face-muted) mt-1.5" aria-live="polite">
+          {saved ? "Actualizado" : "Escribe el saldo que ves en tu app del banco"}
+        </p>
       </div>
     </div>
   );
@@ -150,8 +112,8 @@ export default function CreditCards({
   onUpdateCard?: (id: string, patch: Partial<CreditCardItem>) => void;
   onUpdateInstallment?: (id: string, patch: Partial<InstallmentPlan>) => void;
 }) {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const { isOpen: isMsiOpen, onOpen: onMsiOpen, onOpenChange: onMsiChange } = useDisclosure();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isMsiOpen, onOpen: onMsiOpen, onClose: onMsiChange } = useDisclosure();
   const [simCard, setSimCard] = useState<CreditCardItem | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [cardToDelete, setCardToDelete] = useState<CreditCardItem | null>(null);
@@ -185,7 +147,6 @@ export default function CreditCards({
     Number.isFinite(parseFloat(msiAmount)) && parseFloat(msiAmount) > 0;
 
   const totals = totalDebtBreakdown(cards, installments);
-  const stripes = assignStripes(cards);
 
   const openEditCard = (c: CreditCardItem) => {
     setLabel(c.label);
@@ -284,499 +245,462 @@ export default function CreditCards({
   };
 
   return (
-    <Card className="glass card-hover rule-out col-span-1 sm:col-span-2 lg:col-span-3 shadow-none">
-      <CardHeader className="flex justify-between items-start px-5 pt-4 pb-0 gap-3 flex-wrap">
-        <div className="min-w-0">
-          <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
-            <CreditCardIcon size={18} className="text-money-out-text shrink-0" aria-hidden />
-            Tarjetas de crédito
-          </h3>
-          <p className="text-xs text-default-500 mt-0.5">Cortes, fechas límite, contado y meses sin intereses</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
+    <section className="pop-card">
+      <div className="sec-h">
+        <h2 className="sec">Tarjetas de crédito</h2>
+        <div className="flex gap-2 flex-wrap justify-end">
           {cards.length > 0 && (
-            <Button variant="bordered" startContent={<Layers size={16} />} onPress={openMsiModal} className="h-11 min-w-11 font-bold border-2 border-foreground">
+            <button type="button" className="btn ghost sm" onClick={openMsiModal}>
               Compra a meses
-            </Button>
+            </button>
           )}
-          <Button color="primary" variant="solid" startContent={<Plus size={16} />} onPress={onOpen} className="h-11 min-w-11 font-bold">
+          <button type="button" className="btn sm" onClick={onOpen}>
             Agregar tarjeta
-          </Button>
+          </button>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardBody className="px-5 py-4">
-        {/* Resumen global: contado vs meses. Los cuadritos repiten la leyenda de la tira de reparto. */}
-        {cards.length > 0 && (totals.totalOwed > 0) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-5 mb-5">
-            {[
-              { label: "De contado", value: totals.cash, hint: "a liquidar este corte", sw: "seg-out" },
-              { label: "A meses (saldo)", value: totals.installmentRemaining, hint: "pendiente total de MSI", sw: "border-2 border-money-out" },
-              { label: "Mensualidad MSI", value: totals.monthlyInstallment, hint: "cargo de este mes", sw: "seg-msi" },
-              { label: "Deuda total", value: totals.totalOwed, hint: "contado más meses", sw: "" },
-            ].map((x) => (
-              <div key={x.label} className="min-w-0">
-                <p className="text-xs font-semibold text-default-500 flex items-center gap-2">
-                  {x.sw && <span className={`inline-block w-3.5 h-3.5 rounded-[3px] shrink-0 ${x.sw}`} aria-hidden />}
-                  {x.label}
-                </p>
-                <p className="figure text-[1.9rem] mt-1 truncate">{money(x.value)}</p>
-                <p className="text-[11px] text-default-500">{x.hint}</p>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Resumen global: contado vs meses */}
+      {cards.length > 0 && totals.totalOwed > 0 && (
+        <div className="four">
+          {[
+            { label: "De contado", value: totals.cash, hint: "a liquidar este corte" },
+            { label: "A meses (saldo)", value: totals.installmentRemaining, hint: "pendiente total de MSI" },
+            { label: "Mensualidad MSI", value: totals.monthlyInstallment, hint: "cargo de este mes" },
+            { label: "Deuda total", value: totals.totalOwed, hint: "contado más meses" },
+          ].map((x) => (
+            <div key={x.label}>
+              <small>{x.label}</small>
+              <b className="truncate">{money(x.value)}</b>
+              <span>{x.hint}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-default-300 rounded-lg text-default-500 gap-1">
-            <p className="text-xs font-semibold">Sin tarjetas registradas</p>
-            <p className="text-[11px]">Agrega tu tarjeta para no volver a pagar intereses por olvido</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards.map((c) => {
-              const bd = cardDebtBreakdown(c, installments);
-              const util = c.creditLimit > 0 ? Math.min(100, (bd.totalOwed / c.creditLimit) * 100) : 0;
-              const due = paymentDueDate(c);
-              const daysLeft = daysUntil(due);
-              const cut = nextOccurrence(c.cutoffDay);
-              const cutDays = daysUntil(cut);
-              const pay = payInfo(daysLeft, due);
-              const isExpanded = expanded === c.id;
-              const nearLimit = util >= 80;
+      {cards.length === 0 ? (
+        <div className="empty">
+          Sin tarjetas registradas. Agrega tu tarjeta para no volver a pagar intereses por olvido.
+        </div>
+      ) : (
+        <div className={`grid grid-cols-1 gap-3 items-start ${cards.length > 1 ? "lg:grid-cols-2" : ""}`}>
+          {cards.map((c) => {
+            const bd = cardDebtBreakdown(c, installments);
+            const util = c.creditLimit > 0 ? Math.min(100, (bd.totalOwed / c.creditLimit) * 100) : 0;
+            const due = paymentDueDate(c);
+            const daysLeft = daysUntil(due);
+            const cut = nextOccurrence(c.cutoffDay);
+            const cutDays = daysUntil(cut);
+            const pay = payInfo(daysLeft, due);
+            const isExpanded = expanded === c.id;
+            const nearLimit = util >= 80;
+            // Ciclo ya marcado como pagado: el chip lo dice y avisa la fecha del siguiente
+            const paid = !!c.lastPaidCycle && c.lastPaidCycle >= isoDate(statementDueDate(c));
 
-              return (
-                <div key={c.id} className="card-face group">
-                  <span className={`card-stripe stripe-${stripes.get(c.id) ?? 0}`} aria-hidden />
-
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold text-base flex items-center gap-1.5 flex-wrap">
-                        <span className="truncate">{c.label}</span>
-                        <AddedByBadge addedBy={c.addedBy} viewerId={viewerId} dark />
-                      </p>
-                      <p className="text-xs text-(--face-muted)">Corte día {c.cutoffDay}, pago día {c.dueDay}</p>
-                    </div>
-                    <div className="flex items-center shrink-0 -mr-2 -mt-2">
-                      {onUpdateCard && (
-                        <button
-                          onClick={() => openEditCard(c)}
-                          className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
-                          aria-label={`Editar ${c.label}`}
-                          title="Editar tarjeta"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setCardToDelete(c)}
-                        className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
-                        aria-label={`Eliminar ${c.label}`}
-                        title="Eliminar tarjeta"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+            return (
+              <div key={c.id} className="card-face">
+                <div className="cc-top">
+                  <div className="min-w-0">
+                    <b className="flex items-center gap-1.5 flex-wrap">
+                      <span className="truncate">{c.label}</span>
+                      <AddedByBadge addedBy={c.addedBy} viewerId={viewerId} dark />
+                    </b>
+                    <small>Corte día {c.cutoffDay}, pago día {c.dueDay}</small>
                   </div>
-
-                  {c.last4 && (
-                    <p className="figure text-[2.75rem] mt-1" aria-label={`Terminación ${c.last4}`}>
-                      <span className="text-(--face-muted) text-[0.55em] mr-2 align-middle" aria-hidden>••••</span>
-                      {c.last4}
-                    </p>
-                  )}
-
-                  {/* Desglose contado / meses */}
-                  <div className="flex items-end gap-5 mt-3">
-                    <div>
-                      <p className="text-xs text-(--face-muted)">De contado</p>
-                      <p className="figure text-[2.25rem]">{money(bd.cash)}</p>
-                    </div>
-                    {bd.installmentRemaining > 0 && (
-                      <div className="pb-0.5">
-                        <p className="text-xs text-(--face-muted)">A meses</p>
-                        <p className="figure text-[1.6rem] text-(--face-muted)">{money(bd.installmentRemaining)}</p>
-                      </div>
+                  <div className="flex items-center shrink-0 -mr-2 -mt-2">
+                    {c.last4 && (
+                      <em aria-label={`Terminación ${c.last4}`} className="mr-1">•••• {c.last4}</em>
                     )}
-                  </div>
-
-                  {bd.monthlyInstallment > 0 && (
-                    <p className="text-xs mt-1.5 tnum">
-                      MSI: {money(bd.monthlyInstallment)} al mes. Este corte pagas{" "}
-                      <span className="font-bold">{money(bd.dueThisMonth)}</span>.
-                    </p>
-                  )}
-
-                  {/* Uso del límite: la parte usada es siempre deuda (token de salida) */}
-                  <div className="mt-4">
-                    <div className="flex justify-between items-baseline gap-2 text-xs tnum">
-                      <span className="text-(--face-muted)">Usas {money(bd.totalOwed)} de {money(c.creditLimit)}</span>
-                      <span className="font-bold text-sm">{util.toFixed(0)}%</span>
-                    </div>
-                    <div
-                      className="h-2.5 rounded-sm bg-white/15 mt-1.5 overflow-hidden"
-                      role="progressbar" aria-label={`Uso del límite de ${c.label}`}
-                      aria-valuenow={Math.round(util)} aria-valuemin={0} aria-valuemax={100}
-                    >
-                      <div className="h-full bg-(--money-out) transition-all duration-500" style={{ width: `${util}%` }} />
-                    </div>
-                    <p className={`text-xs mt-1.5 tnum flex items-center gap-1.5 ${nearLimit ? "font-bold" : "text-(--face-muted)"}`}>
-                      {nearLimit && <AlertTriangle size={13} aria-hidden />}
-                      {nearLimit && "Casi al límite. "}Te quedan {money(Math.max(0, c.creditLimit - bd.totalOwed))}
-                    </p>
-                  </div>
-
-                  {/* Fechas clave: lo que más se consulta */}
-                  <div className="mt-4 space-y-2">
-                    <p className={PAY_CLS[pay.level]}>
-                      {pay.level === "calm" ? <CalendarClock size={14} aria-hidden /> : <AlertTriangle size={14} aria-hidden />}
-                      {pay.text}
-                    </p>
-                    <p className="text-[13px] text-(--face-muted) flex items-center gap-1.5">
-                      <Scissors size={14} aria-hidden />
-                      {cutText(cutDays, cut)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 flex-wrap mt-4">
-                    {bd.dueThisMonth > 0 && onMarkPaid ? (
+                    {onUpdateCard && (
                       <button
-                        onClick={() => setCardToPay(c)}
-                        className={`${FACE_BTN} bg-(--face-fg) text-(--face-bg) border-transparent hover:bg-(--face-fg)/90`}
+                        onClick={() => openEditCard(c)}
+                        className={FACE_ICON_BTN}
+                        aria-label={`Editar ${c.label}`}
+                        title="Editar tarjeta"
                       >
-                        <BadgeCheck size={16} aria-hidden />
-                        Pagado
+                        <Pencil size={16} aria-hidden />
                       </button>
-                    ) : <span />}
-                    <div className="flex gap-2">
-                      {bd.activePlans.length > 0 && (
-                        <button onClick={() => setExpanded(isExpanded ? null : c.id)} className={FACE_BTN} aria-expanded={isExpanded}>
-                          <Layers size={15} aria-hidden />
-                          {bd.activePlans.length} MSI
-                          {isExpanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
-                        </button>
-                      )}
-                      {bd.cash > 0 && (
-                        <button onClick={() => setSimCard(c)} className={FACE_BTN}>
-                          <Calculator size={15} aria-hidden />
-                          Simular
-                        </button>
-                      )}
-                    </div>
+                    )}
+                    <button
+                      onClick={() => setCardToDelete(c)}
+                      className={FACE_ICON_BTN}
+                      aria-label={`Eliminar ${c.label}`}
+                      title="Eliminar tarjeta"
+                    >
+                      <Trash2 size={16} aria-hidden />
+                    </button>
                   </div>
+                </div>
 
-                  {/* Lista de compras a meses */}
-                  {isExpanded && bd.activePlans.length > 0 && (
-                    <div className="mt-4 space-y-4 pt-4 border-t border-(--face-line) animate-fade-in-up">
-                      {bd.activePlans.map((s) => (
-                        <div key={s.plan.id}>
-                          <div className="flex justify-between items-center gap-2 mb-1.5">
-                            <span className="text-sm font-bold truncate flex items-center gap-1.5 min-w-0">
-                              <span className="truncate">{s.plan.label}</span>
-                              <AddedByBadge addedBy={s.plan.addedBy} viewerId={viewerId} dark />
-                            </span>
-                            <div className="flex items-center shrink-0 -mr-2">
-                              <span className="text-sm tnum font-bold mr-1">
-                                {money(s.monthlyPayment)}<span className="text-(--face-muted) font-normal text-xs"> al mes</span>
-                              </span>
-                              {onUpdateInstallment && (
-                                <button
-                                  onClick={() => openEditMsi(s.plan)}
-                                  className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
-                                  aria-label={`Editar compra a meses ${s.plan.label}`}
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => onRemoveInstallment(s.plan.id)}
-                                className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
-                                aria-label={`Eliminar compra a meses ${s.plan.label}`}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="h-2 rounded-sm bg-white/15 mb-2 overflow-hidden">
-                            <div className="h-full bg-(--face-fg) transition-all duration-500" style={{ width: `${s.progress}%` }} />
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {onUpdateInstallment && (
-                              <span className="flex items-center gap-1 shrink-0">
-                                <button
-                                  onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) - 1 })}
-                                  disabled={s.monthsPaid <= 0}
-                                  className="w-9 h-9 rounded-lg border border-(--face-line) hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex items-center justify-center"
-                                  aria-label={`Quitar una mensualidad pagada de ${s.plan.label}`}
-                                >
-                                  <Minus size={14} />
-                                </button>
-                                <button
-                                  onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) + 1 })}
-                                  disabled={s.monthsPaid >= s.plan.months}
-                                  className="w-9 h-9 rounded-lg border border-(--face-line) hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex items-center justify-center"
-                                  aria-label={`Marcar una mensualidad más pagada de ${s.plan.label}`}
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </span>
-                            )}
-                            <p className="text-xs tnum text-(--face-muted)">
-                              <span className="text-(--face-fg) font-bold">{s.monthsPaid} de {s.plan.months}</span> pagadas.
-                              {" "}Restan {money(s.remainingAmount)}
-                              {s.nextChargeDate && `, próximo cargo el ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
-                            </p>
-                            {!!s.plan.paidAdjust && (
-                              <span className="text-xs font-bold shrink-0">
-                                {s.plan.paidAdjust > 0 ? `+${s.plan.paidAdjust} ajustada` : `${s.plan.paidAdjust} ajustada`}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                {/* Desglose contado / meses */}
+                <div className="cc-two">
+                  <div>
+                    <small>De contado</small>
+                    <b>{money(bd.cash)}</b>
+                  </div>
+                  {bd.installmentRemaining > 0 && (
+                    <div className="m">
+                      <small>A meses</small>
+                      <b>{money(bd.installmentRemaining)}</b>
                     </div>
                   )}
-
-                  {bd.dueThisMonth > 0 && daysLeft <= 3 && (
-                    <p className="mt-3 text-xs flex items-start gap-1.5">
-                      <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden />
-                      {daysLeft < 0
-                        ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, toca Pagado; si no, paga cuanto antes para frenar intereses.`
-                        : `Paga ${money(bd.dueThisMonth)} antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses`}
-                    </p>
-                  )}
-
-                  <BalanceUpdater current={bd.cash} onSave={(v) => onUpdateBalance(c.id, v)} />
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </CardBody>
 
-      {/* ── Modal: alta de tarjeta ─────────────────────────────── */}
-      <Modal isOpen={isOpen} onOpenChange={(o) => { onOpenChange(); if (!o) setEditingCard(null); }} backdrop="blur">
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>{editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}</ModalHeader>
-              <ModalBody>
-                <div className="flex gap-2">
-                  <Input label="Nombre" placeholder="Ej. BBVA Azul, Nu" variant="bordered" value={label} onValueChange={setLabel} className="flex-1" />
-                  <Input
-                    label="Últimos 4 dígitos" placeholder="1234" variant="bordered" className="w-[150px]"
-                    inputMode="numeric" maxLength={4} value={last4}
-                    onValueChange={(v) => setLast4(v.replace(/\D/g, "").slice(0, 4))}
-                    isInvalid={last4 !== "" && last4.length !== 4}
-                    description="Opcional"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  {!editingCard && (
-                    <Input label="Deuda de contado" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>} value={balance} onValueChange={setBalance} />
-                  )}
-                  <Input label="Límite de crédito" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>} value={creditLimit} onValueChange={setCreditLimit} />
-                </div>
-                {editingCard && (
-                  <p className="text-[11px] text-default-400">
-                    La deuda de contado se actualiza desde la propia tarjeta (campo &quot;Reemplazar deuda&quot; o gastos vinculados).
+                {bd.monthlyInstallment > 0 && (
+                  <p className="text-xs tnum mb-2 opacity-90">
+                    MSI: {money(bd.monthlyInstallment)} al mes. Este corte pagas{" "}
+                    <b>{money(bd.dueThisMonth)}</b>.
                   </p>
                 )}
-                <div className="flex gap-2">
-                  <Input label="Día de corte" type="number" min="1" max="31" placeholder="15" variant="bordered" value={cutoffDay} onValueChange={setCutoffDay} />
-                  <Input label="Día límite de pago" type="number" min="1" max="31" placeholder="5" variant="bordered" value={dueDay} onValueChange={setDueDay} />
-                  <Input label="Tasa anual %" type="number" min="0" placeholder="60" variant="bordered" value={apr} onValueChange={setApr} />
+
+                {/* Uso del límite */}
+                <div
+                  className="cc-lim"
+                  role="progressbar" aria-label={`Uso del límite de ${c.label}`}
+                  aria-valuenow={Math.round(util)} aria-valuemin={0} aria-valuemax={100}
+                >
+                  <span style={{ width: `${util}%` }} />
                 </div>
-                <p className="text-[11px] text-default-400">
-                  Las compras a meses se agregan aparte, con el botón &quot;Compra a meses&quot;.
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="solid" className="font-bold" isDisabled={!validCard} onPress={() => submitCard(onClose)}>
-                  {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+                <div className="cc-limt tnum">
+                  <span>Usado {money(bd.totalOwed)} de {money(c.creditLimit)}, {util.toFixed(0)}%</span>
+                  <span>
+                    {nearLimit && "Casi al límite. "}Te quedan {money(Math.max(0, c.creditLimit - bd.totalOwed))}
+                  </span>
+                </div>
 
-      {/* ── Modal: compra a meses sin intereses ────────────────── */}
-      <Modal isOpen={isMsiOpen} onOpenChange={(o) => { onMsiChange(); if (!o) setEditingPlan(null); }} backdrop="blur">
-        <ModalContent>
-          {(onClose) => {
-            const amt = parseFloat(msiAmount);
-            const mths = parseInt(msiMonths) || 12;
-            const monthly = Number.isFinite(amt) && amt > 0 ? amt / mths : 0;
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <Layers size={18} className="text-foreground" />
-                  {editingPlan ? `Editar "${editingPlan.label}"` : "Compra a meses sin intereses"}
-                </ModalHeader>
-                <ModalBody>
-                  <Select label="Tarjeta" variant="bordered" selectedKeys={msiCardId ? [msiCardId] : []}
-                    onChange={(e) => setMsiCardId(e.target.value)}>
-                    {cards.map((c) => <SelectItem key={c.id}>{c.label}</SelectItem>)}
-                  </Select>
-                  <Input label="¿Qué compraste?" placeholder="Ej. Laptop, Refrigerador" variant="bordered" value={msiLabel} onValueChange={setMsiLabel} />
-                  <div className="flex gap-2">
-                    <Input label="Monto total" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>} value={msiAmount} onValueChange={setMsiAmount} className="flex-1" />
-                    <Select label="Plazo" variant="bordered" className="w-32" selectedKeys={[msiMonths]}
-                      onChange={(e) => setMsiMonths(e.target.value || "12")}>
-                      {TERMS.map((t) => <SelectItem key={String(t)}>{`${t} meses`}</SelectItem>)}
-                    </Select>
+                {/* Fechas clave */}
+                <div className="cc-dates">
+                  <span className={pay.level === "late" ? "due" : paid ? "paid" : ""}>
+                    {paid && "Pagado. "}{pay.text}
+                  </span>
+                  <span>{cutText(cutDays, cut)}</span>
+                </div>
+
+                <div className="cc-acts">
+                  {bd.dueThisMonth > 0 && onMarkPaid && (
+                    <button onClick={() => setCardToPay(c)} className="pri">
+                      Pagado
+                    </button>
+                  )}
+                  {bd.activePlans.length > 0 && (
+                    <button onClick={() => setExpanded(isExpanded ? null : c.id)} aria-expanded={isExpanded}>
+                      {bd.activePlans.length} MSI
+                    </button>
+                  )}
+                  {bd.cash > 0 && (
+                    <button onClick={() => setSimCard(c)}>
+                      Simular
+                    </button>
+                  )}
+                </div>
+
+                {/* Lista de compras a meses */}
+                {isExpanded && bd.activePlans.length > 0 && (
+                  <div className="mt-4 space-y-4 pt-4 border-t border-(--face-line) animate-fade-in-up">
+                    {bd.activePlans.map((s) => (
+                      <div key={s.plan.id}>
+                        <div className="flex justify-between items-center gap-2 mb-1.5">
+                          <span className="text-sm font-bold truncate flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">{s.plan.label}</span>
+                            <AddedByBadge addedBy={s.plan.addedBy} viewerId={viewerId} dark />
+                          </span>
+                          <div className="flex items-center shrink-0 -mr-2">
+                            <span className="text-sm tnum font-bold mr-1">
+                              {money(s.monthlyPayment)}<span className="text-(--face-muted) font-normal text-xs"> al mes</span>
+                            </span>
+                            {onUpdateInstallment && (
+                              <button
+                                onClick={() => openEditMsi(s.plan)}
+                                className={FACE_ICON_BTN}
+                                aria-label={`Editar compra a meses ${s.plan.label}`}
+                              >
+                                <Pencil size={14} aria-hidden />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => onRemoveInstallment(s.plan.id)}
+                              className={FACE_ICON_BTN}
+                              aria-label={`Eliminar compra a meses ${s.plan.label}`}
+                            >
+                              <Trash2 size={14} aria-hidden />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="cc-lim" style={{ height: 8 }}>
+                          <span style={{ width: `${s.progress}%`, background: "var(--pop2)" }} />
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {onUpdateInstallment && (
+                            <span className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) - 1 })}
+                                disabled={s.monthsPaid <= 0}
+                                className="size-9 rounded-full border border-(--face-line) hover:bg-white/10 disabled:opacity-30 transition-colors grid place-items-center"
+                                aria-label={`Quitar una mensualidad pagada de ${s.plan.label}`}
+                              >
+                                <Minus size={14} aria-hidden />
+                              </button>
+                              <button
+                                onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) + 1 })}
+                                disabled={s.monthsPaid >= s.plan.months}
+                                className="size-9 rounded-full border border-(--face-line) hover:bg-white/10 disabled:opacity-30 transition-colors grid place-items-center"
+                                aria-label={`Marcar una mensualidad más pagada de ${s.plan.label}`}
+                              >
+                                <Plus size={14} aria-hidden />
+                              </button>
+                            </span>
+                          )}
+                          <p className="text-xs tnum text-(--face-muted)">
+                            <span className="text-(--face-fg) font-bold">{s.monthsPaid} de {s.plan.months}</span> pagadas.
+                            {" "}Restan {money(s.remainingAmount)}
+                            {s.nextChargeDate && `, próximo cargo el ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
+                          </p>
+                          {!!s.plan.paidAdjust && (
+                            <span className="text-xs font-bold shrink-0">
+                              {s.plan.paidAdjust > 0 ? `+${s.plan.paidAdjust} ajustada` : `${s.plan.paidAdjust} ajustada`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <Input label="Fecha de compra" type="date" variant="bordered" value={msiDate} onValueChange={setMsiDate}
-                    description="Si la dejas vacía se usa hoy" />
+                )}
 
-                  {editingPlan && (
-                    <Input
-                      label="Mensualidades ya pagadas" type="number" min="0" max={String(mths)} step="1"
-                      inputMode="numeric" variant="bordered" value={msiPaid} onValueChange={setMsiPaid}
-                      endContent={<span className="text-default-400 text-xs">de {mths}</span>}
-                      description="Súbela si ya diste por pagada la del mes que viene aunque no llegue tu fecha de pago"
-                    />
-                  )}
-
-                  {monthly > 0 && (
-                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 flex items-center gap-3">
-                      <CalendarClock size={18} className="text-foreground shrink-0" />
-                      <p className="text-sm text-default-600">
-                        Pagarás <span className="figure text-xl">{moneyExact(monthly)}</span> al mes durante{" "}
-                        <span className="font-bold">{mths} meses</span>.
-                      </p>
-                    </div>
-                  )}
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button color="primary" variant="solid" className="font-bold"
-                    isDisabled={!validMsi} onPress={() => submitMsi(onClose)}>
-                    {editingPlan ? "Guardar cambios" : "Agregar a meses"}
-                  </Button>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </ModalContent>
-      </Modal>
-
-      {/* ── Modal: marcar deuda de contado como pagada ─────────── */}
-      <Modal isOpen={cardToPay !== null} onOpenChange={(o) => { if (!o) setCardToPay(null); }} backdrop="blur" size="sm">
-        <ModalContent>
-          {(onClose) => {
-            const linked = cardToPay ? liabilities.filter((l) => l.cardId === cardToPay.id) : [];
-            const bd = cardToPay ? cardDebtBreakdown(cardToPay, installments) : null;
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <BadgeCheck size={18} className="text-foreground" />
-                  Marcar como pagada
-                </ModalHeader>
-                <ModalBody>
-                  <p className="text-sm text-default-600">
-                    La deuda de contado de <span className="font-bold">{cardToPay?.label}</span>{" "}
-                    (<span className="font-bold tnum">{money(bd?.cash || 0)}</span>) quedará en <span className="font-bold">$0</span>.
+                {bd.dueThisMonth > 0 && daysLeft <= 3 && (
+                  <p className="cc-note">
+                    {daysLeft < 0
+                      ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, toca Pagado; si no, paga cuanto antes para frenar intereses.`
+                      : `Paga ${money(bd.dueThisMonth)} antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses`}
                   </p>
-                  {cardToPay && (
-                    <p className="text-xs text-default-600">
-                      Se marcará como pagado el estado de cuenta que vence el{" "}
-                      <span className="font-bold">{statementDueDate(cardToPay).toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</span>.
-                    </p>
-                  )}
-                  {linked.length > 0 && (
-                    <p className="text-xs text-default-500">
-                      También se quitarán sus <span className="font-bold">{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</span> de
-                      Gastos &amp; Deudas. Tu balance disponible se libera.
-                    </p>
-                  )}
-                  {bd && bd.installmentRemaining > 0 && (
-                    <p className="text-xs text-default-600">
-                      Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
-                    </p>
-                  )}
-                  <p className="text-[11px] text-default-400">Tendrás 5 segundos para deshacerlo.</p>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button
-                    color="success" variant="solid" className="font-bold"
-                    startContent={<BadgeCheck size={15} />}
-                    onPress={() => {
-                      if (cardToPay && onMarkPaid) onMarkPaid(cardToPay.id);
-                      setCardToPay(null);
-                      onClose();
-                    }}
-                  >
-                    Sí, ya pagué
-                  </Button>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </ModalContent>
-      </Modal>
+                )}
 
-      {/* ── Modal: confirmar eliminación de tarjeta ────────────── */}
-      <Modal isOpen={cardToDelete !== null} onOpenChange={(o) => { if (!o) setCardToDelete(null); }} backdrop="blur" size="sm">
-        <ModalContent>
-          {(onClose) => {
-            const plans = cardToDelete ? installments.filter((p) => p.cardId === cardToDelete.id) : [];
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-money-out-text" />
-                  Eliminar tarjeta
-                </ModalHeader>
-                <ModalBody>
-                  <p className="text-sm text-default-600">
-                    ¿Seguro que quieres eliminar <span className="font-bold">{cardToDelete?.label}</span>?
-                  </p>
-                  {plans.length > 0 && (
-                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20">
-                      <p className="text-xs text-default-600">
-                        También se eliminarán sus{" "}
-                        <span className="font-bold">{plans.length} compra{plans.length > 1 ? "s" : ""} a meses</span>:
-                      </p>
-                      <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
-                        {plans.map((p) => (
-                          <li key={p.id} className="text-xs text-default-600 tnum">
-                            {p.label}: {money(p.totalAmount)} a {p.months} meses
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-default-400">
-                    Podrás deshacerlo durante 5 segundos con el botón que aparecerá abajo.
-                  </p>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button
-                    color="danger" variant="solid" className="font-bold"
-                    startContent={<Trash2 size={15} />}
-                    onPress={() => {
-                      if (cardToDelete) onRemove(cardToDelete.id);
-                      setCardToDelete(null);
-                      onClose();
-                    }}
-                  >
-                    Sí, eliminar
-                  </Button>
-                </ModalFooter>
-              </>
+                <BalanceUpdater current={bd.cash} onSave={(v) => onUpdateBalance(c.id, v)} />
+              </div>
             );
-          }}
-        </ModalContent>
-      </Modal>
+          })}
+        </div>
+      )}
+
+      {/* ── Hoja: alta y edición de tarjeta ─────────────────────── */}
+      <Sheet
+        open={isOpen}
+        onOpenChange={(o) => { if (!o) { setEditingCard(null); onClose(); } else onOpen(); }}
+        title={editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}
+      >
+        <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); submitCard(onClose); }}>
+          <div className="row2" style={{ gridTemplateColumns: "1.6fr 1fr" }}>
+            <div className="f">
+              <label htmlFor="cc-label">Nombre</label>
+              <input id="cc-label" placeholder="Ej. BBVA Azul, Nu" value={label} onChange={(e) => setLabel(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-last4">Últimos 4 dígitos</label>
+              <input
+                id="cc-last4" placeholder="1234" inputMode="numeric" maxLength={4} value={last4}
+                onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                className={last4 !== "" && last4.length !== 4 ? "err" : ""}
+              />
+            </div>
+          </div>
+          <div className="row2">
+            {!editingCard && (
+              <div className="f">
+                <label htmlFor="cc-balance">Deuda de contado</label>
+                <input id="cc-balance" type="number" min="0" inputMode="decimal" placeholder="$ 0.00" value={balance} onChange={(e) => setBalance(e.target.value)} />
+              </div>
+            )}
+            <div className="f">
+              <label htmlFor="cc-limit">Límite de crédito</label>
+              <input id="cc-limit" type="number" min="0" inputMode="decimal" placeholder="$ 0.00" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+            </div>
+          </div>
+          {editingCard && (
+            <p className="mute text-xs">
+              La deuda de contado se actualiza desde la propia tarjeta (campo «Reemplazar deuda» o gastos vinculados).
+            </p>
+          )}
+          <div className="row2" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <div className="f">
+              <label htmlFor="cc-cut">Día de corte</label>
+              <input id="cc-cut" type="number" min="1" max="31" placeholder="15" value={cutoffDay} onChange={(e) => setCutoffDay(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-due">Día límite de pago</label>
+              <input id="cc-due" type="number" min="1" max="31" placeholder="5" value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-apr">Tasa anual %</label>
+              <input id="cc-apr" type="number" min="0" placeholder="60" value={apr} onChange={(e) => setApr(e.target.value)} />
+            </div>
+          </div>
+          <p className="mute text-xs">
+            Las compras a meses se agregan aparte, con el botón «Compra a meses».
+          </p>
+          <div className="ft">
+            <button type="button" className="btn soft" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn" disabled={!validCard}>
+              {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
+            </button>
+          </div>
+        </form>
+      </Sheet>
+
+      {/* ── Hoja: compra a meses sin intereses ──────────────────── */}
+      {(() => {
+        const amt = parseFloat(msiAmount);
+        const mths = parseInt(msiMonths) || 12;
+        const monthly = Number.isFinite(amt) && amt > 0 ? amt / mths : 0;
+        const closeMsi = () => onMsiChange();
+        return (
+          <Sheet
+            open={isMsiOpen}
+            onOpenChange={(o) => { if (!o) { setEditingPlan(null); closeMsi(); } else onMsiOpen(); }}
+            title={editingPlan ? `Editar «${editingPlan.label}»` : "Compra a meses sin intereses"}
+          >
+            <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); submitMsi(closeMsi); }}>
+              <div className="f">
+                <label htmlFor="msi-card">Tarjeta</label>
+                <select id="msi-card" value={msiCardId} onChange={(e) => setMsiCardId(e.target.value)}>
+                  {cards.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="f">
+                <label htmlFor="msi-label">¿Qué compraste?</label>
+                <input id="msi-label" placeholder="Ej. Laptop, Refrigerador" value={msiLabel} onChange={(e) => setMsiLabel(e.target.value)} />
+              </div>
+              <div className="row2">
+                <div className="f">
+                  <label htmlFor="msi-amount">Monto total</label>
+                  <input id="msi-amount" type="number" min="0" step="0.01" inputMode="decimal" placeholder="$ 0.00" value={msiAmount} onChange={(e) => setMsiAmount(e.target.value)} />
+                </div>
+                <div className="f">
+                  <label htmlFor="msi-months">Plazo</label>
+                  <select id="msi-months" value={msiMonths} onChange={(e) => setMsiMonths(e.target.value || "12")}>
+                    {TERMS.map((t) => <option key={t} value={String(t)}>{`${t} meses`}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="f">
+                <label htmlFor="msi-date">Fecha de compra</label>
+                <input id="msi-date" type="date" value={msiDate} onChange={(e) => setMsiDate(e.target.value)} />
+                <span className="mute text-xs">Si la dejas vacía se usa hoy</span>
+              </div>
+
+              {editingPlan && (
+                <div className="f">
+                  <label htmlFor="msi-paid">Mensualidades ya pagadas (de {mths})</label>
+                  <input id="msi-paid" type="number" min="0" max={String(mths)} step="1" inputMode="numeric" value={msiPaid} onChange={(e) => setMsiPaid(e.target.value)} />
+                  <span className="mute text-xs">Súbela si ya diste por pagada la del mes que viene aunque no llegue tu fecha de pago</span>
+                </div>
+              )}
+
+              {monthly > 0 && (
+                <p className="callout brand flex items-center gap-2">
+                  <CalendarClock size={18} className="shrink-0" aria-hidden />
+                  <span>
+                    Pagarás <b className="text-lg tnum">{moneyExact(monthly)}</b> al mes durante <b>{mths} meses</b>.
+                  </span>
+                </p>
+              )}
+
+              <div className="ft">
+                <button type="button" className="btn soft" onClick={closeMsi}>Cancelar</button>
+                <button type="submit" className="btn" disabled={!validMsi}>
+                  {editingPlan ? "Guardar cambios" : "Agregar a meses"}
+                </button>
+              </div>
+            </form>
+          </Sheet>
+        );
+      })()}
+
+      {/* ── Hoja: marcar deuda de contado como pagada ───────────── */}
+      {(() => {
+        const linked = cardToPay ? liabilities.filter((l) => l.cardId === cardToPay.id) : [];
+        const bd = cardToPay ? cardDebtBreakdown(cardToPay, installments) : null;
+        const closePay = () => setCardToPay(null);
+        return (
+          <Sheet open={cardToPay !== null} onOpenChange={(o) => { if (!o) closePay(); }} title="Marcar como pagada">
+            <p className="text-[15px] leading-relaxed">
+              La deuda de contado de <b>{cardToPay?.label}</b> (<b className="tnum">{money(bd?.cash || 0)}</b>) quedará en <b>$0</b>.
+            </p>
+            {cardToPay && (
+              <p className="callout">
+                Se marcará como pagado el estado de cuenta que vence el{" "}
+                <b>{statementDueDate(cardToPay).toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</b>.
+              </p>
+            )}
+            {linked.length > 0 && (
+              <p className="callout">
+                También se quitarán sus <b>{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</b> de
+                Gastos y deudas. Tu balance disponible se libera.
+              </p>
+            )}
+            {bd && bd.installmentRemaining > 0 && (
+              <p className="callout brand">
+                Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
+              </p>
+            )}
+            <p className="summary" style={{ margin: 0 }}>Tendrás 5 segundos para deshacerlo.</p>
+            <div className="ft">
+              <button type="button" className="btn soft" onClick={closePay}>Cancelar</button>
+              <button
+                type="button" className="btn"
+                onClick={(e) => {
+                  if (!cardToPay || !onMarkPaid) return;
+                  const origin = originOf(e.currentTarget);
+                  const paid = cardToPay;
+                  const amount = bd?.dueThisMonth || bd?.cash || 0;
+                  onMarkPaid(paid.id);
+                  closePay();
+                  celebrate({ amount: money(amount), text: `Pago registrado: ${paid.label}`, tone: "paid", ...origin });
+                }}
+              >
+                <BadgeCheck size={16} aria-hidden /> Sí, ya pagué
+              </button>
+            </div>
+          </Sheet>
+        );
+      })()}
+
+      {/* ── Hoja: confirmar eliminación de tarjeta ──────────────── */}
+      {(() => {
+        const plans = cardToDelete ? installments.filter((p) => p.cardId === cardToDelete.id) : [];
+        const closeDel = () => setCardToDelete(null);
+        return (
+          <Sheet open={cardToDelete !== null} onOpenChange={(o) => { if (!o) closeDel(); }} title="Eliminar tarjeta">
+            <p className="text-[15px] leading-relaxed">
+              ¿Seguro que quieres eliminar <b>{cardToDelete?.label}</b>?
+            </p>
+            {plans.length > 0 && (
+              <div className="callout warn">
+                <p>
+                  También se eliminarán sus <b>{plans.length} compra{plans.length > 1 ? "s" : ""} a meses</b>:
+                </p>
+                <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
+                  {plans.map((p) => (
+                    <li key={p.id} className="text-xs tnum">{p.label}: {money(p.totalAmount)} a {p.months} meses</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="summary" style={{ margin: 0 }}>
+              Podrás deshacerlo durante 5 segundos con el botón que aparecerá abajo.
+            </p>
+            <div className="ft">
+              <button type="button" className="btn soft" onClick={closeDel}>Cancelar</button>
+              <button
+                type="button" className="btn danger"
+                onClick={() => { if (cardToDelete) onRemove(cardToDelete.id); closeDel(); }}
+              >
+                <Trash2 size={16} aria-hidden /> Sí, eliminar
+              </button>
+            </div>
+          </Sheet>
+        );
+      })()}
 
       <DebtSimulator card={simCard} onClose={() => setSimCard(null)} />
-    </Card>
+    </section>
   );
 }

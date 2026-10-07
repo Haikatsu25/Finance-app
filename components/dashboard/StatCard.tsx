@@ -1,24 +1,30 @@
 "use client";
 
+import { TrendingUp, CreditCard, PiggyBank } from "lucide-react";
 import { money } from "@/lib/format";
-import { TONE, type ToneName } from "./tone";
+import type { ToneName } from "./tone";
 import { useAnimatedCounter } from "./useAnimatedCounter";
 
-// El filo superior lleva el color del flujo (entra / sale / se aparta);
-// la cifra va en tinta para que el color siga significando una sola cosa.
+// Bloque de cifra de color sólido (pop1 / pop4 / pop3) con ícono en círculo blanco.
+// El color es decoración; el significado lo da la etiqueta.
+const BLOCK: Record<string, { cls: string; icon: React.ReactNode }> = {
+  emerald: { cls: "a", icon: <TrendingUp size={17} aria-hidden /> },
+  rose:    { cls: "b", icon: <CreditCard size={17} aria-hidden /> },
+  amber:   { cls: "c", icon: <PiggyBank size={17} aria-hidden /> },
+};
+
 export function StatCard({
   label, value, tone,
 }: {
   label: string; value: number; tone: ToneName;
 }) {
   const animated = useAnimatedCounter(value);
-  const t = TONE[tone];
+  const b = BLOCK[tone] ?? BLOCK.emerald;
   return (
-    <div className={`glass ${t.rule} min-w-0 px-3 py-3 md:px-5 md:py-4`}>
-      <p className="text-xs md:text-sm font-semibold text-default-500 truncate">{label}</p>
-      <p className="figure text-[1.65rem] sm:text-3xl md:text-[2.5rem] mt-1.5 md:mt-2 text-foreground truncate">
-        {money(Math.abs(animated))}
-      </p>
+    <div className={`tile ${b.cls}`}>
+      <i>{b.icon}</i>
+      <small>{label}</small>
+      <b className="truncate">{money(Math.abs(animated))}</b>
     </div>
   );
 }

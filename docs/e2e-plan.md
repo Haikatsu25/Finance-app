@@ -13,7 +13,7 @@ pasa a `main`.
     (`NODE_OPTIONS=--require <ruta>/dns-fix.cjs`), `reuseExistingServer: true`.
   - `baseURL`: `http://localhost:3000`.
   - `use`: `screenshot: 'only-on-failure'`, `trace: 'retain-on-failure'`.
-  - Proyectos: `chromium-desktop` (1280x900) y `chromium-mobile` (390x844).
+  - Proyectos: `chromium-desktop` (1366x900) y `chromium-mobile` (390x844).
 - Script en `package.json`: `"test:e2e": "playwright test"`.
 - Carpeta: `tests/e2e/`. Capturas de recorrido en `test-results/visual/`
   (ignorado en git).

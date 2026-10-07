@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Card, CardBody, Input, Button } from "@heroui/react";
-import { Send, Sparkles, Bot, RotateCcw } from "lucide-react";
+import { Send, RotateCcw } from "lucide-react";
 
 interface ChatMsg {
   role: "user" | "assistant";
@@ -117,127 +116,71 @@ export default function AIChat({ queuedPrompt, onPromptConsumed }: {
     }
   };
 
-  const CHIP = "min-h-11 px-3.5 rounded-full border border-default-300 text-[13px] font-semibold hover:border-foreground hover:bg-foreground/5 transition-colors";
-
   return (
-    <div className="space-y-4" id="ai-section">
-      {/* Header del tab */}
-      <div className="flex items-start justify-between gap-2 flex-wrap">
-        <div>
-          <h3 className="text-xl font-bold section-title">FinanceAI</h3>
-          <p className="text-xs text-default-600 mt-1">
-            Tu asesor personal. Conoce tus tarjetas, MSI, presupuestos y movimientos
-          </p>
-        </div>
-        {messages.length > 0 && (
-          <Button
-            variant="bordered"
-            startContent={<RotateCcw size={14} />}
-            onPress={() => setMessages([])}
-            className="h-11 font-bold border-2 border-foreground"
-          >
-            Nueva conversación
-          </Button>
+    <section className="pop-card wide" id="ai-section">
+      <div className="sec-h">
+        <h2 className="sec">FinanceAI</h2>
+        {messages.length > 0 ? (
+          <button type="button" className="btn ghost sm" onClick={() => setMessages([])}>
+            <RotateCcw size={14} aria-hidden /> Nueva conversación
+          </button>
+        ) : (
+          <span className="chip">Tu asesor</span>
         )}
       </div>
 
-      <Card className="glass rule-ink shadow-none">
-        <CardBody className="p-0 flex flex-col">
-          {/* Mensajes */}
-          <div
-            className="flex-1 min-h-[380px] max-h-[58vh] overflow-y-auto px-5 py-5 space-y-4"
-            role="log" aria-label="Conversación con FinanceAI" aria-live="polite" tabIndex={0}
-          >
-            {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center">
-                <Sparkles size={30} className="mb-4" aria-hidden />
-                <p className="text-base font-bold mb-1">¿En qué te ayudo con tu dinero?</p>
-                <p className="text-xs text-default-600 mb-6 max-w-[300px]">
-                  Respondo con tus números reales: disponible, tarjetas, meses sin intereses y gastos.
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-md">
-                  {SUGGESTIONS.map((s) => (
-                    <button key={s} onClick={() => send(s)} className={CHIP}>
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Mensajes */}
+      <div className="chat" role="log" aria-label="Conversación con FinanceAI" aria-live="polite" tabIndex={0}
+        style={messages.length > 0 ? { maxHeight: "56vh", overflowY: "auto", marginBottom: 12 } : undefined}>
+        {messages.length === 0 && (
+          <p className="summary">
+            Respondo con tus números reales: disponible, tarjetas, meses sin intereses y gastos.
+          </p>
+        )}
 
-            {messages.map((m, i) => (
-              <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                {m.role === "assistant" && (
-                  <div className="w-8 h-8 grid place-items-center rounded-lg border border-default-300 shrink-0 mt-0.5" aria-hidden>
-                    <Bot size={16} />
-                  </div>
-                )}
-                <div className={`max-w-[85%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
-                  m.role === "user"
-                    ? "bg-foreground text-background rounded-br-sm"
-                    : "bg-default-100 border border-default-200 text-foreground rounded-bl-sm"
-                }`}>
-                  {m.role === "assistant" ? renderMarkdown(m.content) : m.content}
-                </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex gap-2.5" role="status" aria-label="FinanceAI está escribiendo">
-                <div className="w-8 h-8 grid place-items-center rounded-lg border border-default-300 shrink-0" aria-hidden>
-                  <Bot size={16} />
-                </div>
-                <div className="px-4 py-3 rounded-xl bg-default-100 border border-default-200 text-default-600 text-sm rounded-bl-sm">
-                  <span className="inline-flex gap-1" aria-hidden>
-                    <span className="animate-pulse">●</span>
-                    <span className="animate-pulse" style={{ animationDelay: "150ms" }}>●</span>
-                    <span className="animate-pulse" style={{ animationDelay: "300ms" }}>●</span>
-                  </span>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
+        {messages.map((m, i) => (
+          <div key={i} className={`msg ${m.role === "user" ? "me" : "ai"}`}>
+            {m.role === "assistant" ? renderMarkdown(m.content) : m.content}
           </div>
+        ))}
 
-          {/* Sugerencias rápidas cuando ya hay conversación */}
-          {messages.length > 0 && !loading && (
-            <div className="px-4 pt-2 flex gap-1.5 overflow-x-auto pb-1">
-              {SUGGESTIONS.slice(0, 4).map((s) => (
-                <button key={s} onClick={() => send(s)} className={`${CHIP} shrink-0 text-xs`}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input */}
-          <div className="px-4 pb-4 pt-2 flex items-center gap-2 border-t border-default-200">
-            <Input
-              placeholder="Pregúntale lo que sea sobre tu dinero…"
-              aria-label="Tu pregunta"
-              size="md"
-              variant="bordered"
-              value={input}
-              onValueChange={setInput}
-              onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-              className="flex-1"
-            />
-            <Button
-              isIconOnly color="primary" variant="solid"
-              className="min-w-11 w-11 h-11"
-              isDisabled={!input.trim() || loading}
-              onPress={() => send()}
-              aria-label="Enviar"
-            >
-              <Send size={16} />
-            </Button>
+        {loading && (
+          <div className="msg ai" role="status" aria-label="FinanceAI está escribiendo">
+            <span className="inline-flex gap-1" aria-hidden>
+              <span className="animate-pulse">●</span>
+              <span className="animate-pulse" style={{ animationDelay: "150ms" }}>●</span>
+              <span className="animate-pulse" style={{ animationDelay: "300ms" }}>●</span>
+            </span>
           </div>
-        </CardBody>
-      </Card>
+        )}
+        <div ref={bottomRef} />
+      </div>
 
-      <p className="text-xs text-default-600 text-center">
+      {/* Sugerencias */}
+      {!loading && (
+        <div className="chips">
+          {(messages.length === 0 ? SUGGESTIONS : SUGGESTIONS.slice(0, 4)).map((s) => (
+            <button key={s} type="button" onClick={() => send(s)}>{s}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Pregunta */}
+      <form className="ask" style={{ marginTop: 12 }} onSubmit={(e) => { e.preventDefault(); send(); }}>
+        <input
+          placeholder="Pregúntame lo que sea sobre tu dinero"
+          aria-label="Tu pregunta"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <button type="submit" aria-label="Enviar" disabled={!input.trim() || loading}>
+          <Send size={18} aria-hidden />
+        </button>
+      </form>
+
+      <p className="summary" style={{ margin: "10px 0 0", fontSize: 11 }}>
         FinanceAI puede equivocarse: verifica las cifras importantes. No es asesoría financiera certificada.
       </p>
-    </div>
+    </section>
   );
 }

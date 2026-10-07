@@ -11,7 +11,7 @@ export function SignedOutLanding() {
         <div className="inline-flex p-4 rounded-xl bg-ink mb-8">
           <Wallet className="text-cal w-12 h-12" aria-hidden />
         </div>
-        <h1 className="figure text-[4.5rem] sm:text-[7rem] mb-5">
+        <h1 className="figure text-[3.25rem] sm:text-[5.5rem] leading-[1] mb-5">
           Finance Control
         </h1>
         <p className="text-lg text-default-600 mb-2 max-w-md">
@@ -22,7 +22,7 @@ export function SignedOutLanding() {
         </p>
         <SignInButton mode="modal">
           <Button
-            size="lg"
+            size="lg" radius="full"
             color="primary"
             className="font-bold"
           >

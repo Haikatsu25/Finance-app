@@ -7,11 +7,11 @@ import {
 } from "@heroui/react";
 import {
   ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight,
-  Plus, Trash2, ReceiptText, ScanLine, Search, X, Pencil, Check, Download, Landmark,
+  Plus, Trash2, ReceiptText, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
 } from "lucide-react";
 import { TransactionItem, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
-import { monthKey, shiftMonth, monthLabel, summarizeMonth } from "@/lib/finance-utils";
+import { monthKey, shiftMonth, monthLabel, summarizeMonth, todayIso as todayLocal } from "@/lib/finance-utils";
 import MonthlySummary from "./MonthlySummary";
 import AddedByBadge from "./AddedByBadge";
 
@@ -21,7 +21,8 @@ export const EXPENSE_CATEGORIES = [
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
 
-const ALL_CATEGORIES = Array.from(new Set([...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES]));
+/** Solo la primera letra en mayúscula: "octubre de 2026" → "Octubre de 2026" */
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** Exporta los movimientos visibles a CSV (compatible con Excel). */
 function exportCsv(rows: TransactionItem[], accountName: (id?: string) => string | undefined) {
@@ -43,7 +44,7 @@ function exportCsv(rows: TransactionItem[], accountName: (id?: string) => string
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `movimientos-${new Date().toISOString().split("T")[0]}.csv`;
+  a.download = `movimientos-${todayLocal()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -91,6 +92,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const [eAccountId, setEAccountId] = useState("none");
 
   const openEdit = (t: TransactionItem) => {
+    setEditTried(false);
     setELabel(t.label);
     setEAmount(String(t.amount));
     setEDate(t.date);
@@ -100,13 +102,22 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
     setEditTx(t);
   };
 
-  const saveEdit = () => {
-    if (!editTx || !onUpdate) return;
-    const parsed = round2(parseFloat(eAmount));
-    if (!eLabel.trim() || !Number.isFinite(parsed) || parsed <= 0 || !eDate) return;
+  const editParsed = round2(parseFloat(eAmount));
+  const editLabelOk = !!eLabel.trim();
+  const editAmountOk = Number.isFinite(editParsed) && editParsed > 0;
+  const editDateOk = !!eDate;
+  const editValid = editLabelOk && editAmountOk && editDateOk;
+  // Solo se muestran los errores después de intentar guardar (no mientras se escribe)
+  const [editTried, setEditTried] = useState(false);
+
+  /** Devuelve true solo si guardó; así el modal no se cierra con datos inválidos */
+  const saveEdit = (): boolean => {
+    if (!editTx || !onUpdate || !editValid) return false;
+    const parsed = editParsed;
     const editFuture = eDate > todayIso;
     onUpdate(editTx.id, { label: eLabel.trim(), amount: parsed, date: eDate, type: eType, category: eCategory, accountId: (eAccountId === "none" || editFuture) ? undefined : eAccountId });
     setEditTx(null);
+    return true;
   };
 
   const cats = type === "expense" ? expenseCats : incomeCats;
@@ -114,7 +125,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const currentMonth = monthKey(new Date());
   const maxMonth = shiftMonth(currentMonth, 3);
   const viewingFuture = month > currentMonth;
-  const todayIso = new Date().toISOString().split("T")[0];
+  const todayIso = todayLocal();
   // Fecha efectiva: la que escribas; si no escribes ninguna y estás viendo
   // otro mes, se registra en ESE mes (día 1); si no, hoy.
   const effectiveDate = date || (!searching && month !== currentMonth ? `${month}-01` : todayIso);
@@ -175,24 +186,21 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       {/* Header + navegación de mes */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <ReceiptText className="text-emerald-500 w-5 h-5" />
-          </div>
           <div>
             <h3 className="text-xl font-bold section-title">Movimientos</h3>
-            <p className="text-xs text-default-400 mt-0.5">Cada peso que entra y sale</p>
+            <p className="text-xs text-default-500 mt-0.5">Cada peso que entra y sale</p>
           </div>
         </div>
         {!searching && (
-          <div className="flex items-center gap-1 bg-default-100/70 rounded-xl p-1">
-            <button onClick={() => setMonth(shiftMonth(month, -1))} className="p-1.5 rounded-lg hover:bg-default-200 text-default-500" aria-label="Mes anterior">
+          <div className="flex items-stretch rounded-[10px] border-2 border-foreground overflow-hidden">
+            <button onClick={() => setMonth(shiftMonth(month, -1))} className="px-2.5 py-2 hover:bg-foreground/10 text-foreground" aria-label="Mes anterior">
               <ChevronLeft size={16} />
             </button>
-            <span className="text-xs font-bold px-2 capitalize min-w-[120px] text-center">{monthLabel(month)}</span>
+            <span className="text-[13px] font-bold px-3 min-w-[130px] text-center self-center">{cap(monthLabel(month))}</span>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
               disabled={month >= maxMonth}
-              className="p-1.5 rounded-lg hover:bg-default-200 text-default-500 disabled:opacity-30"
+              className="px-2.5 py-2 hover:bg-foreground/10 text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
               aria-label="Mes siguiente"
             >
               <ChevronRight size={16} />
@@ -206,23 +214,23 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
 
       {/* Mes futuro: lo que llevas comprometido */}
       {!searching && !filtering && viewingFuture && (
-        <Card className="glass border border-cyan-500/25">
+        <Card className="glass rule-ink shadow-none">
           <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex-1">
-              <p className="text-sm font-bold capitalize">Plan de {monthLabel(month)}</p>
-              <p className="text-xs text-default-400">
-                Gastos que ya sabes que vienen — se suman aquí y a tu proyección de flujo
+              <p className="text-sm font-bold">Plan de {monthLabel(month)}</p>
+              <p className="text-xs text-default-500">
+                Gastos que ya sabes que vienen. Se suman aquí y a tu proyección de flujo
               </p>
             </div>
             <div className="flex gap-4">
               <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Comprometido</p>
-                <p className="text-lg font-black tnum text-rose-500">{money(summary.expense)}</p>
+                <p className="text-xs font-semibold text-default-500">Comprometido</p>
+                <p className="figure text-3xl text-money-out-text">{money(summary.expense)}</p>
               </div>
               {summary.income > 0 && (
                 <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">Ingresos esperados</p>
-                  <p className="text-lg font-black tnum text-emerald-500">{money(summary.income)}</p>
+                  <p className="text-xs font-semibold text-default-500">Ingresos esperados</p>
+                  <p className="figure text-3xl text-money-in-text">{money(summary.income)}</p>
                 </div>
               )}
             </div>
@@ -231,7 +239,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       )}
 
       {/* ── Búsqueda y filtros ───────────────────────────────── */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-3 flex flex-col sm:flex-row gap-2">
           <Input
             placeholder="Buscar en todos los meses… (ej. uber, tacos)"
@@ -269,40 +277,40 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
       {(searching || filtering) && (
         <div className="flex items-center justify-between gap-2 flex-wrap px-1">
           <p className="text-xs text-default-500">
-            <span className="font-bold text-default-700">{filteredTotals.count}</span> resultado{filteredTotals.count !== 1 && "s"}
-            {searching && <span className="text-default-400"> en todos los meses</span>}
-            {" · "}gastos <span className="font-bold tnum text-rose-500">{money(filteredTotals.exp)}</span>
-            {filteredTotals.inc > 0 && <> · ingresos <span className="font-bold tnum text-emerald-500">{money(filteredTotals.inc)}</span></>}
+            <span className="font-bold text-foreground">{filteredTotals.count}</span> resultado{filteredTotals.count !== 1 && "s"}
+            {searching && <span className="text-default-500"> en todos los meses</span>}
+            {": "}gastos <span className="font-bold tnum text-money-out-text">{money(filteredTotals.exp)}</span>
+            {filteredTotals.inc > 0 && <>, ingresos <span className="font-bold tnum text-money-in-text">{money(filteredTotals.inc)}</span></>}
           </p>
-          <Button size="sm" variant="light" className="text-default-400 h-7" startContent={<X size={12} />} onPress={clearFilters}>
+          <Button size="sm" variant="light" className="text-default-500 h-7" startContent={<X size={12} />} onPress={clearFilters}>
             Limpiar
           </Button>
         </div>
       )}
 
       {/* Captura */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-4">
           <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2">
             <div className="flex gap-1.5 shrink-0">
               <button
                 onClick={() => { setType("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === "expense" ? "bg-rose-500 text-white shadow-md" : "bg-default-100 text-default-500"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  type === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-500"
                 }`}
               >
                 <ArrowDownCircle size={14} /> Gasto
               </button>
               <button
                 onClick={() => { setType("income"); setCategory(INCOME_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  type === "income" ? "bg-emerald-500 text-white shadow-md" : "bg-default-100 text-default-500"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  type === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-500"
                 }`}
               >
                 <ArrowUpCircle size={14} /> Ingreso
               </button>
             </div>
-            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="flex-1 min-w-[180px] basis-[180px]" value={label} onValueChange={setLabel} />
+            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="lg:flex-1 lg:min-w-[180px] lg:basis-[180px]" value={label} onValueChange={setLabel} />
             <div className="flex gap-2 flex-wrap">
               <Input
                 type="number" min="0" inputMode="decimal" placeholder="0.00" size="sm" variant="bordered"
@@ -327,7 +335,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               )}
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="shadow"
+              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="solid"
                 className="font-bold flex-1 lg:flex-none" isDisabled={!label.trim() || !amountValid}
                 startContent={<Plus size={14} />} onPress={submit}>
                 Registrar
@@ -346,22 +354,22 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
             </div>
           </div>
           {dateIsFuture && (
-            <p className="text-[11px] text-cyan-600 dark:text-cyan-400 font-semibold mt-2">
-              📅 Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de <span className="capitalize">{monthLabel(monthKey(effectiveDate))}</span>
-              {!date && <> (día 1 — puedes elegir otro día con el campo de fecha)</>}
-              {" "}— aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
+            <p className="text-[11px] text-foreground font-semibold mt-2">
+              Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de {monthLabel(monthKey(effectiveDate))}
+              {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
+              . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
             </p>
           )}
           {!dateIsFuture && !date && month !== currentMonth && !searching && (
-            <p className="text-[11px] text-default-400 font-semibold mt-2">
-              📅 Se registrará en <span className="capitalize">{monthLabel(month)}</span> (día 1) — elige otro día con el campo de fecha si quieres.
+            <p className="text-[11px] text-default-500 font-semibold mt-2">
+              Se registrará en {monthLabel(month)} (día 1). Elige otro día con el campo de fecha si quieres.
             </p>
           )}
         </CardBody>
       </Card>
 
       {/* Lista agrupada por día */}
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <CardBody className="p-0">
           {grouped.length === 0 ? (
             <div className="py-14 text-center text-default-400">
@@ -376,48 +384,45 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
               )}
             </div>
           ) : (
-            <div className="divide-y divide-default-100/60">
+            <div className="divide-y divide-default-200">
               {grouped.map(([day, items]) => {
                 const dayTotal = items.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
                 return (
                   <div key={day} className="px-4 py-3">
                     <div className="flex justify-between items-center mb-2">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-default-400">
-                        {new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
+                      <p className="text-sm font-bold">
+                        {cap(new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
                           weekday: "long", day: "numeric", month: "short",
                           ...(searching ? { year: "numeric" } : {}),
-                        })}
+                        }))}
                       </p>
-                      <span className={`text-[11px] font-bold tnum ${dayTotal >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                      <span className={`figure text-xl ${dayTotal >= 0 ? "text-money-in-text" : "text-money-out-text"}`}>
                         {dayTotal >= 0 ? "+" : "−"}{money(Math.abs(dayTotal))}
                       </span>
                     </div>
-                    <div className="space-y-1">
+                    <div>
                       {items.map((t) => (
-                        <div key={t.id} className="group flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-default-100/50 transition-colors">
-                          <div className={`p-1.5 rounded-lg shrink-0 ${t.type === "income" ? "bg-emerald-500/12 text-emerald-500" : "bg-rose-500/12 text-rose-500"}`}>
-                            {t.type === "income" ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
-                          </div>
+                        <div key={t.id} className="group flex items-center gap-3 py-2.5 border-b border-default-200 last:border-b-0">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-default-700 truncate">{t.label}</p>
-                            <p className="text-[10px] text-default-400 flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold truncate">{t.label}</p>
+                            <p className="text-[11px] text-default-500 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
                               {t.category || "Sin categoría"}
-                              {t.source === "scan" && " · 📷 escaneado"}
-                              {t.source === "fixed" && " · 🔁 fijo"}
+                              {t.source === "scan" && <span className="inline-flex items-center gap-1"><ScanLine size={11} aria-hidden /> escaneado</span>}
+                              {t.source === "fixed" && <span className="inline-flex items-center gap-1"><Repeat size={11} aria-hidden /> fijo</span>}
                               {t.accountId && accountName(t.accountId) && (
-                                <span className="text-cyan-600 dark:text-cyan-400 font-semibold">· {accountName(t.accountId)}</span>
+                                <span className="inline-flex items-center gap-1 font-semibold text-foreground"><Landmark size={11} aria-hidden /> {accountName(t.accountId)}</span>
                               )}
                               <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
                             </p>
                           </div>
-                          <span className={`tnum font-bold text-sm shrink-0 ${t.type === "income" ? "text-emerald-500" : "text-default-700"}`}>
+                          <span className={`figure text-[1.35rem] shrink-0 ${t.type === "income" ? "text-money-in-text" : "text-foreground"}`}>
                             {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
                           </span>
                           <div className="flex items-center shrink-0">
                             {onUpdate && (
                               <button
                                 onClick={() => openEdit(t)}
-                                className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1"
+                                className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-foreground/10"
                                 aria-label={`Editar ${t.label}`}
                               >
                                 <Pencil size={13} />
@@ -425,7 +430,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                             )}
                             <button
                               onClick={() => onRemove(t.id)}
-                              className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1"
+                              className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-money-out-text transition-colors p-1.5 rounded-md hover:bg-money-out/10"
                               aria-label={`Eliminar ${t.label}`}
                             >
                               <Trash2 size={13} />
@@ -448,30 +453,33 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           {(onClose) => (
             <>
               <ModalHeader className="flex items-center gap-2">
-                <Pencil size={17} className="text-indigo-500" />
+                <Pencil size={17} className="text-foreground" />
                 Editar movimiento
               </ModalHeader>
               <ModalBody>
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => { setEType("expense"); if (!EXPENSE_CATEGORIES.includes(eCategory)) setECategory(EXPENSE_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${eType === "expense" ? "bg-rose-500 text-white" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-700"}`}
                   >
                     Gasto
                   </button>
                   <button
                     onClick={() => { setEType("income"); if (!INCOME_CATEGORIES.includes(eCategory)) setECategory(INCOME_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${eType === "income" ? "bg-emerald-500 text-white" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-700"}`}
                   >
                     Ingreso
                   </button>
                 </div>
-                <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel} />
-                <div className="flex gap-2">
+                <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel}
+                  isInvalid={editTried && !editLabelOk} errorMessage="Escribe una descripción." />
+                <div className="flex gap-2 items-start">
                   <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>}
-                    value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                  <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
+                    startContent={<span className="text-default-500 text-xs">$</span>}
+                    value={eAmount} onValueChange={setEAmount} className="flex-1"
+                    isInvalid={editTried && !editAmountOk} errorMessage="Escribe un monto mayor a 0." />
+                  <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]"
+                    isInvalid={editTried && !editDateOk} errorMessage="Elige una fecha válida." />
                 </div>
                 <Select label="Categoría" variant="bordered"
                   selectedKeys={eCategory ? [eCategory] : []}
@@ -490,10 +498,18 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 )}
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="shadow" className="font-bold"
+                {editTried && !editValid && (
+                  <p role="alert" className="text-xs font-semibold text-money-out-text mr-auto">Revisa los campos marcados.</p>
+                )}
+                <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cancelar</Button>
+                {/* Siempre activo: con datos inválidos no cierra y marca qué corregir (antes quedaba
+                    deshabilitado sin explicar por qué) */}
+                <Button color="primary" variant="solid" className="font-bold h-11"
                   startContent={<Check size={15} />}
-                  onPress={() => { saveEdit(); onClose(); }}>
+                  onPress={() => {
+                    if (!editValid) { setEditTried(true); return; }
+                    if (saveEdit()) onClose();
+                  }}>
                   Guardar cambios
                 </Button>
               </ModalFooter>

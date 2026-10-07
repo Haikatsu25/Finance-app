@@ -63,7 +63,7 @@ export function SettingsModal({
             <ModalHeader className="flex flex-col gap-1">Ajustes</ModalHeader>
             <ModalBody className="pb-6">
               {/* ── Seguridad ─────────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400">Seguridad</p>
+              <p className="text-sm font-bold text-default-700">Seguridad</p>
               <Button
                 color={lockOn ? "success" : "default"}
                 variant="flat"
@@ -81,7 +81,7 @@ export function SettingsModal({
               )}
 
               {/* ── Notificaciones ────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Recordatorios</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Recordatorios</p>
               <Button
                 color={pushStatus === "on" ? "success" : "default"}
                 variant="flat"
@@ -101,12 +101,12 @@ export function SettingsModal({
               </p>
 
               {/* ── Cuentas compartidas ───────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Cuentas compartidas</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Cuentas compartidas</p>
 
               {isSharedMember ? (
-                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/25 space-y-2">
+                <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 space-y-2">
                   <p className="text-sm text-default-600 flex items-center gap-2">
-                    <Users size={15} className="text-cyan-500 shrink-0" />
+                    <Users size={15} className="text-foreground shrink-0" />
                     Estás viendo <span className="font-bold">cuentas compartidas</span> de otra persona.
                   </p>
                   <p className="text-[11px] text-default-400">
@@ -126,15 +126,15 @@ export function SettingsModal({
                   {members.length > 0 && (
                     <div className="space-y-1.5">
                       {members.map((m) => (
-                        <div key={m.userId} className="flex items-center gap-2 p-2 rounded-xl bg-default-100/60 border border-default-200/50">
-                          <Users size={13} className="text-cyan-500 shrink-0" />
+                        <div key={m.userId} className="flex items-center gap-2 p-2 rounded-lg bg-default-100 border border-default-200">
+                          <Users size={13} className="text-foreground shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-default-700 truncate">{m.name || "Sin nombre"}</p>
                             {m.email && <p className="text-[10px] text-default-400 truncate">{m.email}</p>}
                           </div>
                           <button
                             onClick={() => removeMember(m.userId)}
-                            className="p-1.5 rounded-lg text-default-300 hover:text-rose-500 hover:bg-rose-500/10 transition-all shrink-0"
+                            className="p-1.5 rounded-lg text-default-500 hover:text-money-out-text hover:bg-money-out/10 transition-colors shrink-0"
                             aria-label={`Quitar a ${m.name || m.email || "miembro"}`}
                           >
                             <Trash2 size={13} />
@@ -145,10 +145,10 @@ export function SettingsModal({
                   )}
 
                   {inviteCode ? (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 space-y-1.5">
+                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 space-y-1.5">
                       <p className="text-[11px] text-default-500">Comparte este código (vence en 72 h):</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-2xl font-black tracking-[0.25em] tnum text-emerald-600 dark:text-emerald-400">
+                        <span className="figure text-4xl tracking-[0.12em] text-foreground">
                           {inviteCode}
                         </span>
                         <Button isIconOnly size="sm" variant="flat" color={codeCopied ? "success" : "default"} onPress={copyInvite} aria-label="Copiar código">
@@ -179,7 +179,7 @@ export function SettingsModal({
                         value={joinCode}
                         onValueChange={(v) => setJoinCode(v.toUpperCase())}
                         maxLength={6}
-                        classNames={{ input: "uppercase tracking-widest font-bold" }}
+                        classNames={{ input: joinCode ? "uppercase tracking-widest font-bold" : "" }} /* el código se escribe en mayúsculas; el texto de ayuda no */
                         className="flex-1"
                       />
                       <Button
@@ -193,12 +193,12 @@ export function SettingsModal({
                     </div>
                   )}
 
-                  {shareError && <p className="text-[11px] text-rose-500 font-semibold">{shareError}</p>}
+                  {shareError && <p className="text-[11px] text-money-out-text font-semibold">{shareError}</p>}
                 </>
               )}
 
               {/* ── Categorías personalizadas ──────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Categorías personalizadas</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Categorías personalizadas</p>
               {([
                 { kind: "expense" as const, label: "Para gastos", list: customExpenseCats, setter: setCustomExpenseCats, value: newCatE, setValue: setNewCatE },
                 { kind: "income" as const, label: "Para ingresos", list: customIncomeCats, setter: setCustomIncomeCats, value: newCatI, setValue: setNewCatI },
@@ -208,10 +208,10 @@ export function SettingsModal({
                   {list.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {list.map((c) => (
-                        <span key={c} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <span key={c} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-ink/5 text-foreground border border-ink/20">
                           <Tag size={10} />
                           {c}
-                          <button onClick={() => setter((prev) => prev.filter((x) => x !== c))} aria-label={`Quitar ${c}`} className="hover:text-rose-500 ml-0.5">
+                          <button onClick={() => setter((prev) => prev.filter((x) => x !== c))} aria-label={`Quitar ${c}`} className="hover:text-money-out-text ml-0.5">
                             <X size={11} />
                           </button>
                         </span>
@@ -232,7 +232,7 @@ export function SettingsModal({
               ))}
 
               {/* ── Datos ─────────────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Datos</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Datos</p>
               <p className="text-sm text-default-500 mb-2">
                 Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
               </p>
@@ -273,7 +273,7 @@ export function SettingsModal({
               </div>
 
               <a href="/privacidad" target="_blank" rel="noopener"
-                className="text-[11px] text-default-400 hover:text-sky-500 underline underline-offset-2 mt-2">
+                className="text-[11px] text-default-500 hover:text-foreground underline underline-offset-2 mt-2">
                 Aviso de privacidad
               </a>
             </ModalBody>

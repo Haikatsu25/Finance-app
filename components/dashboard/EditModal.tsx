@@ -37,7 +37,7 @@ export function EditModal({
         {(onClose) => (
           <>
             <ModalHeader className="flex items-center gap-2">
-              <Pencil size={17} className="text-indigo-500" />
+              <Pencil size={17} className="text-foreground" />
               Editar registro
             </ModalHeader>
             <ModalBody>
@@ -58,7 +58,7 @@ export function EditModal({
                   </Select>
                   {editTarget.kind === "liability" &&
                     liabilities.find((l) => l.id === editTarget.id)?.cardId && (
-                    <p className="text-[11px] text-cyan-500">
+                    <p className="text-[11px] text-default-600">
                       Este gasto está ligado a una tarjeta: al cambiar el monto, la deuda de la tarjeta se ajusta por la diferencia.
                     </p>
                   )}

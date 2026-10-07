@@ -58,61 +58,59 @@ export function Section({ title, description, icon, items, total, color, categor
   };
 
   return (
-    <Card className={`glass card-hover border ${t.border} h-full`}>
-      <CardHeader className="flex flex-col items-start px-5 pt-5 pb-0 gap-1">
-        <div className={`p-2.5 rounded-xl ${t.iconBg} mb-2`}>
-          <div className={t.text}>{icon}</div>
+    <Card className={`glass card-hover ${t.rule} h-full shadow-none`}>
+      <CardHeader className="flex items-start justify-between w-full px-5 pt-4 pb-0 gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
+            <span className={`${t.text} shrink-0`} aria-hidden>{icon}</span>
+            {title}
+          </h3>
+          <p className="text-xs text-default-500 mt-0.5">{description}</p>
         </div>
-        <div className="flex justify-between w-full items-start gap-2">
-          <div className="min-w-0">
-            <h3 className="text-base font-bold tracking-tight">{title}</h3>
-            <p className="text-xs text-default-400">{description}</p>
-          </div>
-          <span className={`text-lg tnum font-extrabold shrink-0 ${t.text}`}>
-            {moneyExact(total)}
-          </span>
-        </div>
+        <span className={`figure text-[1.65rem] shrink-0 ${t.text}`}>
+          {moneyExact(total)}
+        </span>
       </CardHeader>
 
       <CardBody className="px-5 py-4 flex flex-col gap-3">
-        <div className="flex-grow space-y-2 min-h-[80px]">
+        <div className="flex-grow min-h-[80px]">
           {items.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
-              <p className="text-xs font-medium">Sin registros aún</p>
-              <p className="text-[11px] text-default-300">Agrega el primero aquí abajo ↓</p>
+            <div className="h-full flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-300 rounded-lg text-default-500 gap-1">
+              <p className="text-xs font-semibold">Sin registros aún</p>
+              <p className="text-[11px]">Agrega el primero en el formulario de abajo</p>
             </div>
           ) : (
             items.map((item) => (
               <div
                 key={item.id}
-                className={`group flex justify-between items-center p-3 rounded-xl ${t.bgBadge} transition-all duration-200 border border-transparent hover:border-default-200 animate-slide-in-left`}
+                className="group flex justify-between items-center gap-2 py-2.5 border-b border-default-200 last:border-b-0"
               >
                 <div className="flex flex-col min-w-0">
-                  <span className="text-sm font-semibold text-default-700 truncate">{item.label}</span>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span className="text-sm font-semibold truncate">{item.label}</span>
+                  <div className="flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap">
                     {item.cardId && cardName(item.cardId) && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 font-bold flex items-center gap-1">
-                        <CreditCard size={9} />
+                      <span className="text-[11px] text-default-500 font-semibold flex items-center gap-1">
+                        <CreditCard size={11} aria-hidden />
                         {cardName(item.cardId)}
                       </span>
                     )}
                     {item.category && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${t.bg} ${t.text} font-medium`}>
+                      <span className="text-[11px] text-default-500">
                         {item.category}
                       </span>
                     )}
                     <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
-                    {item.date && <span className="text-[10px] text-default-400">{item.date}</span>}
+                    {item.date && <span className="text-[11px] text-default-500 tnum">{item.date}</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <span className={`tnum font-bold text-sm text-right mr-1 ${t.text}`}>
+                  <span className={`figure text-[1.35rem] text-right mr-1 ${t.text}`}>
                     {moneySmart(item.amount)}
                   </span>
                   {onEdit && (
                     <button
                       onClick={() => onEdit(item.id)}
-                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-1.5 rounded-lg hover:bg-indigo-500/10"
+                      className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-foreground/10"
                       aria-label={`Editar ${item.label}`}
                     >
                       <Pencil size={13} />
@@ -120,7 +118,7 @@ export function Section({ title, description, icon, items, total, color, categor
                   )}
                   <button
                     onClick={() => onRemove(item.id)}
-                    className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-1.5 rounded-lg hover:bg-rose-500/10"
+                    className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-money-out-text transition-colors p-1.5 rounded-md hover:bg-money-out/10"
                     aria-label={`Eliminar ${item.label}`}
                   >
                     <Trash2 size={13} />
@@ -204,12 +202,12 @@ export function Section({ title, description, icon, items, total, color, categor
           </div>
           {/* El total del banco suele incluir las mensualidades MSI ya facturadas */}
           {selectedCard && cardMsi > 0 && (
-            <label className="flex items-start gap-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 cursor-pointer">
+            <label className="flex items-start gap-2 p-2.5 rounded-lg bg-ink/5 border border-ink/20 cursor-pointer">
               <input
                 type="checkbox"
                 checked={includeMsi}
                 onChange={(e) => setIncludeMsi(e.target.checked)}
-                className="mt-0.5 accent-indigo-500"
+                className="mt-0.5 accent-[var(--ink)]"
               />
               <span className="text-[11px] text-default-600 leading-snug">
                 El monto ya incluye mis mensualidades de meses
@@ -219,14 +217,14 @@ export function Section({ title, description, icon, items, total, color, categor
           )}
 
           {amountValid && msiApplies && !msiTooBig && (
-            <p className="text-[11px] font-bold text-emerald-500 tnum animate-fade-in-up">
+            <p className="text-[11px] font-bold text-money-in-text tnum">
               Se registrarán {moneyExact(effectiveAmount)} de contado
               <span className="font-normal text-default-400"> ({moneyExact(parsed)} − {moneyExact(cardMsi)} de MSI)</span>
             </p>
           )}
 
           {msiTooBig && (
-            <p className="text-[11px] font-bold text-rose-500">
+            <p className="text-[11px] font-bold text-money-out-text">
               El monto es menor o igual a tus mensualidades — no quedaría nada de contado. Desmarca la casilla si el monto no incluye MSI.
             </p>
           )}
@@ -234,7 +232,7 @@ export function Section({ title, description, icon, items, total, color, categor
           <Button
             fullWidth
             color={color}
-            variant="shadow"
+            variant="solid"
             onPress={handleAdd}
             className="font-bold text-sm"
             size="sm"
@@ -245,7 +243,7 @@ export function Section({ title, description, icon, items, total, color, categor
           </Button>
 
           {selectedCard && (
-            <p className="text-[10px] text-default-400 leading-snug">
+            <p className="text-[11px] text-default-500 leading-snug">
               Se sumará a la deuda de <span className="font-bold">{selectedCard.label}</span>. Cuando lo pagues,
               elimínalo de esta lista (o usa el botón Pagado de la tarjeta) y se descontará.
             </p>

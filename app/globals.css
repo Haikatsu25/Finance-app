@@ -1,56 +1,85 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-@theme {
-  --font-sans: var(--font-inter);
+/* Los tokens de dinero y la tinta se exponen como colores de Tailwind
+   (text-money-in, bg-money-out/10, border-money-hold, text-ink…) para que
+   el color de un monto salga SIEMPRE de un token y no de un verde suelto. */
+@theme inline {
+  --font-sans: var(--font-archivo), system-ui, -apple-system, sans-serif;
+
+  --color-money-in: var(--money-in);
+  --color-money-out: var(--money-out);
+  --color-money-hold: var(--money-hold);
+  --color-money-in-text: var(--money-in-text);
+  --color-money-out-text: var(--money-out-text);
+  --color-money-hold-text: var(--money-hold-text);
+  --color-ink: var(--ink);
+  --color-cal: var(--cal);
 }
 
 /* ─────────────────────────────────────────────
-   DESIGN TOKENS — "calm fintech"
-   El verde/rojo quedan reservados para dinero.
-   Las superficies son sólidas: la app se ve cara
-   por precisión y contraste, no por blur.
+   DESIGN TOKENS — "Rotulado"
+   Tinta sobre cal. El color significa dinero y
+   nada más: verde entra, rojo sale, ámbar se
+   aparta. Superficies planas, sin sombras
+   difusas ni cristal.
 ───────────────────────────────────────────── */
 :root {
-  --background: #f6f8fb;
-  --foreground: #0b1220;
+  --cal: #eceee7;            /* fondo: cal verde-grisácea */
+  --paper: #f7f8f4;          /* paneles */
+  --ink: #1f1a24;            /* tinta ciruela: texto y botón primario */
+  --ink-soft: #5a5560;       /* texto secundario (6.3:1 sobre cal) */
 
-  --card-bg: #ffffff;
-  --card-border: rgba(15, 23, 42, 0.08);
-  --card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.10);
-  --card-shadow-hover: 0 2px 4px rgba(15, 23, 42, 0.05), 0 16px 32px -12px rgba(15, 23, 42, 0.16);
+  --background: var(--cal);
+  --foreground: var(--ink);
 
-  --nav-bg: rgba(255, 255, 255, 0.85);
-  --nav-border: rgba(15, 23, 42, 0.06);
+  --card-bg: var(--paper);
+  --card-border: rgba(31, 26, 36, 0.16);
+  --rule: rgba(31, 26, 36, 0.12);
 
-  /* Semántico — dinero */
+  --nav-bg: rgba(236, 238, 231, 0.92);
+  --nav-border: rgba(31, 26, 36, 0.16);
+
+  /* Semántico — dinero (valores originales, sin cambios) */
   --money-in: #059669;
   --money-out: #e11d48;
   --money-hold: #d97706;
 
-  --neural-primary: #6366f1;
+  /* Para TEXTO pequeño sobre papel: el token puro no llega a 4.5:1 */
+  --money-in-text: #047857;
+  --money-out-text: #be123c;
+  --money-hold-text: #b45309;
+
+  --money-in-wash: color-mix(in srgb, var(--money-in) 12%, transparent);
+  --money-out-wash: color-mix(in srgb, var(--money-out) 11%, transparent);
+  --money-hold-wash: color-mix(in srgb, var(--money-hold) 14%, transparent);
+
+  /* Texto sobre la losa del héroe (contraste calculado por estado) */
+  --slab-in-fg: var(--ink);       /* tinta sobre verde: 4.6:1 */
+  --slab-out-fg: #ffffff;         /* blanco sobre rojo: 4.7:1 */
+
+  --neural-primary: var(--ink);
 }
 
 :root[class~="dark"],
 .dark {
-  /* Premium dark: casi negro, tarjetas grafito con highlight superior,
-     neón solo como acento puntual */
-  --background: #060c16;
-  --foreground: #eef2f8;
+  --cal: #16131a;
+  --paper: #201c27;
+  --ink: #eceee7;
+  --ink-soft: #a29dab;
 
-  --card-bg: linear-gradient(180deg, #0c1524 0%, #09101c 100%);
-  --card-border: rgba(255, 255, 255, 0.065);
-  --card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 16px 40px -18px rgba(0, 0, 0, 0.8);
-  --card-shadow-hover:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 2px 4px rgba(0, 0, 0, 0.5),
-    0 24px 56px -18px rgba(0, 0, 0, 0.9);
+  --card-border: rgba(236, 238, 231, 0.16);
+  --rule: rgba(236, 238, 231, 0.12);
 
-  --nav-bg: rgba(6, 12, 22, 0.82);
-  --nav-border: rgba(255, 255, 255, 0.06);
+  --nav-bg: rgba(22, 19, 26, 0.92);
+  --nav-border: rgba(236, 238, 231, 0.16);
+
+  --money-in-text: #34d399;
+  --money-out-text: #fb7185;
+  --money-hold-text: #fbbf24;
+
+  --slab-in-fg: #16131a;
+  --slab-out-fg: #ffffff;
 }
 
 /* ─────────────────────────────────────────────
@@ -59,146 +88,174 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
-  /* Cifras tabulares: los montos se alinean y se comparan de un vistazo */
-  font-feature-settings: "tnum" 1, "cv11" 1;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-}
-
-/* Fondo con profundidad sutil y ESTÁTICA (nada de loops infinitos de GPU) */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 70% 55% at 12% -10%, rgba(59, 130, 246, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 0%, rgba(99, 102, 241, 0.06) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.dark body::before,
-:root[class~="dark"] body::before {
-  background:
-    radial-gradient(ellipse 60% 45% at 20% -12%, rgba(59, 130, 246, 0.16) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 95% -5%, rgba(56, 189, 248, 0.09) 0%, transparent 55%),
-    radial-gradient(ellipse 100% 60% at 50% 115%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
-  background: rgba(59, 130, 246, 0.28);
+  background: var(--ink);
+  color: var(--cal);
 }
 
 @layer components {
 
   /* ───────────────────────────────────────────
      SUPERFICIES
-     .glass conserva su nombre (lo usan los
-     componentes) pero ahora es una card sólida:
-     contraste AA garantizado y cero costo de GPU.
+     .glass conserva su nombre (lo usan todos los
+     componentes) pero es un panel plano: papel,
+     filo fino de tinta, sin sombra.
   ─────────────────────────────────────────── */
   .glass {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    box-shadow: var(--card-shadow);
-    border-radius: 16px;
+    border-radius: 10px;
   }
 
+  /* Antes elevaba la tarjeta al pasar el mouse: ahora solo
+     oscurece el filo, que es lo único que cambia de verdad. */
   .card-hover {
-    transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+    transition: border-color 0.15s ease;
   }
 
   .card-hover:hover {
-    box-shadow: var(--card-shadow-hover);
-    transform: translateY(-1px);
+    border-color: var(--ink);
   }
 
-  /* El blur queda SOLO donde hay contenido real detrás: la barra de navegación */
   .glass-nav {
     background: var(--nav-bg);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--nav-border);
   }
 
+  /* Filo superior del panel: lleva el color del flujo que contiene */
+  .rule-in   { border-top: 3px solid var(--money-in); }
+  .rule-out  { border-top: 3px solid var(--money-out); }
+  .rule-hold { border-top: 3px solid var(--money-hold); }
+  .rule-ink  { border-top: 3px solid var(--ink); }
+
   /* ───────────────────────────────────────────
-     HERO — tarjeta negra estilo "credit card"
-     con destello iridiscente. Oscura SIEMPRE
-     (también en modo claro): el clásico
-     "black card" premium.
+     LOSA DEL HÉROE
+     Un campo plano del color del saldo: verde si
+     te queda dinero, rojo si te falta. Es lo único
+     saturado de la pantalla.
   ─────────────────────────────────────────── */
+  .hero-slab {
+    --slab-bg: var(--money-in);
+    --slab-fg: var(--slab-in-fg);
+    border-radius: 20px;
+    padding: 22px 22px 24px;
+    background: var(--slab-bg);
+    color: var(--slab-fg);
+  }
+
+  .hero-slab[data-state="out"] {
+    --slab-bg: var(--money-out);
+    --slab-fg: var(--slab-out-fg);
+  }
+
+  @media (min-width: 640px) {
+    .hero-slab { padding: 28px 32px 30px; }
+  }
+
+  /* Botones de la losa: contorno en el color del texto; el principal va relleno */
+  .slab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 2px solid var(--slab-fg);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    background: transparent;
+    color: var(--slab-fg);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .slab-btn:hover {
+    background: color-mix(in srgb, var(--slab-fg) 16%, transparent);
+  }
+
+  .slab-btn[data-solid="true"] {
+    background: var(--slab-fg);
+    color: var(--slab-bg);
+  }
+
+  .slab-btn[data-solid="true"]:hover {
+    background: color-mix(in srgb, var(--slab-fg) 88%, var(--slab-bg));
+  }
+
+  /* Superficie oscura fija (bienvenida y candado): tinta plana */
   .hero-card {
-    background:
-      radial-gradient(130% 170% at 100% 0%, rgba(72, 149, 255, 0.30) 0%, transparent 48%),
-      radial-gradient(120% 160% at 0% 110%, rgba(30, 64, 175, 0.35) 0%, transparent 52%),
-      radial-gradient(90% 120% at 55% 45%, rgba(56, 189, 248, 0.08) 0%, transparent 60%),
-      linear-gradient(135deg, #0b1526 0%, #060c16 100%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: #1f1a24;
+    color: #eceee7;
+    border: 0;
   }
 
   .hero-card-negative {
-    background:
-      radial-gradient(130% 170% at 100% 0%, rgba(255, 77, 103, 0.26) 0%, transparent 48%),
-      radial-gradient(120% 160% at 0% 110%, rgba(249, 115, 22, 0.14) 0%, transparent 52%),
-      linear-gradient(135deg, #150b0e 0%, #0a0507 100%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-  }
-
-  /* Línea de brillo superior, como el canto de una tarjeta metálica */
-  .hero-card::after,
-  .hero-card-negative::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 8%;
-    right: 8%;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-    pointer-events: none;
-  }
-
-  .glow-hero-positive {
-    box-shadow: 0 24px 64px -20px rgba(59, 130, 246, 0.40), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-  }
-
-  .glow-hero-negative {
-    box-shadow: 0 24px 64px -20px rgba(255, 77, 103, 0.38), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
-  }
-
-  /* Texto-neón para el gran número del héroe */
-  .neon-number {
+    background: var(--money-out);
     color: #ffffff;
-    text-shadow: 0 0 32px rgba(96, 165, 250, 0.40);
+    border: 0;
   }
 
+  .glow-hero-positive,
+  .glow-hero-negative,
+  .glow-emerald,
+  .glow-rose,
+  .glow-purple {
+    box-shadow: none;
+  }
+
+  .neon-number,
   .neon-number-negative {
-    color: #ffffff;
-    text-shadow: 0 0 32px rgba(255, 77, 103, 0.4);
+    color: inherit;
+    text-shadow: none;
   }
 
   /* ───────────────────────────────────────────
      TEXTO
+     Los montos van en Archivo condensado (ancho 62,
+     peso 800): se leen de lejos y caben en móvil.
+     El resto de la interfaz usa el ancho normal.
   ─────────────────────────────────────────── */
-  .section-title {
+  .figure {
+    font-weight: 800;
+    font-variation-settings: "wdth" 62;
+    font-stretch: 62%;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.01em;
+    line-height: 0.9;
+  }
+
+  .figure-xl {
+    font-size: clamp(4.5rem, 24vw, 9.5rem);
+    line-height: 0.82;
     letter-spacing: -0.02em;
   }
 
-  .gradient-text-emerald {
-    background: linear-gradient(120deg, #3b82f6 0%, #38bdf8 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+  .figure-md {
+    font-size: 1.75rem;
   }
 
+  .section-title {
+    letter-spacing: -0.015em;
+    font-weight: 700;
+  }
+
+  /* El texto con degradado ya no existe: queda en tinta */
+  .gradient-text-emerald,
   .gradient-text-purple {
-    background: linear-gradient(120deg, #6366f1 0%, #a855f7 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: inherit;
   }
 
   .tnum {
@@ -206,19 +263,79 @@ body::before {
   }
 
   /* ───────────────────────────────────────────
-     GLOWS — ahora sombras discretas de acento,
-     no neón. Un solo elemento saturado por vista.
+     CARA DE TARJETA
+     Tinta fija en ambos temas (como un plástico real). Trae su propia
+     paleta porque el rojo/verde de los tokens no llegan a 4.5:1 sobre ella.
+     La franja izquierda identifica cada tarjeta por TRAMA, no por color.
   ─────────────────────────────────────────── */
-  .glow-emerald {
-    box-shadow: 0 12px 40px -12px rgba(59, 130, 246, 0.45);
+  .card-face {
+    --face-bg: #1f1a24;
+    --face-fg: #eceee7;
+    --face-muted: #b8b5bd;
+    --face-line: rgba(236, 238, 231, 0.22);
+    position: relative;
+    overflow: hidden;
+    background: var(--face-bg);
+    color: var(--face-fg);
+    border: 1px solid var(--face-line);
+    border-radius: 16px;
+    padding: 16px 16px 16px 32px;
+    display: flex;
+    flex-direction: column;
   }
 
-  .glow-rose {
-    box-shadow: 0 12px 40px -12px rgba(244, 63, 94, 0.45);
+  .card-stripe {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 14px;
+    border-right: 1px solid var(--face-line);
   }
 
-  .glow-purple {
-    box-shadow: 0 12px 40px -12px rgba(139, 92, 246, 0.40);
+  .stripe-0 { background: #eceee7; }
+  .stripe-1 { background: repeating-linear-gradient(135deg, #eceee7 0 3px, transparent 3px 7px); }
+  .stripe-2 { background: radial-gradient(circle at 50% 50%, #eceee7 1.7px, transparent 2.1px) 0 0 / 7px 7px; }
+  .stripe-3 { background: repeating-linear-gradient(0deg, #eceee7 0 3px, transparent 3px 7px); }
+  .stripe-4 { background: conic-gradient(#eceee7 25%, transparent 0 50%, #eceee7 0 75%, transparent 0) 0 0 / 10px 10px; }
+  .stripe-5 { background: repeating-linear-gradient(90deg, #eceee7 0 2px, transparent 2px 5px); }
+  .stripe-6 { background: radial-gradient(circle at 50% 50%, #eceee7 3.4px, transparent 3.9px) 0 0 / 14px 14px; }
+  .stripe-7 {
+    background:
+      linear-gradient(135deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
+      linear-gradient(225deg, #eceee7 25%, transparent 25%) -5px 0 / 10px 10px,
+      linear-gradient(315deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px,
+      linear-gradient(45deg, #eceee7 25%, transparent 25%) 0 0 / 10px 10px;
+  }
+
+  /* ───────────────────────────────────────────
+     TIRA DE REPARTO
+     Cada tramo se dibuja una vez al cargar.
+     Los tramos que no son «dinero libre» llevan
+     trama, para no depender solo del color.
+  ─────────────────────────────────────────── */
+  .strip-seg {
+    height: 100%;
+    min-width: 2px;
+    transform-origin: left center;
+    animation: stripGrow 0.7s cubic-bezier(0.2, 0, 0, 1) both;
+    animation-delay: calc(var(--i, 0) * 90ms);
+  }
+
+  .seg-in   { background: var(--money-in); }
+  .seg-out  { background: var(--money-out); }
+  .seg-hold { background: var(--money-hold); }
+
+  .seg-fixed {
+    background:
+      repeating-linear-gradient(135deg, transparent 0 4px, rgba(255, 255, 255, 0.55) 4px 6px),
+      var(--money-out);
+  }
+
+  .seg-msi {
+    background:
+      radial-gradient(circle at 3px 3px, rgba(255, 255, 255, 0.7) 1.2px, transparent 1.6px) 0 0 / 7px 7px,
+      var(--money-out);
   }
 
   /* ───────────────────────────────────────────
@@ -231,8 +348,8 @@ body::before {
     right: 0;
     z-index: 50;
     background: var(--nav-bg);
-    backdrop-filter: blur(14px) saturate(160%);
-    -webkit-backdrop-filter: blur(14px) saturate(160%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-top: 1px solid var(--nav-border);
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -244,14 +361,13 @@ body::before {
     z-index: 50;
     width: 56px;
     height: 56px;
-    border-radius: 9999px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
-    box-shadow: 0 8px 24px -6px rgba(59, 130, 246, 0.5);
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s;
+    color: var(--cal);
+    background: var(--ink);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
   }
 
   .fab:active {
@@ -263,14 +379,13 @@ body::before {
   }
 
   /* ───────────────────────────────────────────
-     SKELETONS — carga con forma, nunca pantalla
-     en blanco ni spinners
+     SKELETONS — carga con forma
   ─────────────────────────────────────────── */
   .skeleton {
     position: relative;
     overflow: hidden;
-    background: rgba(148, 163, 184, 0.14);
-    border-radius: 12px;
+    background: var(--rule);
+    border-radius: 10px;
   }
 
   .skeleton::after {
@@ -278,7 +393,7 @@ body::before {
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
     animation: shimmer 1.4s infinite;
   }
 
@@ -292,16 +407,21 @@ body::before {
   .undo-toast {
     position: fixed;
     bottom: calc(84px + env(safe-area-inset-bottom));
-    left: 50%;
-    transform: translateX(-50%);
+    /* Centrado sin transform: la animación fadeInUp termina en translateY(0) y pisaba
+       el translateX(-50%), dejando el aviso corrido a la derecha y cortado.
+       left:50% además le daba solo media pantalla de ancho (el mensaje salía truncado). */
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+    width: max-content;
+    max-width: calc(100vw - 32px);
     z-index: 60;
     display: flex;
     align-items: center;
     gap: 12px;
     background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    box-shadow: var(--card-shadow-hover);
-    border-radius: 9999px;
+    border: 2px solid var(--ink);
+    border-radius: 12px;
     padding: 10px 14px 10px 18px;
     animation: fadeInUp 0.25s cubic-bezier(0.2, 0, 0, 1) both;
   }
@@ -312,9 +432,6 @@ body::before {
     }
   }
 
-  /* ───────────────────────────────────────────
-     RED NEURONAL
-  ─────────────────────────────────────────── */
   .neural-node {
     animation: nodePulse 2.4s ease-in-out infinite;
   }
@@ -354,6 +471,11 @@ body::before {
   to   { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes stripGrow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
@@ -377,20 +499,60 @@ body::before {
   }
 }
 
-:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-  border-radius: 4px;
+/* Placeholders: el gris por defecto de HeroUI no llega a 4.5:1 sobre papel */
+input::placeholder,
+textarea::placeholder {
+  color: var(--ink-soft);
+  opacity: 1;
 }
 
-/* Scrollbar discreto */
+/* Gráficas (recharts): ejes, rejilla y leyenda salen de los tokens. Los atributos
+   SVG quedaban fijos en gris azulado, ilegible en uno de los dos temas. */
+.chart-tokens .recharts-cartesian-axis-tick-value,
+.chart-tokens .recharts-label {
+  fill: var(--ink-soft);
+}
+
+.chart-tokens .recharts-cartesian-grid line {
+  stroke: var(--rule);
+}
+
+/* La leyenda pinta cada texto del color de su serie (rojo sobre papel no llega a 4.5:1) */
+.chart-tokens .recharts-legend-item-text {
+  color: var(--foreground) !important;
+}
+
+.card-face input::placeholder {
+  color: var(--face-muted);
+  opacity: 1;
+}
+
+/* Botón de cerrar de TODOS los modales (HeroUI lo dibuja de 32px): 44px, como el resto de
+   acciones. Va fuera de @layer: la clase de utilidad de HeroUI está en una capa y ganaría. */
+[role="dialog"] > button[aria-label="Close"],
+[role="dialog"] > button[aria-label="Cerrar"] {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
+/* Foco: tinta de 2px con un halo del color del fondo, visible
+   tanto sobre papel como sobre la losa verde o roja. */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--cal);
+  border-radius: 6px;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.35);
+  background: var(--rule);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: content-box;
@@ -398,4 +560,27 @@ body::before {
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* Áreas táctiles: todo botón visible mide al menos 36px y los de acción principal (relleno sólido,
+   botones de la losa, botón flotante) al menos 44px. Va fuera de @layer para ganarle a las clases
+   de tamaño "sm" de HeroUI. Se excluyen los botones solo para lectores de pantalla (1x1). */
+:where(button:not(.sr-only):not([aria-label="Descartar"]):not([aria-label="Dismiss"]), [role="button"]:not(.sr-only)) {
+  min-height: 36px;
+  min-width: 36px;
+}
+button.bg-primary,
+button.bg-foreground,
+button[data-solid="true"],
+.fab {
+  min-height: 44px;
+}
+button.bg-foreground[aria-label],
+button.bg-primary[aria-label] {
+  min-width: 44px;
+}
+
+.cl-userButtonTrigger {
+  min-height: 36px;
+  min-width: 36px;
 }

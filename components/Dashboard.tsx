@@ -7,8 +7,6 @@ import {
   Wallet,
   ShieldAlert,
   DollarSign,
-  TrendingDown,
-  TrendingUp,
   ArrowLeftRight,
 } from "lucide-react";
 import {
@@ -25,7 +23,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth } from "@/lib/finance-utils";
+import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso, isoDate } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -56,6 +54,7 @@ import { TopNav } from "./dashboard/TopNav";
 import { HomeViewToggle } from "./dashboard/HomeViewToggle";
 import { UndoToast } from "./dashboard/UndoToast";
 import { BalanceHero } from "./dashboard/BalanceHero";
+import { AllocationStrip } from "./dashboard/AllocationStrip";
 import { WelcomeCard } from "./dashboard/WelcomeCard";
 import { DemoDataBanner } from "./dashboard/DemoDataBanner";
 import { PendingFixedChargesCard } from "./dashboard/PendingFixedChargesCard";
@@ -108,7 +107,7 @@ export default function Dashboard() {
   const [leaveArmed,   setLeaveArmed]   = useState(false);
   const [codeCopied,   setCodeCopied]   = useState(false);
 
-  const { user } = useUser();
+  const { user, isLoaded, isSignedIn } = useUser();
   const isSharedMember = !!(docOwnerId && user?.id && docOwnerId !== user.id);
 
   // Autoría: se sella en cada registro nuevo (visible en cuentas compartidas)
@@ -132,6 +131,8 @@ export default function Dashboard() {
   const [pendingUndo, setPendingUndo] = useState<{
     label: string;
     restore: () => void;
+    /** Texto completo del toast; si falta, dice "Se eliminó {label}" */
+    message?: string;
   } | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -185,6 +186,22 @@ export default function Dashboard() {
     setLocked(enabled);
     biometricsAvailable().then(setBioAvailable);
     getPushStatus().then(setPushStatus);
+  }, []);
+
+  // Carga de datos. Espera a que Clerk termine de cargar: antes se pedía /api/finance
+  // al montar, cuando Clerk aún no sabía quién eres, y el servidor respondía 401
+  // (dos por carga). La ref evita repetir la petición con el doble montaje de
+  // StrictMode o con re-renders de la misma sesión.
+  const userId = user?.id;
+  const fetchedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isLoaded) return;
+    // Sin sesión se muestra la pantalla de entrada: no hay nada que pedir. isLoading se
+    // queda en true a propósito: el guardado automático exige !isLoading, y sin sesión
+    // dispararía un POST /api/finance (otro 401).
+    if (!isSignedIn || !userId) return;
+    if (fetchedFor.current === userId) return;
+    fetchedFor.current = userId;
 
     const fetchData = async () => {
       try {
@@ -234,7 +251,7 @@ export default function Dashboard() {
       }
     };
     fetchData();
-  }, [applyServerData]);
+  }, [isLoaded, isSignedIn, userId, applyServerData]);
 
   const togglePrivacy = () => {
     const next = !privacy;
@@ -456,14 +473,11 @@ export default function Dashboard() {
 
   const animatedAvailable = useAnimatedCounter(afterThisMonth);
   const isPositive        = afterThisMonth >= 0;
-  const balanceProgress   = totalAssets > 0
-    ? Math.max(0, Math.min(100, (afterThisMonth / totalAssets) * 100))
-    : 0;
 
   // ── Deshacer borrados ────────────────────────────────────────
-  const scheduleUndo = (label: string, restore: () => void) => {
+  const scheduleUndo = (label: string, restore: () => void, message?: string) => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    setPendingUndo({ label, restore });
+    setPendingUndo({ label, restore, message });
     undoTimerRef.current = setTimeout(() => setPendingUndo(null), 5000);
   };
 
@@ -491,10 +505,13 @@ export default function Dashboard() {
     setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: 0, lastPaidCycle: paidCycle } : c)));
     if (linked.length) setLiabilities((prev) => prev.filter((l) => l.cardId !== cardId));
 
+    const [py, pm, pd] = paidCycle.split("-").map(Number);
+    const cycleLabel = new Date(py, pm - 1, pd).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
     scheduleUndo(`Pago de ${card.label}`, () => {
       setCreditCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, balance: prevBalance, lastPaidCycle: prevPaidCycle } : c)));
       if (linked.length) setLiabilities((prev) => [...prev, ...linked]);
-    });
+    }, `Marcaste pagado el ciclo del ${cycleLabel} (${card.label})`);
   };
 
   /** Suma (o resta con signo negativo) a la deuda de contado de una tarjeta */
@@ -512,7 +529,7 @@ export default function Dashboard() {
       id: crypto.randomUUID(),
       label,
       amount: rounded,
-      date: date || new Date().toISOString().split("T")[0],
+      date: date || todayIso(),
       type,
       category,
       ...(type === "liability" && cardId ? { cardId } : {}),
@@ -811,7 +828,7 @@ export default function Dashboard() {
         : a.id === to.id ? { ...a, amount: round2(a.amount - amount) }
         : a,
       ));
-    });
+    }, `Transferiste ${money(amount)} de ${from.label} a ${to.label}`);
     setTAmount("");
     close();
   };
@@ -836,10 +853,15 @@ export default function Dashboard() {
 
   const loadDemoData = () => {
     const today = new Date();
-    const iso = (d: Date) => d.toISOString().split("T")[0];
+    const iso = isoDate; // hora local, no UTC
     const daysAgo = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
     const monthsFromNow = (n: number) => { const d = new Date(today); d.setMonth(d.getMonth() + n); return d; };
     const uid = () => crypto.randomUUID();
+    // La tarjeta de ejemplo siempre está "a la mitad de su ciclo": cortó hace 6 días y paga dentro de 14.
+    // Con días fijos (corte 18 / pago 28) aparecía como pago vencido del día 1 al 18 de cada mes.
+    const dayOfMonth = (d: Date) => Math.min(d.getDate(), 28);
+    const cutoffDay = dayOfMonth(daysAgo(6));
+    const dueDay = dayOfMonth(daysAgo(-14));
 
     const cardId = uid();
     const acc1 = uid();
@@ -851,7 +873,7 @@ export default function Dashboard() {
       { id: uid(), label: "Fondo emergencia (ejemplo)", amount: 2000, date: iso(today), type: "bucket", category: "Emergencia" },
     ]);
     setCreditCards([
-      { id: cardId, label: "Nu (ejemplo)", balance: 2350, creditLimit: 20000, cutoffDay: 18, dueDay: 28, apr: 65, minPayment: 0 },
+      { id: cardId, label: "Nu (ejemplo)", balance: 2350, creditLimit: 20000, cutoffDay, dueDay, apr: 65, minPayment: 0 },
     ]);
     setInstallments([
       { id: uid(), cardId, label: "Pantalla (ejemplo)", totalAmount: 6000, months: 6, startDate: iso(daysAgo(65)) },
@@ -905,7 +927,7 @@ export default function Dashboard() {
   const pendingFixedTotal = round2(pendingFixed.reduce((s, i) => s + i.amount, 0));
 
   const registerFixedCharges = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayIso();
     setTransactions((prev) => [
       ...prev,
       ...pendingFixed.map((s) => ({
@@ -964,7 +986,7 @@ export default function Dashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `finance-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `finance-backup-${todayIso()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1126,7 +1148,7 @@ export default function Dashboard() {
               viewerId={user?.id}
             />
           ) : (
-          <section className="animate-fade-in-up">
+          <section className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
               <BalanceHero
@@ -1138,18 +1160,26 @@ export default function Dashboard() {
                 totalLiabilities={totalLiabilities}
                 totalFixedCosts={totalFixedCosts}
                 totalMsiMonthly={totalMsiMonthly}
-                balanceProgress={balanceProgress}
                 onSaveSnapshot={saveSnapshot}
                 onViewHistory={() => changeTab("history")}
                 onOpenSettings={onDataModalOpen}
               />
 
               <div className="col-span-1 md:col-span-4 grid grid-cols-3 md:flex md:flex-col gap-2 md:gap-3">
-                <StatCard label="Total Activos"  value={totalAssets}      icon={<TrendingUp size={20} />}   tone="emerald" delay={100} />
-                <StatCard label="Gastos / Deudas" value={totalLiabilities} icon={<TrendingDown size={20} />} tone="rose"    delay={200} />
-                <StatCard label="Apartados"       value={totalBuckets}     icon={<Wallet size={20} />}       tone="amber"   delay={300} />
+                <StatCard label="Total activos"   value={totalAssets}      tone="emerald" />
+                <StatCard label="Deudas"         value={totalLiabilities} tone="rose" />
+                <StatCard label="Apartados"       value={totalBuckets}     tone="amber" />
               </div>
             </div>
+
+            <AllocationStrip
+              totalAssets={totalAssets}
+              totalLiabilities={totalLiabilities}
+              totalBuckets={totalBuckets}
+              totalFixedCosts={totalFixedCosts}
+              totalMsiMonthly={totalMsiMonthly}
+              remaining={afterThisMonth}
+            />
           </section>
           )}
 
@@ -1183,9 +1213,9 @@ export default function Dashboard() {
           {/* ── MIS FINANZAS ──────────────────────────────────── */}
           <section className={activeTab !== "dashboard" || planMode ? "hidden" : ""} id="management-sections">
             <div className="flex items-center justify-between gap-2 mb-4">
-              <h2 className="text-xl font-bold section-title">Mis Finanzas</h2>
+              <h2 className="text-xl font-bold section-title">Mis finanzas</h2>
               {assets.length >= 2 && (
-                <Button size="sm" variant="flat" color="primary" className="font-bold"
+                <Button size="sm" variant="flat" color="primary" className="font-bold min-h-11"
                   startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>
                   Transferir entre cuentas
                 </Button>
@@ -1302,7 +1332,7 @@ export default function Dashboard() {
                 startBalance={available}
                 transactions={transactions}
               />
-              <Analytics history={history} assets={assets} liabilities={liabilities} isDark={isDark} />
+              <Analytics history={history} assets={assets} transactions={transactions} />
             </div>
           </section>
 
@@ -1339,7 +1369,7 @@ export default function Dashboard() {
 
         {/* ── TOAST DESHACER ──────────────────────────────────── */}
         {pendingUndo && (
-          <UndoToast label={pendingUndo.label} onUndo={handleUndo} />
+          <UndoToast label={pendingUndo.label} message={pendingUndo.message} onUndo={handleUndo} />
         )}
 
         {/* ── MODAL: captura rápida (FAB) ─────────────────────── */}

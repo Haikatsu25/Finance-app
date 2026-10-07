@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardHeader, CardBody, Input, Button, Select, SelectItem } from "@heroui/react";
 import { PiggyBank, Plus, Trash2, AlertTriangle, Pencil, Check } from "lucide-react";
 import { BudgetItem, TransactionItem } from "@/types";
@@ -8,6 +8,8 @@ import { money, round2 } from "@/lib/format";
 import { monthKey, spentByCategory } from "@/lib/finance-utils";
 import { EXPENSE_CATEGORIES } from "./Transactions";
 import AddedByBadge from "./AddedByBadge";
+
+const ICON_BTN = "opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 w-11 h-11 grid place-items-center rounded-lg text-default-500 transition-colors hover:bg-foreground/10";
 
 export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpdateLimit, extraCategories = [], viewerId }: {
   budgets: BudgetItem[];
@@ -19,7 +21,7 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
   viewerId?: string;
 }) {
   const catList = [...EXPENSE_CATEGORIES.slice(0, -1), ...extraCategories, "Otros"];
-  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [category, setCategory] = useState("");
   const [limit, setLimit] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -37,31 +39,34 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
   );
 
   const available = catList.filter((c) => !budgets.some((b) => b.category === c));
+  // La categoría elegida solo vale si sigue libre; si no (por ejemplo al recargar, cuando
+  // Comida ya tiene presupuesto), se usa la primera libre. Antes el selector se veía vacío
+  // pero conservaba "Comida" y "Crear" duplicaba el presupuesto.
+  const effectiveCategory = available.includes(category) ? category : (available[0] ?? "");
   const limitValid = limit !== "" && Number.isFinite(parseFloat(limit)) && parseFloat(limit) > 0;
 
   const submit = () => {
-    if (!limitValid || !category) return;
-    onAdd({ category, monthlyLimit: round2(parseFloat(limit)) });
+    if (!limitValid || !effectiveCategory) return;
+    if (budgets.some((b) => b.category === effectiveCategory)) return;
+    onAdd({ category: effectiveCategory, monthlyLimit: round2(parseFloat(limit)) });
     setLimit("");
-    const next = available.filter((c) => c !== category);
-    if (next.length) setCategory(next[0]);
   };
 
   return (
-    <Card className="glass card-hover border border-blue-500/20 col-span-1 sm:col-span-2 lg:col-span-3">
-      <CardHeader className="flex flex-col items-start px-5 pt-5 pb-0 gap-1">
-        <div className="p-2.5 rounded-xl bg-blue-500/12 mb-2">
-          <PiggyBank size={18} className="text-blue-500 dark:text-blue-400" />
-        </div>
-        <h3 className="text-base font-bold tracking-tight">Presupuestos del Mes</h3>
-        <p className="text-xs text-default-400">Límite por categoría, calculado con tus movimientos</p>
+    <Card className="glass card-hover rule-out col-span-1 sm:col-span-2 lg:col-span-3 shadow-none">
+      <CardHeader className="flex flex-col items-start px-5 pt-4 pb-0 gap-0.5">
+        <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
+          <PiggyBank size={18} className="text-money-out-text shrink-0" aria-hidden />
+          Presupuestos del mes
+        </h3>
+        <p className="text-xs text-default-500">Límite por categoría, calculado con tus movimientos</p>
       </CardHeader>
 
       <CardBody className="px-5 py-4 flex flex-col gap-4">
         {budgets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
-            <p className="text-xs font-medium">Sin presupuestos</p>
-            <p className="text-[11px] text-default-300">Ej. Comida $3,000/mes — te avisamos al 80%</p>
+          <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-default-300 rounded-lg text-default-500 gap-1">
+            <p className="text-xs font-semibold">Sin presupuestos</p>
+            <p className="text-[11px]">Ej. Comida $3,000 al mes. Te avisamos al 80%</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -69,68 +74,77 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
               const used = spent.get(b.category) || 0;
               const pct = b.monthlyLimit > 0 ? (used / b.monthlyLimit) * 100 : 0;
               const over = pct >= 100;
-              const warn = pct >= 80 && !over;
-              const barCls = over ? "bg-rose-500" : warn ? "bg-amber-500" : "bg-blue-500";
+              const near = pct >= 80 && !over;
               return (
-                <div key={b.id} className={`group p-3.5 rounded-xl border transition-colors ${
-                  over ? "bg-rose-500/8 border-rose-500/25" : warn ? "bg-amber-500/8 border-amber-500/25" : "bg-blue-500/5 border-blue-500/15"
-                }`}>
-                  <div className="flex justify-between items-start mb-1.5">
-                    <span className="text-sm font-bold text-default-800 flex items-center gap-1.5 flex-wrap">
+                <div key={b.id} className="group p-4 rounded-lg border border-default-200 bg-background/60 hover:border-foreground transition-colors">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="text-sm font-bold flex items-center gap-1.5 flex-wrap pt-0.5">
                       {b.category}
-                      {(over || warn) && <AlertTriangle size={12} className={over ? "text-rose-500" : "text-amber-500"} />}
                       <AddedByBadge addedBy={b.addedBy} viewerId={viewerId} />
                     </span>
-                    <div className="flex items-center gap-0.5">
+                    <div className="flex items-center -mr-2.5 -mt-2.5">
                       {onUpdateLimit && (
                         <button
                           onClick={() => { setEditingId(b.id); setEditValue(String(b.monthlyLimit)); }}
-                          className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-indigo-500 transition-all p-0.5"
+                          className={`${ICON_BTN} hover:text-foreground`}
                           aria-label={`Editar límite de ${b.category}`}
                         >
-                          <Pencil size={13} />
+                          <Pencil size={14} />
                         </button>
                       )}
                       <button
                         onClick={() => onRemove(b.id)}
-                        className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-300 hover:text-rose-500 transition-all p-0.5"
+                        className={`${ICON_BTN} hover:text-money-out-text`}
                         aria-label={`Eliminar presupuesto de ${b.category}`}
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs tnum mb-1.5 gap-2">
-                    <span className={`font-bold ${over ? "text-rose-500" : warn ? "text-amber-600 dark:text-amber-400" : "text-default-600"}`}>
-                      {money(used)}
-                    </span>
+
+                  <div className="flex justify-between items-end gap-2 mt-1">
+                    <span className="figure text-[1.75rem]">{money(used)}</span>
                     {editingId === b.id ? (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1.5">
                         <Input
-                          size="sm" type="number" min="0" inputMode="decimal" variant="bordered"
+                          size="md" type="number" min="0" inputMode="decimal" variant="bordered"
                           value={editValue} onValueChange={setEditValue}
                           onKeyDown={(e) => { if (e.key === "Enter") commitEdit(b.id); }}
-                          className="w-24" aria-label="Nuevo límite"
-                          startContent={<span className="text-default-400 text-[10px]">$</span>}
+                          className="w-28" aria-label="Nuevo límite"
+                          startContent={<span className="text-default-500 text-xs">$</span>}
                         />
-                        <Button isIconOnly size="sm" color="primary" variant="flat" className="min-w-7 w-7 h-7"
+                        <Button isIconOnly color="primary" variant="solid" className="min-w-11 w-11 h-11"
                           onPress={() => commitEdit(b.id)} aria-label="Guardar límite">
-                          <Check size={13} />
+                          <Check size={16} />
                         </Button>
                       </span>
                     ) : (
-                      <span className="text-default-400">de {money(b.monthlyLimit)}</span>
+                      <span className="text-xs text-default-600 tnum pb-1">de {money(b.monthlyLimit)}</span>
                     )}
                   </div>
-                  <div className="h-2 rounded-full bg-default-200/60 overflow-hidden" role="progressbar"
+
+                  {/* El avance siempre va en el token de salida: es dinero que ya salió. El aviso
+                      del 80% y el exceso se dicen con ícono y texto, no con otro color. */}
+                  <div className="h-2.5 rounded-sm bg-default-200 mt-2 overflow-hidden" role="progressbar"
+                    aria-label={`Gastado de ${b.category}`}
                     aria-valuenow={Math.min(100, Math.round(pct))} aria-valuemin={0} aria-valuemax={100}>
-                    <div className={`h-full rounded-full transition-all duration-500 ${barCls}`}
+                    <div className="h-full rounded-sm bg-money-out transition-all duration-500"
                       style={{ width: `${Math.min(100, pct)}%` }} />
                   </div>
-                  <p className="text-[10px] text-default-400 mt-1.5">
-                    {over
-                      ? <span className="text-rose-500 font-bold">Excedido por {money(used - b.monthlyLimit)}</span>
-                      : `Te quedan ${money(b.monthlyLimit - used)} este mes`}
+                  <p className="text-xs mt-2 flex items-center gap-1.5 tnum">
+                    {over ? (
+                      <>
+                        <AlertTriangle size={13} className="shrink-0 text-money-out-text" aria-hidden />
+                        <span className="text-money-out-text font-bold">Excedido por {money(used - b.monthlyLimit)}</span>
+                      </>
+                    ) : (
+                      <>
+                        {near && <AlertTriangle size={13} className="shrink-0" aria-hidden />}
+                        {near && <span className="font-bold">Casi al límite.</span>}
+                        <span className="text-money-in-text font-bold">Te quedan {money(b.monthlyLimit - used)}</span>
+                        <span className="text-default-600">este mes</span>
+                      </>
+                    )}
                   </p>
                 </div>
               );
@@ -138,15 +152,18 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-default-200/50">
-          <Select size="sm" variant="bordered" aria-label="Categoría" className="flex-1"
-            selectedKeys={category ? [category] : []} onChange={(e) => setCategory(e.target.value)}>
-            {(available.length ? available : catList).map((c) => <SelectItem key={c}>{c}</SelectItem>)}
+        <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-default-200">
+          <Select size="md" variant="bordered" aria-label="Categoría" className="flex-1"
+            isDisabled={available.length === 0}
+            placeholder={available.length === 0 ? "Ya tienes presupuesto en todas" : undefined}
+            selectedKeys={effectiveCategory ? [effectiveCategory] : []}
+            onChange={(e) => { if (e.target.value) setCategory(e.target.value); }}>
+            {available.map((c) => <SelectItem key={c}>{c}</SelectItem>)}
           </Select>
-          <Input type="number" min="0" inputMode="decimal" placeholder="Límite mensual $" size="sm" variant="bordered"
-            className="w-full sm:w-44" value={limit} onValueChange={setLimit} />
-          <Button size="sm" variant="shadow" className="font-bold bg-blue-500 text-white"
-            isDisabled={!limitValid} startContent={<Plus size={14} />} onPress={submit}>
+          <Input type="number" min="0" inputMode="decimal" placeholder="Límite mensual $" size="md" variant="bordered"
+            aria-label="Límite mensual" className="w-full sm:w-44" value={limit} onValueChange={setLimit} />
+          <Button color="primary" variant="solid" className="font-bold h-12 sm:h-auto min-h-11"
+            isDisabled={!limitValid || !effectiveCategory} startContent={<Plus size={16} />} onPress={submit}>
             Crear presupuesto
           </Button>
         </div>

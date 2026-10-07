@@ -1,42 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Card, CardHeader, CardBody, Input, Button, Select, SelectItem,
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure,
 } from "@heroui/react";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
-  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil, Minus,
+  Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil, Minus, Scissors,
 } from "lucide-react";
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
-  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
-} from "@/lib/finance-utils";
+  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus, todayIso } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
 
-// Gradientes tipo tarjeta física — se asignan cíclicamente
-const CARD_SKINS = [
-  "from-slate-800 via-slate-900 to-black",
-  "from-indigo-900 via-slate-900 to-black",
-  "from-emerald-900 via-slate-900 to-black",
-  "from-rose-900 via-slate-900 to-black",
-  "from-cyan-900 via-slate-900 to-black",
-];
-
 const TERMS = [3, 6, 9, 12, 18, 24];
 
-function utilizationColor(pct: number): string {
-  if (pct >= 80) return "bg-rose-500";
-  if (pct >= 50) return "bg-amber-500";
-  return "bg-emerald-500";
+// ─────────────────────────────────────────────────────────────────
+// FRANJA LATERAL — cada tarjeta se reconoce por su trama, no por color.
+// La trama sale de un hash del id (estable aunque cambie el orden) y, si ya
+// la usa otra tarjeta, avanza a la siguiente libre. Con más de 8 se repiten.
+// ─────────────────────────────────────────────────────────────────
+const STRIPE_COUNT = 8;
+
+function assignStripes(cards: CreditCardItem[]): Map<string, number> {
+  const taken = new Set<number>();
+  const out = new Map<string, number>();
+  for (const c of cards) {
+    let h = 0;
+    for (const ch of c.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    let i = h % STRIPE_COUNT;
+    for (let k = 0; k < STRIPE_COUNT && taken.has(i); k++) i = (i + 1) % STRIPE_COUNT;
+    taken.add(i);
+    out.set(c.id, i);
+    if (taken.size === STRIPE_COUNT) taken.clear();
+  }
+  return out;
 }
 
 const fmtShort = (d: Date) => d.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
 
-/** "hoy" · "mañana" · "en 4 días" · "hace 2 días" */
+/** "hoy", "mañana", "en 4 días", "hace 2 días" */
 function whenText(days: number): string {
   if (days < 0) return `hace ${Math.abs(days)} ${Math.abs(days) === 1 ? "día" : "días"}`;
   if (days === 0) return "hoy";
@@ -44,18 +50,28 @@ function whenText(days: number): string {
   return `en ${days} días`;
 }
 
-function payBadge(days: number, date: Date): { text: string; cls: string } {
-  const base = `Pagas ${fmtShort(date)} · ${whenText(days)}`;
-  if (days < 0)  return { text: `Pago vencido ${whenText(days)}`, cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
-  if (days === 0) return { text: `Pagas HOY (${fmtShort(date)})`, cls: "bg-rose-500/20 text-rose-300 border-rose-500/40" };
-  if (days <= 3) return { text: base, cls: "bg-amber-500/20 text-amber-300 border-amber-500/40" };
-  return { text: base, cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+/** Urgencia por FORMA (relleno, contorno, texto), no por color. */
+type PayLevel = "late" | "soon" | "calm";
+
+function payInfo(days: number, date: Date): { text: string; level: PayLevel } {
+  if (days < 0) return { text: `Pago vencido ${whenText(days)}`, level: "late" };
+  if (days === 0) return { text: `Pagas HOY (${fmtShort(date)})`, level: "late" };
+  const text = `Pagas el ${fmtShort(date)}, ${whenText(days)}`;
+  return { text, level: days <= 3 ? "soon" : "calm" };
 }
 
-function cutBadge(days: number, date: Date): { text: string; cls: string } {
-  if (days === 0) return { text: `Corta HOY (${fmtShort(date)})`, cls: "bg-indigo-500/25 text-indigo-200 border-indigo-400/40" };
-  return { text: `Corta ${fmtShort(date)} · ${whenText(days)}`, cls: "bg-white/10 text-white/60 border-white/15" };
+function cutText(days: number, date: Date): string {
+  return days === 0 ? `Corta HOY (${fmtShort(date)})` : `Corta el ${fmtShort(date)}, ${whenText(days)}`;
 }
+
+const PAY_CLS: Record<PayLevel, string> = {
+  late: "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold bg-(--face-fg) text-(--face-bg)",
+  soon: "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold border-2 border-(--face-fg)",
+  calm: "inline-flex items-center gap-1.5 text-[13px] text-(--face-muted)",
+};
+
+const FACE_BTN = "h-11 min-w-11 px-3.5 rounded-lg text-[13px] font-bold inline-flex items-center justify-center gap-1.5 transition-colors border border-(--face-line) hover:bg-white/10";
+const FACE_ICON_BTN = "w-11 h-11 grid place-items-center rounded-lg text-(--face-muted) transition-colors hover:bg-white/10";
 
 // ─────────────────────────────────────────────────────────────────
 // ACTUALIZAR DEUDA — formulario real con botón (antes solo Enter)
@@ -76,44 +92,41 @@ function BalanceUpdater({ current, onSave }: { current: number; onSave: (v: numb
   };
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/10">
-      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1.5">
-        Reemplazar deuda de contado
-      </p>
-      <div className="flex items-center gap-1.5">
-      <Input
-        size="sm"
-        variant="flat"
-        type="number"
-        min="0"
-        inputMode="decimal"
-        placeholder={`Saldo actual: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
-        aria-label="Reemplazar deuda de contado"
-        value={value}
-        onValueChange={setValue}
-        onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
-        startContent={<span className="text-white/40 text-xs font-bold">$</span>}
-        classNames={{
-          inputWrapper: "bg-white/10 hover:bg-white/15 data-[hover=true]:bg-white/15 h-9",
-          input: "text-white placeholder:text-white/35 text-xs",
-        }}
-      />
-      <Button
-        isIconOnly
-        size="sm"
-        className={`h-9 min-w-9 shrink-0 font-bold ${
-          saved ? "bg-emerald-500 text-white" : "bg-white text-black"
-        }`}
-        isDisabled={!valid && !saved}
-        onPress={commit}
-        aria-label="Guardar nueva deuda"
-      >
-        <Check size={16} />
-      </Button>
+    <div className="mt-auto pt-4">
+      <div className="pt-4 border-t border-(--face-line)">
+      <p className="text-xs font-semibold text-(--face-muted) mb-2">Reemplazar deuda de contado</p>
+      <div className="flex items-center gap-2">
+        <Input
+          size="md"
+          variant="flat"
+          type="number"
+          min="0"
+          inputMode="decimal"
+          placeholder={`Saldo actual: ${current.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
+          aria-label="Reemplazar deuda de contado"
+          value={value}
+          onValueChange={setValue}
+          onKeyDown={(e) => { if (e.key === "Enter") commit(); }}
+          startContent={<span className="text-(--face-muted) text-sm font-bold">$</span>}
+          classNames={{
+            inputWrapper: "bg-white/10 hover:bg-white/15 data-[hover=true]:bg-white/15 h-11 min-h-11",
+            input: "text-(--face-fg) text-sm",
+          }}
+        />
+        <Button
+          isIconOnly
+          className="h-11 w-11 min-w-11 shrink-0 font-bold bg-(--face-fg) text-(--face-bg)"
+          isDisabled={!valid && !saved}
+          onPress={commit}
+          aria-label="Guardar nueva deuda"
+        >
+          <Check size={18} />
+        </Button>
       </div>
-      <p className="text-[9px] text-white/30 mt-1">
-        {saved ? "✓ Actualizado" : "Escribe el saldo que ves en tu app del banco"}
+      <p className="text-xs text-(--face-muted) mt-1.5" aria-live="polite">
+        {saved ? "Actualizado" : "Escribe el saldo que ves en tu app del banco"}
       </p>
+      </div>
     </div>
   );
 }
@@ -153,6 +166,7 @@ export default function CreditCards({
   const [cutoffDay, setCutoffDay] = useState("");
   const [dueDay, setDueDay] = useState("");
   const [apr, setApr] = useState("");
+  const [last4, setLast4] = useState("");
 
   // Alta de compra a meses
   const [msiCardId, setMsiCardId] = useState("");
@@ -164,12 +178,14 @@ export default function CreditCards({
 
   const validCard = label.trim() && creditLimit && dueDay &&
     Number.isFinite(parseFloat(creditLimit)) && parseFloat(creditLimit) > 0 &&
-    parseInt(dueDay) >= 1 && parseInt(dueDay) <= 31;
+    parseInt(dueDay) >= 1 && parseInt(dueDay) <= 31 &&
+    (last4 === "" || /^\d{4}$/.test(last4));
 
   const validMsi = msiCardId && msiLabel.trim() && msiAmount &&
     Number.isFinite(parseFloat(msiAmount)) && parseFloat(msiAmount) > 0;
 
   const totals = totalDebtBreakdown(cards, installments);
+  const stripes = assignStripes(cards);
 
   const openEditCard = (c: CreditCardItem) => {
     setLabel(c.label);
@@ -178,6 +194,7 @@ export default function CreditCards({
     setCutoffDay(String(c.cutoffDay));
     setDueDay(String(c.dueDay));
     setApr(c.apr ? String(c.apr) : "");
+    setLast4(c.last4 || "");
     setEditingCard(c);
     onOpen();
   };
@@ -202,9 +219,10 @@ export default function CreditCards({
         cutoffDay: Math.min(31, Math.max(1, parseInt(cutoffDay) || 1)),
         dueDay: Math.min(31, Math.max(1, parseInt(dueDay))),
         apr: round2(parseFloat(apr) || 0),
+        last4,
       });
       setEditingCard(null);
-      setLabel(""); setBalance(""); setCreditLimit(""); setCutoffDay(""); setDueDay(""); setApr("");
+      setLabel(""); setBalance(""); setCreditLimit(""); setCutoffDay(""); setDueDay(""); setApr(""); setLast4("");
       close();
       return;
     }
@@ -216,8 +234,9 @@ export default function CreditCards({
       dueDay: Math.min(31, Math.max(1, parseInt(dueDay))),
       apr: round2(parseFloat(apr) || 0),
       minPayment: 0,
+      ...(last4 ? { last4 } : {}),
     });
-    setLabel(""); setBalance(""); setCreditLimit(""); setCutoffDay(""); setDueDay(""); setApr("");
+    setLabel(""); setBalance(""); setCreditLimit(""); setCutoffDay(""); setDueDay(""); setApr(""); setLast4("");
     close();
   };
 
@@ -253,7 +272,7 @@ export default function CreditCards({
       label: msiLabel.trim(),
       totalAmount: round2(parseFloat(msiAmount)),
       months: parseInt(msiMonths) || 12,
-      startDate: msiDate || new Date().toISOString().split("T")[0],
+      startDate: msiDate || todayIso(),
     });
     setMsiLabel(""); setMsiAmount(""); setMsiDate("");
     close();
@@ -265,174 +284,181 @@ export default function CreditCards({
   };
 
   return (
-    <Card className="glass card-hover border border-cyan-500/20 col-span-1 sm:col-span-2 lg:col-span-3">
-      <CardHeader className="flex justify-between items-start px-5 pt-5 pb-0 gap-2 flex-wrap">
-        <div className="flex flex-col gap-1">
-          <div className="p-2.5 rounded-xl bg-cyan-500/12 mb-2 w-fit">
-            <CreditCardIcon size={18} className="text-cyan-500 dark:text-cyan-400" />
-          </div>
-          <h3 className="text-base font-bold tracking-tight">Tarjetas de Crédito</h3>
-          <p className="text-xs text-default-400">Cortes, fechas límite, contado y meses sin intereses</p>
+    <Card className="glass card-hover rule-out col-span-1 sm:col-span-2 lg:col-span-3 shadow-none">
+      <CardHeader className="flex justify-between items-start px-5 pt-4 pb-0 gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h3 className="text-base font-bold tracking-tight flex items-center gap-2">
+            <CreditCardIcon size={18} className="text-money-out-text shrink-0" aria-hidden />
+            Tarjetas de crédito
+          </h3>
+          <p className="text-xs text-default-500 mt-0.5">Cortes, fechas límite, contado y meses sin intereses</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {cards.length > 0 && (
-            <Button size="sm" variant="flat" color="secondary" startContent={<Layers size={15} />} onPress={openMsiModal} className="font-bold">
+            <Button variant="bordered" startContent={<Layers size={16} />} onPress={openMsiModal} className="h-11 min-w-11 font-bold border-2 border-foreground">
               Compra a meses
             </Button>
           )}
-          <Button size="sm" variant="flat" color="primary" startContent={<Plus size={15} />} onPress={onOpen} className="font-bold">
+          <Button color="primary" variant="solid" startContent={<Plus size={16} />} onPress={onOpen} className="h-11 min-w-11 font-bold">
             Agregar tarjeta
           </Button>
         </div>
       </CardHeader>
 
       <CardBody className="px-5 py-4">
-        {/* Resumen global contado vs meses */}
+        {/* Resumen global: contado vs meses. Los cuadritos repiten la leyenda de la tira de reparto. */}
         {cards.length > 0 && (totals.totalOwed > 0) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-5 mb-5">
             {[
-              { label: "De contado", value: totals.cash, cls: "text-rose-500", hint: "a liquidar este corte" },
-              { label: "A meses (saldo)", value: totals.installmentRemaining, cls: "text-indigo-500", hint: "pendiente total MSI" },
-              { label: "Mensualidad MSI", value: totals.monthlyInstallment, cls: "text-amber-500", hint: "cargo de este mes" },
-              { label: "Deuda total", value: totals.totalOwed, cls: "text-default-700", hint: "contado + meses" },
-            ].map((s) => (
-              <div key={s.label} className="p-3 rounded-xl bg-default-100/60 border border-default-200/50">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-default-400">{s.label}</p>
-                <p className={`text-lg font-extrabold tnum ${s.cls}`}>{money(s.value)}</p>
-                <p className="text-[9px] text-default-400">{s.hint}</p>
+              { label: "De contado", value: totals.cash, hint: "a liquidar este corte", sw: "seg-out" },
+              { label: "A meses (saldo)", value: totals.installmentRemaining, hint: "pendiente total de MSI", sw: "border-2 border-money-out" },
+              { label: "Mensualidad MSI", value: totals.monthlyInstallment, hint: "cargo de este mes", sw: "seg-msi" },
+              { label: "Deuda total", value: totals.totalOwed, hint: "contado más meses", sw: "" },
+            ].map((x) => (
+              <div key={x.label} className="min-w-0">
+                <p className="text-xs font-semibold text-default-500 flex items-center gap-2">
+                  {x.sw && <span className={`inline-block w-3.5 h-3.5 rounded-[3px] shrink-0 ${x.sw}`} aria-hidden />}
+                  {x.label}
+                </p>
+                <p className="figure text-[1.9rem] mt-1 truncate">{money(x.value)}</p>
+                <p className="text-[11px] text-default-500">{x.hint}</p>
               </div>
             ))}
           </div>
         )}
 
         {cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-default-200/60 rounded-xl text-default-400 gap-1">
-            <p className="text-xs font-medium">Sin tarjetas registradas</p>
-            <p className="text-[11px] text-default-300">Agrega tu tarjeta para no volver a pagar intereses por olvido</p>
+          <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-default-300 rounded-lg text-default-500 gap-1">
+            <p className="text-xs font-semibold">Sin tarjetas registradas</p>
+            <p className="text-[11px]">Agrega tu tarjeta para no volver a pagar intereses por olvido</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {cards.map((c, i) => {
+            {cards.map((c) => {
               const bd = cardDebtBreakdown(c, installments);
               const util = c.creditLimit > 0 ? Math.min(100, (bd.totalOwed / c.creditLimit) * 100) : 0;
               const due = paymentDueDate(c);
               const daysLeft = daysUntil(due);
               const cut = nextOccurrence(c.cutoffDay);
               const cutDays = daysUntil(cut);
-              const pay = payBadge(daysLeft, due);
-              const cutB = cutBadge(cutDays, cut);
+              const pay = payInfo(daysLeft, due);
               const isExpanded = expanded === c.id;
+              const nearLimit = util >= 80;
 
               return (
-                <div
-                  key={c.id}
-                  className={`group relative rounded-2xl p-4 text-white bg-gradient-to-br ${CARD_SKINS[i % CARD_SKINS.length]} border border-white/10 shadow-lg overflow-hidden animate-fade-in-scale`}
-                >
-                  <div className="absolute top-0 left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <div key={c.id} className="card-face group">
+                  <span className={`card-stripe stripe-${stripes.get(c.id) ?? 0}`} aria-hidden />
 
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="font-bold text-sm flex items-center gap-1.5">
-                        {c.label}
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <p className="font-bold text-base flex items-center gap-1.5 flex-wrap">
+                        <span className="truncate">{c.label}</span>
                         <AddedByBadge addedBy={c.addedBy} viewerId={viewerId} dark />
                       </p>
-                      <p className="text-[10px] text-white/50 uppercase tracking-wider">
-                        Corte día {c.cutoffDay} · Pago día {c.dueDay}
-                      </p>
+                      <p className="text-xs text-(--face-muted)">Corte día {c.cutoffDay}, pago día {c.dueDay}</p>
                     </div>
-                    <div className="flex items-center shrink-0 -m-1">
+                    <div className="flex items-center shrink-0 -mr-2 -mt-2">
                       {onUpdateCard && (
                         <button
                           onClick={() => openEditCard(c)}
-                          className="p-2 rounded-lg text-white/45 hover:text-cyan-300 hover:bg-white/10 transition-all"
+                          className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
                           aria-label={`Editar ${c.label}`}
                           title="Editar tarjeta"
                         >
-                          <Pencil size={14} />
+                          <Pencil size={16} />
                         </button>
                       )}
                       <button
                         onClick={() => setCardToDelete(c)}
-                        className="p-2 rounded-lg text-white/45 hover:text-rose-400 hover:bg-white/10 active:bg-white/15 transition-all"
+                        className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
                         aria-label={`Eliminar ${c.label}`}
                         title="Eliminar tarjeta"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
 
+                  {c.last4 && (
+                    <p className="figure text-[2.75rem] mt-1" aria-label={`Terminación ${c.last4}`}>
+                      <span className="text-(--face-muted) text-[0.55em] mr-2 align-middle" aria-hidden>••••</span>
+                      {c.last4}
+                    </p>
+                  )}
+
                   {/* Desglose contado / meses */}
-                  <div className="flex items-end gap-3 mb-1">
+                  <div className="flex items-end gap-5 mt-3">
                     <div>
-                      <p className="text-[10px] text-white/50 uppercase tracking-widest">De contado</p>
-                      <p className="text-2xl font-black tnum leading-tight">{money(bd.cash)}</p>
+                      <p className="text-xs text-(--face-muted)">De contado</p>
+                      <p className="figure text-[2.25rem]">{money(bd.cash)}</p>
                     </div>
                     {bd.installmentRemaining > 0 && (
                       <div className="pb-0.5">
-                        <p className="text-[10px] text-white/50 uppercase tracking-widest">A meses</p>
-                        <p className="text-lg font-bold tnum text-indigo-300 leading-tight">{money(bd.installmentRemaining)}</p>
+                        <p className="text-xs text-(--face-muted)">A meses</p>
+                        <p className="figure text-[1.6rem] text-(--face-muted)">{money(bd.installmentRemaining)}</p>
                       </div>
                     )}
                   </div>
 
                   {bd.monthlyInstallment > 0 && (
-                    <p className="text-[11px] text-amber-300 mb-1 tnum">
-                      + {money(bd.monthlyInstallment)}/mes de MSI · este corte pagas{" "}
-                      <span className="font-bold">{money(bd.dueThisMonth)}</span>
+                    <p className="text-xs mt-1.5 tnum">
+                      MSI: {money(bd.monthlyInstallment)} al mes. Este corte pagas{" "}
+                      <span className="font-bold">{money(bd.dueThisMonth)}</span>.
                     </p>
                   )}
 
-                  <div className="flex justify-between items-baseline gap-2 mb-3 flex-wrap">
-                    <p className="text-[11px] text-white/50 tnum">
-                      Usado {money(bd.totalOwed)} de {money(c.creditLimit)} · {util.toFixed(0)}%
-                    </p>
-                    <p className={`text-[11px] tnum font-bold ${util >= 80 ? "text-rose-300" : "text-emerald-300"}`}>
-                      Te quedan {money(Math.max(0, c.creditLimit - bd.totalOwed))}
+                  {/* Uso del límite: la parte usada es siempre deuda (token de salida) */}
+                  <div className="mt-4">
+                    <div className="flex justify-between items-baseline gap-2 text-xs tnum">
+                      <span className="text-(--face-muted)">Usas {money(bd.totalOwed)} de {money(c.creditLimit)}</span>
+                      <span className="font-bold text-sm">{util.toFixed(0)}%</span>
+                    </div>
+                    <div
+                      className="h-2.5 rounded-sm bg-white/15 mt-1.5 overflow-hidden"
+                      role="progressbar" aria-label={`Uso del límite de ${c.label}`}
+                      aria-valuenow={Math.round(util)} aria-valuemin={0} aria-valuemax={100}
+                    >
+                      <div className="h-full bg-(--money-out) transition-all duration-500" style={{ width: `${util}%` }} />
+                    </div>
+                    <p className={`text-xs mt-1.5 tnum flex items-center gap-1.5 ${nearLimit ? "font-bold" : "text-(--face-muted)"}`}>
+                      {nearLimit && <AlertTriangle size={13} aria-hidden />}
+                      {nearLimit && "Casi al límite. "}Te quedan {money(Math.max(0, c.creditLimit - bd.totalOwed))}
                     </p>
                   </div>
 
-                  <div className="h-1.5 rounded-full bg-white/15 mb-3">
-                    <div className={`h-full rounded-full ${utilizationColor(util)} transition-all duration-500`} style={{ width: `${util}%` }} />
-                  </div>
-
-                  {/* Fechas clave: corte y pago, cada una con su cuenta regresiva */}
-                  <div className="flex gap-1.5 flex-wrap mb-2.5">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${pay.cls}`}>
+                  {/* Fechas clave: lo que más se consulta */}
+                  <div className="mt-4 space-y-2">
+                    <p className={PAY_CLS[pay.level]}>
+                      {pay.level === "calm" ? <CalendarClock size={14} aria-hidden /> : <AlertTriangle size={14} aria-hidden />}
                       {pay.text}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${cutB.cls}`}>
-                      {cutB.text}
-                    </span>
+                    </p>
+                    <p className="text-[13px] text-(--face-muted) flex items-center gap-1.5">
+                      <Scissors size={14} aria-hidden />
+                      {cutText(cutDays, cut)}
+                    </p>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center justify-between gap-2 flex-wrap mt-4">
                     {bd.dueThisMonth > 0 && onMarkPaid ? (
                       <button
                         onClick={() => setCardToPay(c)}
-                        className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-2.5 py-1 rounded-lg transition-colors"
+                        className={`${FACE_BTN} bg-(--face-fg) text-(--face-bg) border-transparent hover:bg-(--face-fg)/90`}
                       >
-                        <BadgeCheck size={12} />
+                        <BadgeCheck size={16} aria-hidden />
                         Pagado
                       </button>
                     ) : <span />}
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-2">
                       {bd.activePlans.length > 0 && (
-                        <button
-                          onClick={() => setExpanded(isExpanded ? null : c.id)}
-                          className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 hover:text-indigo-200 bg-white/10 hover:bg-white/15 px-2 py-1 rounded-lg transition-colors"
-                        >
-                          <Layers size={11} />
+                        <button onClick={() => setExpanded(isExpanded ? null : c.id)} className={FACE_BTN} aria-expanded={isExpanded}>
+                          <Layers size={15} aria-hidden />
                           {bd.activePlans.length} MSI
-                          {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                          {isExpanded ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
                         </button>
                       )}
                       {bd.cash > 0 && (
-                        <button
-                          onClick={() => setSimCard(c)}
-                          className="flex items-center gap-1 text-[10px] font-bold text-cyan-300 hover:text-cyan-200 bg-white/10 hover:bg-white/15 px-2 py-1 rounded-lg transition-colors"
-                        >
-                          <Calculator size={11} />
+                        <button onClick={() => setSimCard(c)} className={FACE_BTN}>
+                          <Calculator size={15} aria-hidden />
                           Simular
                         </button>
                       )}
@@ -441,67 +467,68 @@ export default function CreditCards({
 
                   {/* Lista de compras a meses */}
                   {isExpanded && bd.activePlans.length > 0 && (
-                    <div className="mt-3 space-y-2 pt-3 border-t border-white/10 animate-fade-in-up">
+                    <div className="mt-4 space-y-4 pt-4 border-t border-(--face-line) animate-fade-in-up">
                       {bd.activePlans.map((s) => (
-                        <div key={s.plan.id} className="group/msi">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-[11px] font-bold text-white/90 truncate max-w-[110px] flex items-center gap-1">
-                              {s.plan.label}
+                        <div key={s.plan.id}>
+                          <div className="flex justify-between items-center gap-2 mb-1.5">
+                            <span className="text-sm font-bold truncate flex items-center gap-1.5 min-w-0">
+                              <span className="truncate">{s.plan.label}</span>
                               <AddedByBadge addedBy={s.plan.addedBy} viewerId={viewerId} dark />
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] tnum font-bold text-indigo-300">
-                                {money(s.monthlyPayment)}<span className="text-white/40 font-normal">/mes</span>
+                            <div className="flex items-center shrink-0 -mr-2">
+                              <span className="text-sm tnum font-bold mr-1">
+                                {money(s.monthlyPayment)}<span className="text-(--face-muted) font-normal text-xs"> al mes</span>
                               </span>
                               {onUpdateInstallment && (
                                 <button
                                   onClick={() => openEditMsi(s.plan)}
-                                  className="p-1.5 -m-1 rounded-lg text-white/35 hover:text-cyan-300 hover:bg-white/10 transition-all"
+                                  className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
                                   aria-label={`Editar compra a meses ${s.plan.label}`}
                                 >
-                                  <Pencil size={12} />
+                                  <Pencil size={14} />
                                 </button>
                               )}
                               <button
                                 onClick={() => onRemoveInstallment(s.plan.id)}
-                                className="p-1.5 -m-1 rounded-lg text-white/35 hover:text-rose-400 hover:bg-white/10 transition-all"
+                                className={`${FACE_ICON_BTN} hover:text-(--face-fg)`}
                                 aria-label={`Eliminar compra a meses ${s.plan.label}`}
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </div>
-                          <div className="h-1 rounded-full bg-white/15 mb-1">
-                            <div className="h-full rounded-full bg-indigo-400 transition-all duration-500" style={{ width: `${s.progress}%` }} />
+                          <div className="h-2 rounded-sm bg-white/15 mb-2 overflow-hidden">
+                            <div className="h-full bg-(--face-fg) transition-all duration-500" style={{ width: `${s.progress}%` }} />
                           </div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {onUpdateInstallment && (
-                              <span className="flex items-center gap-0.5 shrink-0">
+                              <span className="flex items-center gap-1 shrink-0">
                                 <button
                                   onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) - 1 })}
                                   disabled={s.monthsPaid <= 0}
-                                  className="w-5 h-5 rounded-md bg-white/10 text-white/60 hover:bg-white/20 hover:text-white disabled:opacity-25 disabled:hover:bg-white/10 transition-all flex items-center justify-center"
+                                  className="w-9 h-9 rounded-lg border border-(--face-line) hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex items-center justify-center"
                                   aria-label={`Quitar una mensualidad pagada de ${s.plan.label}`}
                                 >
-                                  <Minus size={10} />
+                                  <Minus size={14} />
                                 </button>
                                 <button
                                   onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) + 1 })}
                                   disabled={s.monthsPaid >= s.plan.months}
-                                  className="w-5 h-5 rounded-md bg-white/10 text-white/60 hover:bg-indigo-400/30 hover:text-indigo-200 disabled:opacity-25 disabled:hover:bg-white/10 transition-all flex items-center justify-center"
+                                  className="w-9 h-9 rounded-lg border border-(--face-line) hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors flex items-center justify-center"
                                   aria-label={`Marcar una mensualidad más pagada de ${s.plan.label}`}
                                 >
-                                  <Plus size={10} />
+                                  <Plus size={14} />
                                 </button>
                               </span>
                             )}
-                            <p className="text-[10px] text-white/40 tnum">
-                              <span className="text-white/70 font-bold">{s.monthsPaid}/{s.plan.months}</span> pagados · restan {money(s.remainingAmount)}
-                              {s.nextChargeDate && ` · próximo ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
+                            <p className="text-xs tnum text-(--face-muted)">
+                              <span className="text-(--face-fg) font-bold">{s.monthsPaid} de {s.plan.months}</span> pagadas.
+                              {" "}Restan {money(s.remainingAmount)}
+                              {s.nextChargeDate && `, próximo cargo el ${s.nextChargeDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`}
                             </p>
                             {!!s.plan.paidAdjust && (
-                              <span className="text-[9px] font-bold uppercase text-indigo-300 shrink-0">
-                                {s.plan.paidAdjust > 0 ? `+${s.plan.paidAdjust} ajustado` : `${s.plan.paidAdjust} ajustado`}
+                              <span className="text-xs font-bold shrink-0">
+                                {s.plan.paidAdjust > 0 ? `+${s.plan.paidAdjust} ajustada` : `${s.plan.paidAdjust} ajustada`}
                               </span>
                             )}
                           </div>
@@ -511,8 +538,8 @@ export default function CreditCards({
                   )}
 
                   {bd.dueThisMonth > 0 && daysLeft <= 3 && (
-                    <p className="mt-2 text-[11px] text-amber-300 flex items-start gap-1">
-                      <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+                    <p className="mt-3 text-xs flex items-start gap-1.5">
+                      <AlertTriangle size={13} className="shrink-0 mt-0.5" aria-hidden />
                       {daysLeft < 0
                         ? `El pago de ${money(bd.dueThisMonth)} venció el ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}. Si ya pagaste, toca Pagado; si no, paga cuanto antes para frenar intereses.`
                         : `Paga ${money(bd.dueThisMonth)} antes del ${due.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} para no generar intereses`}
@@ -534,7 +561,16 @@ export default function CreditCards({
             <>
               <ModalHeader>{editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}</ModalHeader>
               <ModalBody>
-                <Input label="Nombre" placeholder="Ej. BBVA Azul, Nu" variant="bordered" value={label} onValueChange={setLabel} />
+                <div className="flex gap-2">
+                  <Input label="Nombre" placeholder="Ej. BBVA Azul, Nu" variant="bordered" value={label} onValueChange={setLabel} className="flex-1" />
+                  <Input
+                    label="Últimos 4 dígitos" placeholder="1234" variant="bordered" className="w-[150px]"
+                    inputMode="numeric" maxLength={4} value={last4}
+                    onValueChange={(v) => setLast4(v.replace(/\D/g, "").slice(0, 4))}
+                    isInvalid={last4 !== "" && last4.length !== 4}
+                    description="Opcional"
+                  />
+                </div>
                 <div className="flex gap-2">
                   {!editingCard && (
                     <Input label="Deuda de contado" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
@@ -559,7 +595,7 @@ export default function CreditCards({
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="shadow" className="font-bold" isDisabled={!validCard} onPress={() => submitCard(onClose)}>
+                <Button color="primary" variant="solid" className="font-bold" isDisabled={!validCard} onPress={() => submitCard(onClose)}>
                   {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
                 </Button>
               </ModalFooter>
@@ -578,7 +614,7 @@ export default function CreditCards({
             return (
               <>
                 <ModalHeader className="flex items-center gap-2">
-                  <Layers size={18} className="text-indigo-500" />
+                  <Layers size={18} className="text-foreground" />
                   {editingPlan ? `Editar "${editingPlan.label}"` : "Compra a meses sin intereses"}
                 </ModalHeader>
                 <ModalBody>
@@ -608,10 +644,10 @@ export default function CreditCards({
                   )}
 
                   {monthly > 0 && (
-                    <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center gap-3">
-                      <CalendarClock size={18} className="text-indigo-500 shrink-0" />
+                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 flex items-center gap-3">
+                      <CalendarClock size={18} className="text-foreground shrink-0" />
                       <p className="text-sm text-default-600">
-                        Pagarás <span className="font-black tnum text-indigo-500">{moneyExact(monthly)}</span> al mes durante{" "}
+                        Pagarás <span className="figure text-xl">{moneyExact(monthly)}</span> al mes durante{" "}
                         <span className="font-bold">{mths} meses</span>.
                       </p>
                     </div>
@@ -619,7 +655,7 @@ export default function CreditCards({
                 </ModalBody>
                 <ModalFooter>
                   <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button color="secondary" variant="shadow" className="font-bold bg-indigo-500"
+                  <Button color="primary" variant="solid" className="font-bold"
                     isDisabled={!validMsi} onPress={() => submitMsi(onClose)}>
                     {editingPlan ? "Guardar cambios" : "Agregar a meses"}
                   </Button>
@@ -639,7 +675,7 @@ export default function CreditCards({
             return (
               <>
                 <ModalHeader className="flex items-center gap-2">
-                  <BadgeCheck size={18} className="text-emerald-500" />
+                  <BadgeCheck size={18} className="text-foreground" />
                   Marcar como pagada
                 </ModalHeader>
                 <ModalBody>
@@ -656,11 +692,11 @@ export default function CreditCards({
                   {linked.length > 0 && (
                     <p className="text-xs text-default-500">
                       También se quitarán sus <span className="font-bold">{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</span> de
-                      Gastos &amp; Deudas — tu balance disponible se libera.
+                      Gastos &amp; Deudas. Tu balance disponible se libera.
                     </p>
                   )}
                   {bd && bd.installmentRemaining > 0 && (
-                    <p className="text-xs text-indigo-500">
+                    <p className="text-xs text-default-600">
                       Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
                     </p>
                   )}
@@ -669,7 +705,7 @@ export default function CreditCards({
                 <ModalFooter>
                   <Button variant="light" onPress={onClose}>Cancelar</Button>
                   <Button
-                    color="success" variant="shadow" className="font-bold text-white"
+                    color="success" variant="solid" className="font-bold"
                     startContent={<BadgeCheck size={15} />}
                     onPress={() => {
                       if (cardToPay && onMarkPaid) onMarkPaid(cardToPay.id);
@@ -694,7 +730,7 @@ export default function CreditCards({
             return (
               <>
                 <ModalHeader className="flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-rose-500" />
+                  <AlertTriangle size={18} className="text-money-out-text" />
                   Eliminar tarjeta
                 </ModalHeader>
                 <ModalBody>
@@ -702,15 +738,15 @@ export default function CreditCards({
                     ¿Seguro que quieres eliminar <span className="font-bold">{cardToDelete?.label}</span>?
                   </p>
                   {plans.length > 0 && (
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20">
                       <p className="text-xs text-default-600">
                         También se eliminarán sus{" "}
                         <span className="font-bold">{plans.length} compra{plans.length > 1 ? "s" : ""} a meses</span>:
                       </p>
-                      <ul className="mt-1.5 space-y-0.5">
+                      <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
                         {plans.map((p) => (
-                          <li key={p.id} className="text-[11px] text-default-500 tnum">
-                            · {p.label} — {money(p.totalAmount)} a {p.months} meses
+                          <li key={p.id} className="text-xs text-default-600 tnum">
+                            {p.label}: {money(p.totalAmount)} a {p.months} meses
                           </li>
                         ))}
                       </ul>
@@ -723,7 +759,7 @@ export default function CreditCards({
                 <ModalFooter>
                   <Button variant="light" onPress={onClose}>Cancelar</Button>
                   <Button
-                    color="danger" variant="shadow" className="font-bold"
+                    color="danger" variant="solid" className="font-bold"
                     startContent={<Trash2 size={15} />}
                     onPress={() => {
                       if (cardToDelete) onRemove(cardToDelete.id);

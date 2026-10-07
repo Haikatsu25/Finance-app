@@ -30,7 +30,7 @@ export function TransferModal({
           return (
             <>
               <ModalHeader className="flex items-center gap-2">
-                <ArrowLeftRight size={17} className="text-emerald-500" />
+                <ArrowLeftRight size={17} className="text-foreground" />
                 Transferir entre cuentas
               </ModalHeader>
               <ModalBody>
@@ -50,7 +50,7 @@ export function TransferModal({
                   startContent={<span className="text-default-400 text-xs">$</span>}
                   value={tAmount} onValueChange={setTAmount} />
                 {from && Number.isFinite(parsed) && parsed > from.amount && (
-                  <p className="text-[11px] text-rose-500 font-semibold">
+                  <p className="text-[11px] text-money-out-text font-semibold">
                     {from.label} solo tiene {money(from.amount)}.
                   </p>
                 )}

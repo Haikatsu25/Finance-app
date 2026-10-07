@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import ./tests/register-alias.mjs --test \"tests/**/*.test.ts\""
+    "test": "node --import ./tests/register-alias.mjs --test \"tests/**/*.test.ts\"",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.7",
@@ -24,6 +25,8 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.43",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

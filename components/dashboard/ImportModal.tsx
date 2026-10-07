@@ -17,8 +17,8 @@ export function ImportModal({ isOpen, onOpenChange, importError, importPreview, 
           <>
             <ModalHeader className="flex items-center gap-2">
               {importError
-                ? <><AlertTriangle size={18} className="text-rose-500" /> Archivo inválido</>
-                : <><Upload size={18} className="text-indigo-500" /> Importar respaldo</>}
+                ? <><AlertTriangle size={18} className="text-money-out-text" /> Archivo inválido</>
+                : <><Upload size={18} className="text-foreground" /> Importar respaldo</>}
             </ModalHeader>
             <ModalBody>
               {importError ? (
@@ -28,7 +28,7 @@ export function ImportModal({ isOpen, onOpenChange, importError, importPreview, 
                   <p className="text-sm text-default-500">
                     El respaldo contiene: <span className="font-semibold text-default-700">{importPreview?.counts}</span>
                   </p>
-                  <p className="text-sm text-rose-500 font-semibold">
+                  <p className="text-sm text-money-out-text font-semibold">
                     Esto reemplazará todos tus datos actuales.
                   </p>
                 </>

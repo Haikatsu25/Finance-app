@@ -11,7 +11,7 @@ export function SyncConflictModal({ isOpen, onResolve }: {
     <Modal isOpen={isOpen} onOpenChange={() => {}} backdrop="blur" size="sm" hideCloseButton isDismissable={false}>
       <ModalContent>
         <ModalHeader className="flex items-center gap-2">
-          <RefreshCw size={18} className="text-indigo-500" />
+          <RefreshCw size={18} className="text-foreground" />
           Datos actualizados en otro lugar
         </ModalHeader>
         <ModalBody>

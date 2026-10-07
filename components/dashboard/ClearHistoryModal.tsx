@@ -15,7 +15,7 @@ export function ClearHistoryModal({ isOpen, onOpenChange, historyCount, onConfir
         {(onClose) => (
           <>
             <ModalHeader className="flex items-center gap-2">
-              <AlertTriangle size={18} className="text-amber-500" />
+              <AlertTriangle size={18} className="text-foreground" />
               Limpiar historial
             </ModalHeader>
             <ModalBody>

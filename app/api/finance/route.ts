@@ -139,6 +139,12 @@ function cleanDay(v: unknown): number {
     return Math.max(1, Math.min(31, Math.round(n)));
 }
 
+/** Últimos 4 dígitos de la tarjeta: solo se guardan si son exactamente 4 dígitos. */
+function cleanLast4(v: unknown): { last4?: string } {
+    const s = String(v ?? '').trim();
+    return /^\d{4}$/.test(s) ? { last4: s } : {};
+}
+
 /** Ciclo pagado de una tarjeta: solo una fecha real YYYY-MM-DD; cualquier otra cosa se descarta. */
 function cleanLastPaidCycle(v: unknown): { lastPaidCycle?: string } {
     const s = String(v ?? '').trim();
@@ -166,6 +172,7 @@ function cleanCreditCards(v: unknown): any[] {
             dueDay: cleanDay(r.dueDay),
             apr: Math.max(0, Math.min(200, cleanAmount(r.apr))),
             minPayment: cleanAmount(r.minPayment),
+            ...cleanLast4(r.last4),
             ...cleanLastPaidCycle(r.lastPaidCycle),
             ...cleanAddedBy(r.addedBy),
         }];

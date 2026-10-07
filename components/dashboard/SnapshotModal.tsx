@@ -5,6 +5,7 @@ import { parseDate } from "@internationalized/date";
 import { DollarSign, ShieldAlert, Wallet } from "lucide-react";
 import { FinanceItem, HistorySnapshot } from "@/types";
 import { money } from "@/lib/format";
+import { localDay } from "@/lib/finance-utils";
 import { TONE } from "./tone";
 
 export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
@@ -24,7 +25,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
         {(onClose) => (
           <>
             <ModalHeader className="flex flex-col gap-1">
-              <span className="gradient-text-emerald">Detalles del Snapshot</span>
+              <span className="font-extrabold">Detalles del snapshot</span>
               <span className="text-small font-normal text-default-400">
                 {selectedSnapshot &&
                   new Date(selectedSnapshot.date).toLocaleDateString("es-MX", {
@@ -39,9 +40,9 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
                     <div className="flex justify-center">
                       <CalendarWidget
                         aria-label="Fecha del snapshot"
-                        value={parseDate(selectedSnapshot.date.split("T")[0])}
+                        value={parseDate(localDay(selectedSnapshot.date))}
                         isReadOnly
-                        className="shadow-md border border-default-100 rounded-2xl"
+                        className="border border-default-200 rounded-lg"
                       />
                     </div>
                     <div className="flex-grow grid grid-cols-1 gap-3 content-center">
@@ -53,7 +54,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
                         <Card key={label} className={`${tone.bg} border ${tone.border} shadow-none`}>
                           <CardBody className="py-3 px-4 flex flex-row items-center justify-between">
                             <div>
-                              <p className={`text-xs font-bold uppercase ${tone.text}`}>{label}</p>
+                              <p className={`text-xs font-bold ${tone.text}`}>{label}</p>
                               <p className={`text-xl font-extrabold tnum ${tone.textStrong}`}>
                                 {money(value)}
                               </p>
@@ -95,7 +96,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
               )}
             </ModalBody>
             <ModalFooter>
-              <Button color="danger" variant="light" onPress={onClose}>Cerrar</Button>
+              <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cerrar</Button>
             </ModalFooter>
           </>
         )}

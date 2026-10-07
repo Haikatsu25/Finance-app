@@ -27,14 +27,14 @@ export function BottomNav({ active, onChange }: { active: NavTab; onChange: (t: 
               key={t.id}
               onClick={() => onChange(t.id)}
               className={`relative flex flex-col items-center gap-1 px-3 py-1.5 min-w-[56px] rounded-xl transition-all duration-200 ${
-                isActive ? "bg-blue-500/12 text-blue-600 dark:text-sky-400" : "text-default-400 hover:text-default-600"
+                isActive ? "text-foreground" : "text-default-500 hover:text-foreground"
               }`}
               aria-label={t.label}
               aria-current={isActive ? "page" : undefined}
             >
               {t.icon}
-              <span className="text-[10px] font-semibold">{t.label}</span>
-              {isActive && <span className="absolute -bottom-0.5 w-6 h-0.5 rounded-full bg-sky-400" />}
+              <span className={`text-[11px] ${isActive ? "font-bold" : "font-semibold"}`}>{t.label}</span>
+              {isActive && <span className="absolute -top-2 w-8 h-[3px] rounded-b-sm bg-foreground" aria-hidden />}
             </button>
           );
         })}

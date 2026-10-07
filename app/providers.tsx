@@ -6,7 +6,8 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <HeroUIProvider>
+    // locale: los textos de los componentes de HeroUI (calendario, "Cerrar", mes y días) salían en inglés
+    <HeroUIProvider locale="es-MX">
       <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
         {children}
       </NextThemesProvider>

@@ -19,10 +19,10 @@ const LAST_UPDATE = "Agosto de 2026";
 export default function PrivacidadPage() {
     return (
         <main className="max-w-3xl mx-auto px-6 py-12 text-foreground">
-            <Link href="/" className="text-sm text-emerald-500 hover:underline">← Volver a Finance Control</Link>
+            <Link href="/" className="text-sm font-semibold text-foreground underline underline-offset-2 hover:no-underline">← Volver a Finance Control</Link>
 
             <h1 className="text-3xl font-black tracking-tight mt-6 mb-2">Aviso de Privacidad</h1>
-            <p className="text-sm text-default-400 mb-8">Última actualización: {LAST_UPDATE}</p>
+            <p className="text-sm text-default-600 mb-8">Última actualización: {LAST_UPDATE}</p>
 
             <div className="space-y-6 text-sm leading-relaxed text-default-600">
                 <section>
@@ -31,7 +31,7 @@ export default function PrivacidadPage() {
                         Finance Control (en adelante, &quot;la Aplicación&quot;) es operada por su titular, con domicilio en
                         México, quien es responsable del tratamiento de tus datos personales conforme a la Ley Federal de
                         Protección de Datos Personales en Posesión de los Particulares (LFPDPPP). Para cualquier asunto
-                        relacionado con este aviso puedes escribir a <a href={`mailto:${CONTACT_EMAIL}`} className="text-emerald-500 hover:underline">{CONTACT_EMAIL}</a>.
+                        relacionado con este aviso puedes escribir a <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-foreground underline underline-offset-2 hover:no-underline">{CONTACT_EMAIL}</a>.
                     </p>
                 </section>
 
@@ -83,7 +83,7 @@ export default function PrivacidadPage() {
                         (derechos ARCO), así como a revocar tu consentimiento. Puedes ejercerlos directamente desde la
                         Aplicación —editando o eliminando tus registros, exportando tu información desde Ajustes, o
                         eliminando tu cuenta— o enviando tu solicitud a{" "}
-                        <a href={`mailto:${CONTACT_EMAIL}`} className="text-emerald-500 hover:underline">{CONTACT_EMAIL}</a>,
+                        <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-foreground underline underline-offset-2 hover:no-underline">{CONTACT_EMAIL}</a>,
                         indicando tu nombre, el correo asociado a tu cuenta y el derecho que deseas ejercer. Responderemos
                         en un plazo máximo de 20 días hábiles.
                     </p>

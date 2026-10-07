@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { ClerkProvider } from '@clerk/nextjs'
 import { PWARegister } from '@/components/PWARegister'
 
-const inter = Inter({ subsets: ["latin"] });
+// Una sola familia con eje de ancho: condensada para los montos, normal para el resto
+const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Finance Control — Gestión Financiera Inteligente",
@@ -28,8 +29,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#060c16" }
+    { media: "(prefers-color-scheme: light)", color: "#eceee7" },
+    { media: "(prefers-color-scheme: dark)", color: "#16131a" }
   ],
   width: "device-width",
   initialScale: 1,
@@ -44,8 +45,8 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="es" suppressHydrationWarning>
-        <body className={inter.className}>
+      <html lang="es" className={archivo.variable} suppressHydrationWarning>
+        <body>
           <Providers>
             {children}
           </Providers>

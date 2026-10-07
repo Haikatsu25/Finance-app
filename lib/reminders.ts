@@ -3,7 +3,7 @@
 //
 // Fechas límite de pago (5, 3, 1 y 0 días antes, y el día siguiente si venció sin
 // marcarse como pagado) y de corte (5, 3, 1 y 0 días antes).
-import { nextOccurrence, paymentDueDate, daysUntil } from "./finance-utils";
+import { nextOccurrence, paymentDueDate, daysUntil, wallClock } from "./finance-utils";
 
 const fmtMXN = (n: number) =>
     new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
@@ -29,6 +29,15 @@ function monthlyInstallmentFor(cardId: string, installments: any[], now: Date): 
     return Math.round(total * 100) / 100;
 }
 
+/**
+ * Recordatorios para un INSTANTE real (el cron): "hoy" es el día en America/Mexico_City, no el del
+ * servidor (UTC), que a las 18:00 de México ya marca mañana y adelantaría cada aviso un día.
+ */
+export function buildRemindersAt(cards: any[], installments: any[], instant: Date = new Date()): Reminder[] {
+    return buildReminders(cards, installments, wallClock(instant));
+}
+
+/** `now` es un reloj de pared (ver wallClock); para un instante real usa buildRemindersAt. */
 export function buildReminders(cards: any[], installments: any[], now: Date): Reminder[] {
     const out: Reminder[] = [];
     for (const c of cards || []) {

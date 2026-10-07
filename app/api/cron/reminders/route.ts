@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import webpush from 'web-push';
 import dbConnect from '@/lib/db';
 import Finance from '@/models/Finance';
-import { buildReminders } from '@/lib/reminders';
+import { buildRemindersAt } from '@/lib/reminders';
 
 // ─────────────────────────────────────────────────────────────────
 // Cron diario (vercel.json): revisa las tarjetas de TODOS los
@@ -41,11 +41,10 @@ export async function GET(request: Request) {
             { userId: 1, creditCards: 1, installments: 1, pushSubscriptions: 1 },
         ).lean();
 
-        const now = new Date();
         let sent = 0, pruned = 0;
 
         for (const user of users as any[]) {
-            const reminders = buildReminders(user.creditCards, user.installments || [], now);
+            const reminders = buildRemindersAt(user.creditCards, user.installments || []);
             if (reminders.length === 0) continue;
 
             const dead: string[] = [];

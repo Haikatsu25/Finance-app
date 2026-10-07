@@ -38,6 +38,28 @@ export function isoDate(d: Date): string {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Zona horaria de la app: los avisos y el asistente de IA corren en el servidor (UTC) pero hablan de "hoy" en México. */
+export const APP_TIME_ZONE = "America/Mexico_City";
+
+/**
+ * "Reloj de pared": un Date cuyos campos locales (getFullYear, getDate, getHours…) son la hora que
+ * marca `timeZone` en el instante dado, sea cual sea la zona del proceso. Así las funciones de este
+ * archivo, que leen campos locales, calculan "hoy" como lo vería el usuario aunque el servidor esté en UTC.
+ */
+export function wallClock(instant: Date = new Date(), timeZone: string = APP_TIME_ZONE): Date {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone, hourCycle: "h23",
+        year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+    }).formatToParts(instant);
+    const n = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+    return new Date(n("year"), n("month") - 1, n("day"), n("hour"), n("minute"), n("second"));
+}
+
+/** Hoy como YYYY-MM-DD en `timeZone` (para código de servidor). */
+export function todayInZone(instant: Date = new Date(), timeZone: string = APP_TIME_ZONE): string {
+    return isoDate(wallClock(instant, timeZone));
+}
+
 /** Hoy como YYYY-MM-DD en la zona horaria del usuario (única fuente de "hoy" para fechas de captura). */
 export function todayIso(now: Date = new Date()): string {
     return isoDate(now);

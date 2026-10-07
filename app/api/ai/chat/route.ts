@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import dbConnect from '@/lib/db';
 import Finance from '@/models/Finance';
 import { aiChat, AiMessage } from '@/lib/ai';
+import { isoDate, wallClock } from '@/lib/finance-utils';
 
 // ─────────────────────────────────────────────────────────────────
 // Chat financiero con Gemini (tier gratuito). La IA recibe un
@@ -23,7 +24,7 @@ function buildFinancialContext(doc: any): string {
         (s: number, i: any) => s + (i.billingCycle === 'anual' ? (i.amount || 0) / 12 : (i.amount || 0)), 0);
 
     // Mensualidades MSI activas
-    const now = new Date();
+    const now = wallClock(); // "hoy" en America/Mexico_City, no en UTC
     let msiMonthly = 0;
     let msiRemaining = 0;
     for (const p of doc.installments || []) {
@@ -40,9 +41,9 @@ function buildFinancialContext(doc: any): string {
     }
 
     // Últimos 60 días de movimientos por categoría
-    const cutoff = new Date();
+    const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - 60);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
+    const cutoffStr = isoDate(cutoff);
     const recent = (doc.transactions || []).filter((t: any) => t.date >= cutoffStr);
     const byCat = new Map<string, number>();
     let recentIncome = 0, recentExpense = 0;
@@ -71,7 +72,7 @@ function buildFinancialContext(doc: any): string {
         `${g.label}: $${(g.currentAmount || 0).toFixed(0)}/$${(g.targetAmount || 0).toFixed(0)} para ${g.deadline}`
     ).join('; ') || 'ninguna';
 
-    return `RESUMEN FINANCIERO DEL USUARIO (moneda MXN, hoy es ${now.toISOString().split('T')[0]}):
+    return `RESUMEN FINANCIERO DEL USUARIO (moneda MXN, hoy es ${isoDate(now)}):
 - Activos totales: $${totalAssets.toFixed(0)}
 - Deudas/gastos registrados: $${totalLiabilities.toFixed(0)}
 - Apartados: $${totalBuckets.toFixed(0)}

@@ -1,7 +1,6 @@
 "use client";
 
-import { Card, CardBody, Button } from "@heroui/react";
-import { Repeat, Check } from "lucide-react";
+import { Repeat } from "lucide-react";
 import { SubscriptionItem } from "@/types";
 import { money } from "@/lib/format";
 import { monthLabel } from "@/lib/finance-utils";
@@ -14,33 +13,24 @@ export function PendingFixedChargesCard({ pendingFixed, pendingFixedTotal, curre
   onRegister: () => void;
 }) {
   return (
-    <Card className="glass rule-ink shadow-none">
-      <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="p-2.5 rounded-lg bg-ink/10 w-fit shrink-0">
-          <Repeat size={18} className="text-ink" aria-hidden />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold">
+    <section className="pop-card flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <i className="grid place-items-center size-10 rounded-full bg-brand-soft text-brand-text shrink-0" aria-hidden>
+          <Repeat size={18} />
+        </i>
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold">
             ¿Registro tus gastos fijos de <span className="capitalize">{monthLabel(currentMonthKey).split(" ")[0]}</span>?
-          </p>
-          <p className="text-xs text-default-500 truncate">
-            {pendingFixed.map((s) => s.label).join(", ")}. Total{" "}
-            <span className="font-bold tnum text-default-600">{money(pendingFixedTotal)}</span>
+          </h2>
+          <p className="text-xs mute truncate">
+            {pendingFixed.map((s) => s.label).join(", ")}. Total <b className="tnum text-foreground">{money(pendingFixedTotal)}</b>
           </p>
         </div>
-        <div className="flex gap-2 shrink-0">
-          <Button size="sm" variant="light" className="text-default-500" onPress={onDismiss}>
-            Este mes no
-          </Button>
-          <Button
-            size="sm" variant="solid" className="font-bold bg-foreground text-background"
-            startContent={<Check size={14} />}
-            onPress={onRegister}
-          >
-            Registrar {pendingFixed.length}
-          </Button>
-        </div>
-      </CardBody>
-    </Card>
+      </div>
+      <div className="flex gap-2 justify-end">
+        <button type="button" className="btn soft sm" onClick={onDismiss}>Este mes no</button>
+        <button type="button" className="btn sm" onClick={onRegister}>Registrar {pendingFixed.length}</button>
+      </div>
+    </section>
   );
 }

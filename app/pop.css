@@ -1,0 +1,475 @@
+/* ─────────────────────────────────────────────
+   PRIMITIVOS "POP"
+   Las piezas de docs/design-pop/finance-control-pop.html con los tokens de globals.css.
+   Los componentes los usan directo (sin HeroUI) para que se vean idénticos a la referencia.
+───────────────────────────────────────────── */
+@layer components {
+
+  /* ── Encabezado de sección: título + chip suave ── */
+  .sec-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .sec {
+    margin: 0;
+    font-weight: 800;
+    font-size: 17px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .sec-lg { font-size: 19px; }
+
+  .chip {
+    background: var(--brand-soft);
+    color: var(--brand-text);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .mute { color: var(--ink-soft); }
+
+  /* ── Tarjeta Pop (la tarjeta blanca de las secciones) ── */
+  .pop-card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: var(--sh);
+  }
+
+  /* ── Bloques de cifras ── */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  @media (min-width: 900px) {
+    .tiles { gap: 14px; }
+  }
+
+  .tile {
+    --tile-bg: var(--pop1);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border-radius: 22px;
+    color: #ffffff;
+    background: var(--tile-bg);
+    box-shadow: var(--sh);
+  }
+
+  /* En claro los bloques se oscurecen un poco para que el texto chico de 12px llegue a 4.5:1 */
+  .tile.a { --tile-bg: color-mix(in srgb, var(--pop1) 78%, #000); }
+  .tile.b { --tile-bg: color-mix(in srgb, var(--pop4) 74%, #000); }
+  .tile.c { --tile-bg: color-mix(in srgb, var(--pop3) 78%, #000); }
+  .dark .tile.a { --tile-bg: #1f6f5f; }
+  .dark .tile.b { --tile-bg: #b24a3a; }
+  .dark .tile.c { --tile-bg: #2b5aa8; }
+
+  .tile i {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--navy);
+  }
+
+  .dark .tile i { color: #10131a; }
+  .tile small { font-size: 12px; font-weight: 500; line-height: 1.2; color: #ffffff; }
+  .tile b { font-weight: 800; font-size: 19px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+  /* ── Anillo con porcentaje ── */
+  @property --p {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+  }
+
+  .ring {
+    --p: 0;
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: conic-gradient(var(--pop1) calc(var(--p) * 1%), rgba(255, 255, 255, 0.14) 0);
+    transition: --p 0.9s var(--ease);
+  }
+
+  .ring span {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--navy2);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 12px;
+  }
+
+  /* ── Barra de reparto y leyenda ── */
+  .bar {
+    display: flex;
+    gap: 3px;
+    height: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--track);
+  }
+
+  .bar span { display: block; height: 100%; transition: width 0.9s var(--ease); }
+
+  .legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 14px;
+    margin: 10px 0 0;
+    padding: 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .legend li { list-style: none; display: flex; align-items: center; gap: 7px; }
+
+  .legend li::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--c);
+  }
+
+  .legend b { margin-left: auto; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ── Filas ── */
+  .list { display: flex; flex-direction: column; gap: 8px; }
+
+  .it {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 18px;
+    background: var(--cal);
+  }
+
+  .dark .it { background: rgba(255, 255, 255, 0.04); }
+
+  .it > i {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--brand-soft);
+    color: var(--brand-text);
+  }
+
+  .it .t { flex: 1; min-width: 0; }
+
+  .it .t b {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .it .t small { font-size: 12px; color: var(--ink-soft); }
+
+  .it .amt {
+    font-weight: 800;
+    font-size: 15px;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .it .acts { display: flex; gap: 2px; }
+
+  .it .acts button {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-soft);
+    display: grid;
+    place-items: center;
+  }
+
+  .it .acts button:hover { background: var(--brand-soft); color: var(--brand-text); }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .pill.urg { background: var(--money-out); color: #ffffff; }
+  .dark .pill.urg { color: #0a0c12; }
+  .pill.soon { background: var(--money-hold-soft); color: var(--money-hold-text); }
+  .pill.ok { background: var(--track); color: var(--ink-soft); }
+
+  .empty {
+    padding: 22px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-soft);
+    border: 2px dashed var(--rule);
+    border-radius: 18px;
+  }
+
+  /* ── Botones píldora ── */
+  .btn {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #ffffff;
+    background: var(--navy);
+    white-space: nowrap;
+  }
+
+  .dark .btn { background: var(--brand); color: #0a0c12; }
+  .btn.ghost { background: var(--brand-soft); color: var(--brand-text); }
+  .btn.soft { background: var(--track); color: var(--ink); }
+  .btn.danger { background: var(--money-out); color: #ffffff; }
+  .dark .btn.danger { color: #0a0c12; }
+  .btn.sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+  .btn.pri-row { min-height: 44px; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+
+  /* ── Control segmentado ── */
+  .seg {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--track);
+  }
+
+  .seg button {
+    min-height: 36px;
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .seg button[aria-pressed="true"] { background: var(--card-bg); color: var(--ink); box-shadow: var(--sh); }
+  .dark .seg button[aria-pressed="true"] { background: var(--navy); }
+  .seg.in button[aria-pressed="true"] { background: var(--money-in); color: #ffffff; }
+  .seg.out button[aria-pressed="true"] { background: var(--money-out); color: #ffffff; }
+  .seg.hold button[aria-pressed="true"] { background: var(--pop3); color: #ffffff; }
+  .dark .seg.in button[aria-pressed="true"],
+  .dark .seg.out button[aria-pressed="true"],
+  .dark .seg.hold button[aria-pressed="true"] { color: #0a0c12; }
+
+  /* ── Campos ── */
+  .f { display: flex; flex-direction: column; gap: 6px; }
+  .f > label { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+
+  .field,
+  .f input,
+  .f select {
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 14px;
+    border: 2px solid transparent;
+    border-radius: 16px;
+    background: var(--cal);
+    color: var(--ink);
+    font: 500 15px var(--font-jakarta), system-ui, sans-serif;
+  }
+
+  .dark .field,
+  .dark .f input,
+  .dark .f select { background: rgba(255, 255, 255, 0.05); }
+
+  .field:focus,
+  .f input:focus,
+  .f select:focus { border-color: var(--brand); outline: none; }
+
+  .field.err,
+  .f input.err { border-color: var(--money-out); }
+
+  /* Campo en píldora (las filas de "agregar") */
+  .field-pill {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--cal);
+    color: var(--ink);
+    font: 500 14px var(--font-jakarta), system-ui, sans-serif;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .dark .field-pill { background: rgba(255, 255, 255, 0.05); }
+  .field-pill:focus { outline: 2px solid var(--brand); outline-offset: 0; }
+
+  .err-msg { margin: 0; color: var(--money-out-text); font-size: 12px; font-weight: 600; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .callout {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--cal);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .dark .callout { background: rgba(255, 255, 255, 0.05); }
+  .callout.warn { background: var(--money-hold-soft); }
+  .callout.brand { background: var(--brand-soft); color: var(--brand-text); }
+
+  .demo-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: var(--money-hold-soft);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* ── Tarjeta de crédito (contenido de .card-face) ── */
+  .cc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .cc-top b { font-weight: 800; font-size: 16px; }
+  .cc-top small { display: block; margin-top: 2px; font-size: 11px; opacity: 0.7; }
+  .cc-top em { font-style: normal; font-weight: 700; font-size: 13px; letter-spacing: 0.12em; opacity: 0.85; }
+
+  .cc-two { display: flex; gap: 18px; margin: 14px 0 10px; }
+  .cc-two small { display: block; font-size: 11px; opacity: 0.7; }
+  .cc-two b { font-weight: 800; font-size: 26px; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .cc-two .m b { color: var(--pop2); }
+
+  .cc-lim { height: 9px; margin: 6px 0 4px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.14); }
+  .cc-lim span { display: block; height: 100%; border-radius: 999px; background: var(--pop1); transition: width 0.9s var(--ease); }
+  .cc-limt { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; opacity: 0.85; }
+
+  .cc-dates { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+
+  .cc-dates span {
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .cc-dates span.due { border-color: transparent; background: var(--money-out); color: #ffffff; }
+  .dark .cc-dates span.due { color: #0a0c12; }
+  .cc-dates span.paid { border-color: transparent; background: var(--pop1); color: #06231d; }
+  .dark .cc-dates span.paid { color: #0a0c12; }
+
+  .cc-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  .cc-acts button {
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .cc-acts button.pri { border-color: transparent; background: var(--pop1); color: #06231d; }
+  .dark .cc-acts button.pri { color: #0a0c12; }
+
+  .cc-note {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .four { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .four > div { padding: 12px; border-radius: 18px; background: var(--cal); }
+  .dark .four > div { background: rgba(255, 255, 255, 0.04); }
+  .four small { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .four b { display: block; margin: 2px 0; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .four span { font-size: 11px; color: var(--ink-soft); }
+
+  @media (min-width: 900px) {
+    .four { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  /* ── Presupuestos ── */
+  .bud { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bud .r { padding: 12px; border-radius: 18px; background: var(--cal); }
+  .dark .bud .r { background: rgba(255, 255, 255, 0.04); }
+  .bud .r b { display: block; font-weight: 600; font-size: 12px; color: var(--ink-soft); }
+  .bud .r .v { margin: 2px 0 8px; font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .bud .r .v small { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+  .bud .tr { height: 9px; overflow: hidden; border-radius: 999px; background: var(--track); }
+  .bud .tr span { display: block; height: 100%; border-radius: 999px; background: var(--pop1); transition: width 0.9s var(--ease); }
+  .bud .tr span.warn { background: var(--pop2); }
+  .bud .tr span.over { background: var(--money-out); }
+  .bud .left { display: block; margin-top: 6px; font-size: 11px; font-weight: 700; text-align: right; }
+
+  /* ── Metas ── */
+  .goal { display: flex; flex-direction: column; gap: 8px; }
+  .goal .l { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .goal .l b { font-weight: 800; font-size: 15px; }
+  .goal .l span { font-size: 12px; color: var(--ink-soft); }
+  .goal .tr { height: 12px; overflow: hidden; border-radius: 999px; background: var(--track); }
+
+  .goal .tr span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--pop3), var(--pop1));
+    transition: width 0.9s var(--ease);
+  }
+
+  /* ── Barras horizontales (distribuciones) ── */
+  .hbars { display: flex; flex-direction: column; gap: 10px; }
+  .hb .l { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; font-size: 13px; }
+  .hb .l b { font-weight: 700; }
+  .hb .l span { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .hb .l span small { margin-left: 6px; font-weight: 600; color: var(--ink-soft); }
+  .hb .tr { height: 10px; overflow: hidden; border-radius: 999px; background: var(--track); }
+  .hb .tr span { display: block; height: 100%; border-radius: 999px; background: var(--pop3); transition: width 0.9s var(--ease); }
+  .hb.out .tr span { background: var(--pop4); }
+  .summary { margin: 0 0 10px; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+}

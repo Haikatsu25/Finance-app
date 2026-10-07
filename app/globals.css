@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+@import "./pop.css";
 
 /* Los tokens de dinero, la tinta y la marca se exponen como colores de Tailwind
    (text-money-in, bg-money-out/10, bg-brand-soft, text-ink…) para que el color
@@ -18,6 +19,7 @@
   --color-navy: var(--navy);
   --color-brand-token: var(--brand);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-text: var(--brand-text);
   --color-track: var(--track);
   --color-pop1: var(--pop1);
   --color-pop2: var(--pop2);
@@ -51,6 +53,7 @@
   --navy2: #0a1a40;
   --brand: #2f9e8f;
   --brand-soft: rgba(47, 158, 143, 0.14);
+  --brand-text: #1f7a6e;     /* marca para texto pequeño (AA sobre tarjeta) */
   --pop1: #2f9e8f;
   --pop2: #f2b53a;
   --pop3: #3b82f6;
@@ -106,6 +109,7 @@
   --navy2: #10131a;
   --brand: #d8f26a;
   --brand-soft: rgba(216, 242, 106, 0.14);
+  --brand-text: #d8f26a;
   --pop1: #d8f26a;
   --pop2: #c7b8ff;
   --pop3: #7dd3fc;
@@ -139,7 +143,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-sans);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
@@ -380,15 +384,20 @@ body {
   .seg-msi  { background: var(--pop2); }
 
   /* ───────────────────────────────────────────
-     NAVEGACIÓN MÓVIL
+     NAVEGACIÓN
+     Móvil: barra flotante de cristal. Escritorio (≥900px): riel
+     izquierdo de 232px (248px desde 1200px) con el nombre arriba.
   ─────────────────────────────────────────── */
-  .bottom-nav {
+  .app-nav {
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
     width: min(100% - 24px, 406px);
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     z-index: 50;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 6px;
     background: var(--nav-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
@@ -396,6 +405,25 @@ body {
     border-radius: 28px;
     box-shadow: var(--sh);
   }
+
+  .app-nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 52px;
+    min-height: 44px;
+    padding: 4px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    background: none;
+    border: 0;
+  }
+
+  .app-nav button[aria-current="page"] { color: var(--brand-text); }
+  .app-nav button:active { transform: scale(0.88); }
+  .app-nav-brand { display: none; }
 
   .fab {
     position: fixed;
@@ -422,6 +450,142 @@ body {
   .fab:active { transform: scale(0.9); }
 
   .fab-open { transform: rotate(45deg); }
+
+  /* Entre 431 y 899px la app es una columna de 430px: el botón flotante queda en su esquina */
+  @media (min-width: 431px) and (max-width: 899px) {
+    .fab { right: auto; left: calc(50% + 215px - 74px); }
+  }
+
+  @media (min-width: 900px) {
+    .app-nav {
+      left: 0;
+      top: 0;
+      bottom: 0;
+      transform: none;
+      width: 232px;
+      height: 100dvh;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      gap: 4px;
+      padding: 28px 16px;
+      border-width: 0 1px 0 0;
+      border-radius: 0;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      background: var(--card-bg);
+      box-shadow: none;
+    }
+
+    .app-nav-brand {
+      display: block;
+      padding: 0 14px 22px;
+      font-weight: 800;
+      font-size: 17px;
+      letter-spacing: -0.01em;
+    }
+
+    .app-nav button {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 12px;
+      min-width: 0;
+      min-height: 48px;
+      padding: 0 14px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+
+    .app-nav button[aria-current="page"] { background: var(--brand-soft); }
+    .app-nav button:active { transform: scale(0.98); }
+
+    .fab { right: 28px; bottom: 28px; width: 60px; height: 60px; }
+  }
+
+  @media (min-width: 1200px) {
+    .app-nav { width: 248px; }
+  }
+
+  /* ───────────────────────────────────────────
+     ENCABEZADO Y VISTAS
+  ─────────────────────────────────────────── */
+  .app-shell { min-height: 100dvh; }
+
+  /* Columna de app: en móvil 430px centrada; en escritorio hasta 1120px */
+  .app-col { max-width: 430px; margin-inline: auto; }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 16px 0;
+  }
+
+  .greet { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+  .greet .av {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 16px;
+    background: linear-gradient(135deg, var(--pop1), var(--pop3));
+  }
+
+  .dark .greet .av { color: #0a0c12; }
+  .greet small { display: block; font-size: 13px; color: var(--ink-soft); }
+  .greet b { font-size: 19px; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; }
+
+  .icons { display: flex; align-items: center; gap: 2px; flex: none; }
+
+  .top-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+  }
+
+  .top-icon:hover { background: var(--brand-soft); }
+  .top-icon[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand-text); }
+
+  /* Cada pestaña es una "vista": columna en móvil, dos columnas en escritorio */
+  .view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 14px 14px 120px;
+  }
+
+  .view[hidden] { display: none; }
+
+  .view .wide { grid-column: 1 / -1; }
+
+  @media (min-width: 900px) {
+    .app-shell { padding-left: 232px; }
+    .app-col { max-width: 1120px; padding-inline: 28px; }
+    .top { padding: 22px 0 0; }
+    .view {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      align-items: start;
+      grid-auto-flow: dense;
+      padding: 18px 0 60px;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .app-shell { padding-left: 248px; }
+  }
 
   /* ───────────────────────────────────────────
      SKELETONS — carga con forma
@@ -568,7 +732,7 @@ textarea::placeholder {
 .chart-tokens .recharts-label {
   fill: var(--ink-soft);
   stroke: none;
-  font-family: var(--font-sans);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
   font-weight: 600;
 }
 

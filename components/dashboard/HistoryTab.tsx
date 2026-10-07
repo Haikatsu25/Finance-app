@@ -7,7 +7,6 @@ import {
 import { Trash2, History } from "lucide-react";
 import { HistorySnapshot } from "@/types";
 import { money } from "@/lib/format";
-import type { NavTab } from "./BottomNav";
 
 /** Cero no es ni entrada ni salida: va en tinta y sin signo. */
 function Amount({ value, tone, sign = "" }: { value: number; tone: string; sign?: string }) {
@@ -15,14 +14,13 @@ function Amount({ value, tone, sign = "" }: { value: number; tone: string; sign?
   return <span className={zero ? "text-foreground" : tone}>{zero ? money(0) : `${sign}${money(value)}`}</span>;
 }
 
-export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
-  activeTab: NavTab;
+export function HistoryTab({ history, onClearOpen, onOpenDetails }: {
   history: HistorySnapshot[];
   onClearOpen: () => void;
   onOpenDetails: (snapshot: HistorySnapshot) => void;
 }) {
   return (
-    <section id="history-section" className={activeTab !== "history" ? "hidden" : ""}>
+    <section id="history-section" className="wide">
       <Divider className="my-2" />
       <div className="flex justify-between items-end mb-4">
         <div>

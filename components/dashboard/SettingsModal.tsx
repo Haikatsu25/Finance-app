@@ -2,9 +2,10 @@
 
 import React from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody, Input, Button } from "@heroui/react";
+import { UserButton } from "@clerk/nextjs";
 import {
   Fingerprint, Bell, BellOff, Users, LogOut, Trash2, Check, Copy, UserPlus,
-  Tag, X, Plus, Download, Upload,
+  Tag, X, Plus, Download, Upload, Mic, CircleHelp,
 } from "lucide-react";
 
 type SetStrings = React.Dispatch<React.SetStateAction<string[]>>;
@@ -18,7 +19,7 @@ export function SettingsModal({
   joinCode, setJoinCode, joinShared, shareError,
   customExpenseCats, setCustomExpenseCats, customIncomeCats, setCustomIncomeCats,
   newCatE, setNewCatE, newCatI, setNewCatI, addCustomCat,
-  exportData, onImportFile,
+  exportData, onImportFile, onVoiceOpen, onStartTour,
 }: {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +55,8 @@ export function SettingsModal({
   addCustomCat: (kind: "expense" | "income") => void;
   exportData: () => void;
   onImportFile: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onVoiceOpen: () => void;
+  onStartTour: () => void;
 }) {
   return (
     <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur">
@@ -62,6 +65,17 @@ export function SettingsModal({
           <>
             <ModalHeader className="flex flex-col gap-1">Ajustes</ModalHeader>
             <ModalBody className="pb-6">
+              {/* ── Atajos que en móvil no caben en el encabezado ── */}
+              <div className="flex flex-wrap items-center gap-2 sm:hidden">
+                <Button variant="flat" startContent={<Mic size={16} />} onPress={() => { onClose(); onVoiceOpen(); }}>
+                  Asistente de voz
+                </Button>
+                <Button variant="flat" startContent={<CircleHelp size={16} />} onPress={() => { onClose(); onStartTour(); }}>
+                  Iniciar tour
+                </Button>
+                <UserButton />
+              </div>
+
               {/* ── Seguridad ─────────────────────────────── */}
               <p className="text-sm font-bold text-default-700">Seguridad</p>
               <Button

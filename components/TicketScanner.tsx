@@ -106,51 +106,50 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
         {(onClose) => (
           <>
             <ModalHeader className="flex items-center gap-2">
-              <ScanLine size={18} className="text-purple-500" />
+              <ScanLine size={18} aria-hidden />
               Escanear ticket
             </ModalHeader>
             <ModalBody className="pb-2">
               {state === "idle" && (
-                <label className="flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-purple-500/30 rounded-2xl cursor-pointer hover:bg-purple-500/5 transition-colors">
-                  <div className="p-3 rounded-2xl bg-purple-500/12">
-                    <Camera size={24} className="text-purple-500" />
-                  </div>
+                <label className="flex flex-col items-center justify-center gap-3 py-10 border-2 border-dashed border-default-400 rounded-lg cursor-pointer hover:border-foreground hover:bg-foreground/5 focus-within:border-foreground focus-within:bg-foreground/5 transition-colors">
+                  <Camera size={30} aria-hidden />
                   <div className="text-center">
                     <p className="text-sm font-bold">Toma o sube la foto del ticket</p>
-                    <p className="text-[11px] text-default-400 mt-1">La IA lee el comercio, el total y la fecha por ti</p>
+                    <p className="text-xs text-default-600 mt-1">La IA lee el comercio, el total y la fecha por ti</p>
                   </div>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
+                  {/* sr-only (no hidden): así el selector de archivo también se alcanza con teclado */}
+                  <input type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Foto del ticket" onChange={handleFile} />
                 </label>
               )}
 
               {state === "processing" && (
                 <div className="flex flex-col items-center gap-3 py-10">
-                  <Spinner color="secondary" />
-                  <p className="text-sm text-default-500">Leyendo tu ticket…</p>
+                  <Spinner color="current" className="text-foreground" />
+                  <p className="text-sm text-default-700" role="status">Leyendo tu ticket…</p>
                 </div>
               )}
 
               {state === "error" && (
                 <div className="flex flex-col items-center gap-3 py-8 text-center">
-                  <AlertTriangle size={26} className="text-amber-500" />
-                  <p className="text-sm text-default-500 max-w-[280px]">{errorMsg}</p>
-                  <Button size="sm" variant="flat" color="secondary" onPress={reset}>Intentar de nuevo</Button>
+                  <AlertTriangle size={28} aria-hidden />
+                  <p className="text-sm text-default-700 max-w-[280px]" role="alert">{errorMsg}</p>
+                  <Button variant="bordered" className="h-11 font-bold border-2 border-foreground" onPress={reset}>Intentar de nuevo</Button>
                 </div>
               )}
 
               {state === "review" && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-default-400 flex items-center gap-1">
-                    <Check size={12} className="text-emerald-500" /> Ticket leído — revisa y confirma
+                  <p className="text-xs text-default-700 flex items-center gap-1.5 font-semibold">
+                    <Check size={14} aria-hidden /> Ticket leído. Revisa y confirma
                   </p>
-                  <Input label="Comercio" size="sm" variant="bordered" value={label} onValueChange={setLabel} />
+                  <Input label="Comercio" size="md" variant="bordered" value={label} onValueChange={setLabel} />
                   <div className="flex gap-2">
-                    <Input label="Total" type="number" min="0" inputMode="decimal" size="sm" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>}
+                    <Input label="Total" type="number" min="0" inputMode="decimal" size="md" variant="bordered"
+                      startContent={<span className="text-default-500 text-xs">$</span>}
                       value={amount} onValueChange={setAmount} className="flex-1" />
-                    <Input label="Fecha" type="date" size="sm" variant="bordered" value={date} onValueChange={setDate} className="w-[150px]" />
+                    <Input label="Fecha" type="date" size="md" variant="bordered" value={date} onValueChange={setDate} className="w-[160px]" />
                   </div>
-                  <Select label="Categoría" size="sm" variant="bordered"
+                  <Select label="Categoría" size="md" variant="bordered"
                     selectedKeys={[category]} onChange={(e) => setCategory(e.target.value || "Otros")}>
                     {EXPENSE_CATEGORIES.map((c) => <SelectItem key={c}>{c}</SelectItem>)}
                   </Select>
@@ -158,9 +157,9 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
               )}
             </ModalBody>
             <ModalFooter>
-              <Button variant="light" onPress={onClose}>Cancelar</Button>
+              <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cancelar</Button>
               {state === "review" && (
-                <Button color="secondary" variant="shadow" className="font-bold bg-purple-500"
+                <Button color="primary" variant="solid" className="font-bold h-11"
                   isDisabled={!label.trim() || !amountValid}
                   startContent={<Check size={15} />}
                   onPress={() => confirm(onClose)}>

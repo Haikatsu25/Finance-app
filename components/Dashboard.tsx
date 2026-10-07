@@ -19,10 +19,13 @@ import {
   BudgetItem,
   InstallmentPlan,
 } from "@/types";
-import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useClerk, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
-import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
+import {
+  biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock,
+  clearLockSkipOnce, consumeLockSkipOnce, markLockSkipOnce,
+} from "@/lib/applock";
 import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso, isoDate } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
@@ -93,7 +96,9 @@ export default function Dashboard() {
   const [locked,        setLocked]        = useState(false);
   const [lockOn,        setLockOn]        = useState(false);
   const [bioAvailable,  setBioAvailable]  = useState(false);
+  const [bioChecked,    setBioChecked]    = useState(false);
   const [unlocking,     setUnlocking]     = useState(false);
+  const [unlockFailed,  setUnlockFailed]  = useState(false);
 
   // ── Notificaciones push ──────────────────────────────────────
   const [pushStatus, setPushStatus] = useState<"on" | "off" | "denied" | "unsupported">("unsupported");
@@ -110,6 +115,7 @@ export default function Dashboard() {
   const [codeCopied,   setCodeCopied]   = useState(false);
 
   const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const isSharedMember = !!(docOwnerId && user?.id && docOwnerId !== user.id);
 
   // Autoría: se sella en cada registro nuevo (visible en cuentas compartidas)
@@ -183,10 +189,12 @@ export default function Dashboard() {
     setPrivacy(loadPrivacyMode());
 
     // Candado biométrico: si está activado, la app abre bloqueada
+    // Hasta que Clerk confirme la sesión se queda bloqueada (nunca en falso): el efecto de
+    // fc_lock_skip_once, más abajo, es el único que puede abrirla sin huella.
     const enabled = isLockEnabled();
     setLockOn(enabled);
     setLocked(enabled);
-    biometricsAvailable().then(setBioAvailable);
+    biometricsAvailable().then((ok) => { setBioAvailable(ok); setBioChecked(true); });
     getPushStatus().then(setPushStatus);
   }, []);
 
@@ -264,10 +272,35 @@ export default function Dashboard() {
   // ── Candado biométrico: handlers ─────────────────────────────
   const handleUnlock = async () => {
     setUnlocking(true);
+    setUnlockFailed(false);
     const ok = await verifyLock();
     setUnlocking(false);
     if (ok) setLocked(false);
+    else setUnlockFailed(true); // la pantalla sigue abierta con un aviso corto
   };
+
+  // "Entrar con mi cuenta" / "¿No eres tú?": cierra la sesión de Clerk para volver a entrar con
+  // Google o correo. El candado (fc_lock_on) sigue activado para la próxima apertura; la marca solo
+  // evita que la app abra bloqueada al volver de ese inicio de sesión.
+  const handleUseAccount = async () => {
+    markLockSkipOnce();
+    setLocked(false);
+    setUnlockFailed(false);
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn("signOut failed:", err);
+      clearLockSkipOnce();
+      setLocked(true);
+    }
+  };
+
+  // Regreso de "Entrar con mi cuenta": la marca fc_lock_skip_once se consume solo cuando Clerk ya
+  // cargó Y confirma la sesión. Una carga intermedia (p. ej. el sso-callback de Google) no la gasta.
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    if (consumeLockSkipOnce()) setLocked(false);
+  }, [isLoaded, isSignedIn]);
 
   const toggleBiometricLock = async () => {
     if (lockOn) {
@@ -1343,7 +1376,10 @@ export default function Dashboard() {
       <SignedIn>
         {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
         {locked && (
-          <BiometricLockScreen unlocking={unlocking} onUnlock={handleUnlock} />
+          <BiometricLockScreen
+            unlocking={unlocking} bioAvailable={bioAvailable} bioChecked={bioChecked} failed={unlockFailed}
+            onUnlock={handleUnlock} onUseAccount={handleUseAccount}
+          />
         )}
 
         {/* ── FAB → registro rápido ───────────────────────────── */}

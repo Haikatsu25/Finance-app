@@ -14,7 +14,7 @@ pasa a `main`.
   - `baseURL`: `http://localhost:3000`.
   - `use`: `screenshot: 'only-on-failure'`, `trace: 'retain-on-failure'`.
   - Proyectos: `chromium-desktop` (1366x900), `chromium-mobile` (390x844) y `mobile-small`
-    (360x780; solo corre el recorrido visual y la prueba 14).
+    (360x780; solo corre el recorrido visual y las pruebas 14 y 19-21).
 - Script en `package.json`: `"test:e2e": "playwright test"`.
 - Carpeta: `tests/e2e/`. Capturas de recorrido en `test-results/visual/`
   (ignorado en git).
@@ -85,6 +85,21 @@ pasa a `main`.
     (tamaño raíz ×1.2; todo está en `rem`): ningún `.it b` ni disparador
     de Picker (`.pk-btn`, `.pk-val`, filas del Picker) tiene
     `scrollWidth > clientWidth`.
+19. **Candado, pantalla de entrada**: con `localStorage` `fc_lock_on=1` y una
+    `fc_lock_cred` falsa (y la biometría de la plataforma simulada como
+    disponible), al abrir aparecen "Hola, {nombre}", "Usar huella o rostro",
+    "Entrar con mi cuenta" y "¿No eres tú? Cambiar de cuenta". La huella
+    (`navigator.credentials.get`) NO se pide al montar, solo al tocar el botón;
+    si el sistema la cancela sale "No se pudo verificar. Intenta de nuevo o entra
+    con tu cuenta." y la pantalla sigue abierta. Sin textos cortados ni botones
+    bajo 44px, a ×1 y con la fuente al 120 %.
+20. **Candado, huella correcta**: al verificar bien, la pantalla se cierra y
+    se ve la app.
+21. **Entrar con mi cuenta**: con una sesión propia (para no invalidar la
+    compartida), el botón cierra la sesión y aparece "Iniciar sesión"; el
+    candado (`fc_lock_on`) sigue activado y queda la marca de sesión
+    `fc_lock_skip_once` (una sola vez; la lógica está en
+    `tests/applock-skip.test.ts`).
 
 ## Criterio de éxito
 

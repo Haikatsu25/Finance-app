@@ -1314,6 +1314,7 @@ export default function Dashboard() {
 
           {/* ── ANÁLISIS ──────────────────────────────────────── */}
           <TabView active={activeTab === "analytics"} direction={tabDir}>
+            <Analytics history={history} assets={assets} transactions={transactions} />
             <CashflowTimeline
               cards={creditCards}
               subscriptions={subscriptions}
@@ -1321,7 +1322,6 @@ export default function Dashboard() {
               startBalance={available}
               transactions={transactions}
             />
-            <Analytics history={history} assets={assets} transactions={transactions} />
           </TabView>
 
           {/* ── FINANCE AI ────────────────────────────────────── */}
@@ -1335,7 +1335,7 @@ export default function Dashboard() {
 
           {/* ── HISTORIAL ─────────────────────────────────────── */}
           <TabView active={activeTab === "history"} direction={tabDir}>
-            <HistoryTab history={history} onClearOpen={onClearOpen} onOpenDetails={openHistoryDetails} />
+            <HistoryTab history={history} onClearOpen={onClearOpen} onOpenDetails={openHistoryDetails} onSaveSnapshot={saveSnapshot} />
           </TabView>
         </main>
         )}

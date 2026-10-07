@@ -1,22 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import {
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
-    Legend,
     AreaChart,
     Area,
+    Line,
     BarChart,
     Bar,
+    LabelList,
 } from "recharts";
-import { Card, CardHeader, CardBody } from "@heroui/react";
 import { HistorySnapshot, FinanceItem, TransactionItem } from "@/types";
 import { BarChart2 } from "lucide-react";
 import { money, round2 } from "@/lib/format";
-import { monthKey, monthLabel, spentByCategory } from "@/lib/finance-utils";
+import { monthKey, monthLabel, spentByCategory, summarizeMonth, shiftMonth } from "@/lib/finance-utils";
 
 interface AnalyticsProps {
     history: HistorySnapshot[];
@@ -24,23 +26,65 @@ interface AnalyticsProps {
     transactions: TransactionItem[];
 }
 
-// Valores de los tokens de dinero (los atributos SVG de recharts no resuelven var())
-const IN = "#059669";
-const OUT = "#e11d48";
-const INK = "var(--ink)";
+// ─────────────────────────────────────────
+// Colores de las gráficas. Los atributos SVG de Recharts no resuelven var(), así que se leen
+// ya resueltos de los tokens (y se releen al cambiar de tema). Nunca se hereda el stroke de los
+// íconos: cada serie declara el suyo y los ejes no llevan ninguno.
+// ─────────────────────────────────────────
+type ChartColors = { pop1: string; pop3: string; pop4: string; ink: string; mute: string; card: string; line: string };
+const FALLBACK: ChartColors = { pop1: "#2f9e8f", pop3: "#3b82f6", pop4: "#e7772b", ink: "#0e1a33", mute: "#6b7590", card: "#ffffff", line: "rgba(14,26,51,.07)" };
 
-// ─────────────────────────────────────────
-// Tooltip: panel plano, sin desenfoque ni sombra
-// ─────────────────────────────────────────
+function useChartColors(): ChartColors {
+    const { resolvedTheme } = useTheme();
+    const [colors, setColors] = useState<ChartColors>(FALLBACK);
+    useEffect(() => {
+        const cs = getComputedStyle(document.documentElement);
+        const v = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+        setColors({
+            pop1: v("--pop1", FALLBACK.pop1), pop3: v("--pop3", FALLBACK.pop3), pop4: v("--pop4", FALLBACK.pop4),
+            ink: v("--ink", FALLBACK.ink), mute: v("--ink-soft", FALLBACK.mute),
+            card: v("--card-bg", FALLBACK.card), line: v("--rule", FALLBACK.line),
+        });
+    }, [resolvedTheme]);
+    return colors;
+}
+
+const FONT = "var(--font-jakarta), system-ui, sans-serif";
+
+/** Escalón "bonito" (1, 2, 2.5, 5 × 10ⁿ) para tener unas 4 marcas en el eje Y */
+function niceStep(max: number): number {
+    if (max <= 0) return 1;
+    const raw = max / 4;
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+}
+
+function niceTicks(max: number): number[] {
+    const step = niceStep(max);
+    const out: number[] = [0];
+    for (let v = step; v <= max * 1.001 + step; v += step) {
+        out.push(round2(v));
+        if (v >= max) break;
+    }
+    return out;
+}
+
+const compactAxis = (v: number) => (v === 0 ? "0" : v >= 1000 ? `${(v / 1000).toFixed(v % 1000 ? 1 : 0)}k` : String(Math.round(v)));
+const barLabel = (raw: unknown) => { const v = Number(raw); return (v > 0 ? (v >= 1000 ? `${(v / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(Math.round(v))) : ""); };
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// Tooltip: tarjeta plana
 function ChartTooltip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="rounded-lg p-3 text-xs border border-(--card-border) bg-(--card-bg)">
+        <div className="pop-card text-xs" style={{ padding: 12 }}>
             <p className="font-bold mb-2">{label}</p>
             {payload.map((p: any) => (
                 <div key={p.name} className="flex items-center gap-2 mb-1">
-                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: p.color }} aria-hidden />
-                    <span className="text-default-600">{p.name}</span>
+                    <span className="size-2.5 rounded-full shrink-0" style={{ background: p.color || p.stroke || p.fill }} aria-hidden />
+                    <span className="mute">{p.name}</span>
                     <span className="tnum font-bold ml-auto pl-4">{money(Number(p.value))}</span>
                 </div>
             ))}
@@ -48,21 +92,18 @@ function ChartTooltip({ active, payload, label }: any) {
     );
 }
 
-const compactAxis = (v: number) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`;
-
 function EmptyChart({ message }: { message: string }) {
     return (
-        <div className="h-full flex flex-col items-center justify-center gap-2 text-default-500">
-            <BarChart2 size={32} className="opacity-40" aria-hidden />
-            <p className="text-sm">{message}</p>
+        <div className="empty flex flex-col items-center justify-center gap-2" style={{ minHeight: 140 }}>
+            <BarChart2 size={28} className="opacity-40" aria-hidden />
+            <p>{message}</p>
         </div>
     );
 }
 
 // ─────────────────────────────────────────
-// Distribución por categoría: barras ordenadas, no donas.
-// Cada barra lleva su etiqueta, su monto y su % a la derecha; se lee sin leyenda
-// y sin depender del color. Más de 8 categorías: las menores se juntan en "Otros".
+// Distribución por categoría: barras horizontales ordenadas, con su monto y su % a la derecha.
+// Más de 8 categorías: las menores se juntan en "Otros".
 // ─────────────────────────────────────────
 type Row = { name: string; value: number };
 const MAX_ROWS = 8;
@@ -85,194 +126,181 @@ function pctText(share: number): string {
     return `${Math.round(share)}%`;
 }
 
-// Barras en tinta y el color del flujo en el total de la tarjeta: contra su pista dan
-// 12:1 (claro) y 11:1 (oscuro); las rojas/verdes atenuadas al 60% daban 2.0:1 y 1.5:1.
-function DistributionBars({ rows }: { rows: Row[] }) {
+function DistributionBars({ rows, tone }: { rows: Row[]; tone?: "out" }) {
     const total = rows.reduce((s, r) => s + r.value, 0);
-    const max = Math.max(...rows.map((r) => r.value));
-
     return (
-        <ul className="space-y-3">
-            {rows.map((r) => {
-                return (
-                    <li key={r.name}>
-                        <div className="flex items-baseline justify-between gap-3">
-                            <span className="text-sm font-semibold truncate">{r.name}</span>
-                            <span className="shrink-0 flex items-baseline gap-2">
-                                <span className="figure text-[1.2rem]">{money(r.value)}</span>
-                                <span className="text-xs text-default-600 tnum min-w-[2.6rem] text-right">{pctText((r.value / total) * 100)}</span>
-                            </span>
-                        </div>
-                        <div className="h-2.5 rounded-sm bg-default-200 mt-1 overflow-hidden" aria-hidden>
-                            <div className="h-full rounded-sm bg-foreground" style={{ width: `${(r.value / max) * 100}%` }} />
-                        </div>
-                    </li>
-                );
-            })}
-        </ul>
+        <div className="hbars">
+            {rows.map((r) => (
+                <div key={r.name} className={`hb ${tone ?? ""}`}>
+                    <div className="l">
+                        <b className="truncate">{r.name}</b>
+                        <span>{money(r.value)}<small>{pctText((r.value / total) * 100)}</small></span>
+                    </div>
+                    <div className="tr" aria-hidden><span style={{ width: `${(r.value / total) * 100}%` }} /></div>
+                </div>
+            ))}
+        </div>
     );
 }
 
 export default function Analytics({ history, assets, transactions }: AnalyticsProps) {
-    // ── Trend data from history ──────────────────────────────────
+    const c = useChartColors();
+
+    // ── Tendencia: los snapshots, del más viejo al más nuevo ──────
     const trendData = [...history]
         .reverse()
         .map((h) => ({
-            date: new Date(h.date).toLocaleDateString("es-MX", { month: "short", day: "numeric" }),
-            Activos:     h.totalAssets,
-            Deudas:      h.totalLiabilities,
-            Apartados:   h.totalBuckets,
-            Disponible:  h.available,
+            date: new Date(h.date).toLocaleDateString("es-MX", { day: "numeric", month: "short" }),
+            Activos:   h.totalAssets,
+            Deudas:    h.totalLiabilities,
+            Apartados: h.totalBuckets,
+            Disponible: h.available,
         }));
+    const topValue = Math.max(0, ...trendData.map((d) => Math.max(d.Activos, d.Deudas, d.Apartados)));
+    const trendTicks = niceTicks(topValue || 1);
+    const lastIdx = trendData.length - 1;
 
-    // ── Category distribution ────────────────────────────────────
-    const getCategoryData = (items: FinanceItem[]): Row[] => {
-        const map = new Map<string, number>();
-        items.forEach((i) => {
-            const cat = i.category || "Otros";
-            map.set(cat, (map.get(cat) || 0) + i.amount);
-        });
-        return groupRows(Array.from(map, ([name, value]) => ({ name, value })));
-    };
+    // ── Distribuciones ───────────────────────────────────────────
+    const assetMap = new Map<string, number>();
+    assets.forEach((i) => assetMap.set(i.category || "Otros", (assetMap.get(i.category || "Otros") || 0) + i.amount));
+    const assetDist = groupRows(Array.from(assetMap, ([name, value]) => ({ name, value })));
+    const assetTotal = assetDist.reduce((s, r) => s + r.value, 0);
 
-    const assetDist     = getCategoryData(assets);
-    // Gastos del mes en curso, por categoría (los movimientos de tipo gasto, no la lista de deudas)
+    // Gastos del mes en curso, por categoría (movimientos de tipo gasto, no la lista de deudas)
     const currentMonth = monthKey(new Date());
-    const liabilityDist = groupRows(Array.from(spentByCategory(transactions, currentMonth), ([name, value]) => ({ name, value })));
-    const assetTotal     = assetDist.reduce((s, r) => s + r.value, 0);
-    const liabilityTotal = liabilityDist.reduce((s, r) => s + r.value, 0);
+    const expenseDist = groupRows(Array.from(spentByCategory(transactions, currentMonth), ([name, value]) => ({ name, value })));
+    const expenseTotal = expenseDist.reduce((s, r) => s + r.value, 0);
 
-    // ── Monthly bar comparison ───────────────────────────────────
-    const barData = trendData.slice(-6); // Last 6 snapshots
+    // ── Comparación mensual: ingresos y gastos de los últimos 3 meses ──
+    const months = [2, 1, 0].map((k) => {
+        const key = shiftMonth(currentMonth, -k);
+        const s = summarizeMonth(transactions, key);
+        return { key, mes: cap(monthLabel(key).split(" ")[0].slice(0, 3)), Ingresos: s.income, Gastos: s.expense };
+    });
+    const thisMonth = months[2];
 
     // ── Resúmenes en texto: lo que dicen las gráficas, para quien no las ve ──
-    const last = trendData[trendData.length - 1];
-    const prev = trendData[trendData.length - 2];
+    const last = trendData[lastIdx];
+    const prev = trendData[lastIdx - 1];
     const trendSummary = last
         ? (() => {
             const delta = prev && prev.Activos > 0
-                ? ` (${last.Activos >= prev.Activos ? "+" : "−"}${Math.abs(((last.Activos - prev.Activos) / prev.Activos) * 100).toFixed(0)}% frente al snapshot anterior)`
+                ? `, ${last.Activos >= prev.Activos ? "+" : "−"}${Math.abs(((last.Activos - prev.Activos) / prev.Activos) * 100).toFixed(0)}% frente al snapshot anterior`
                 : "";
-            return `Activos ${money(last.Activos)}${delta}, deudas ${money(last.Deudas)}, disponible ${money(last.Disponible)}.`;
+            return `Activos ${money(last.Activos)}${delta}. Deudas ${money(last.Deudas)}, apartados ${money(last.Apartados)}.`;
         })()
         : "";
-    const barSummary = barData.length
-        ? `En ${barData.length} snapshot${barData.length > 1 ? "s" : ""}: activos de ${money(barData[0].Activos)} a ${money(last.Activos)}, deudas de ${money(barData[0].Deudas)} a ${money(last.Deudas)}.`
-        : "";
+    const barSummary = `Este mes entró ${money(thisMonth.Ingresos)} y salió ${money(thisMonth.Gastos)}.`;
+
+    const axisTick = { fontSize: 10, fontWeight: 600, fill: c.mute, fontFamily: FONT };
 
     return (
-        <div className="space-y-4" id="analytics-section">
-            {/* Section header */}
-            <div className="mb-2">
-                <h3 className="text-xl font-bold section-title">Analíticas</h3>
-                <p className="text-xs text-default-500 mt-1">Tendencias y distribución de tu patrimonio</p>
-            </div>
+        <>
+            <h2 className="wide sec sec-lg px-0.5" id="analytics-section">Análisis</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                {/* ── AREA TREND CHART ────────────────────────── */}
-                <Card className="col-span-1 md:col-span-2 glass card-hover rule-ink shadow-none">
-                    <CardHeader className="flex-col items-start pb-1 gap-1">
-                        <h4 className="font-bold text-sm">Tendencia de patrimonio</h4>
-                        {trendSummary && <p className="text-xs text-default-600 tnum">{trendSummary}</p>}
-                    </CardHeader>
-                    <CardBody className="chart-tokens h-[260px] sm:h-[300px] w-full pt-0">
-                        {trendData.length > 0 ? (
-                            <div className="h-full w-full" role="img" aria-label={`Tendencia de patrimonio. ${trendSummary}`}>
+            {/* ── Tendencia de patrimonio ─────────────────── */}
+            <section className="pop-card chart-tokens">
+                <div className="sec-h">
+                    <h2 className="sec">Tendencia de patrimonio</h2>
+                    <span className="chip">{trendData.length} snapshot{trendData.length === 1 ? "" : "s"}</span>
+                </div>
+                {trendData.length > 0 ? (
+                    <>
+                        <p className="summary tnum">{trendSummary}</p>
+                        <div className="h-[200px] w-full" role="img" aria-label={`Tendencia de patrimonio. ${trendSummary}`}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={trendData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                                <AreaChart data={trendData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="gradActivos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%"  stopColor={IN} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={IN} stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="gradDeudas" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%"  stopColor={OUT} stopOpacity={0.25} />
-                                            <stop offset="95%" stopColor={OUT} stopOpacity={0} />
+                                            <stop offset="0%" stopColor={c.pop1} stopOpacity={0.32} />
+                                            <stop offset="100%" stopColor={c.pop1} stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="4 4" />
-                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={compactAxis} width={52} />
+                                    <CartesianGrid stroke={c.line} strokeDasharray="3 4" vertical={false} />
+                                    <XAxis dataKey="date" tick={axisTick} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                                    <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={compactAxis} width={40}
+                                        ticks={trendTicks} domain={[0, trendTicks[trendTicks.length - 1]]} />
                                     <Tooltip content={<ChartTooltip />} />
-                                    <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "8px" }} iconType="plainline" iconSize={16} />
-                                    <Area type="monotone" dataKey="Activos"    stroke={IN}  strokeWidth={2.5} fill="url(#gradActivos)" dot={false} activeDot={{ r: 5 }} />
-                                    <Area type="monotone" dataKey="Deudas"     stroke={OUT} strokeWidth={2.5} fill="url(#gradDeudas)"  dot={false} activeDot={{ r: 5 }} />
-                                    {/* Disponible no es un flujo: tinta y línea punteada (se distingue sin color) */}
-                                    <Area type="monotone" dataKey="Disponible" stroke={INK} strokeWidth={2.5} strokeDasharray="6 4" fill="none" dot={false} activeDot={{ r: 5 }} />
+                                    <Area type="monotone" dataKey="Activos" stroke={c.pop1} strokeWidth={3} fill="url(#gradActivos)"
+                                        dot={(p: any) => p.index === lastIdx
+                                            ? <circle key="end-a" cx={p.cx} cy={p.cy} r={5} fill={c.pop1} stroke={c.card} strokeWidth={2.5} />
+                                            : <g key={`a${p.index}`} />}
+                                        activeDot={{ r: 5, fill: c.pop1, stroke: c.card, strokeWidth: 2 }} />
+                                    <Line type="monotone" dataKey="Deudas" stroke={c.pop4} strokeWidth={2} dot={(p: any) => p.index === lastIdx
+                                        ? <circle key="end-d" cx={p.cx} cy={p.cy} r={5} fill={c.pop4} stroke={c.card} strokeWidth={2.5} />
+                                        : <g key={`d${p.index}`} />} />
+                                    <Line type="monotone" dataKey="Apartados" stroke={c.pop3} strokeWidth={2} dot={(p: any) => p.index === lastIdx
+                                        ? <circle key="end-b" cx={p.cx} cy={p.cy} r={5} fill={c.pop3} stroke={c.card} strokeWidth={2.5} />
+                                        : <g key={`b${p.index}`} />} />
                                 </AreaChart>
                             </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <EmptyChart message="Guarda snapshots para ver tu tendencia" />
-                        )}
-                    </CardBody>
-                </Card>
-
-                {/* ── BAR CHART — monthly comparison ──────────── */}
-                <Card className="col-span-1 md:col-span-2 glass card-hover rule-ink shadow-none">
-                    <CardHeader className="flex-col items-start pb-1 gap-1">
-                        <h4 className="font-bold text-sm">Comparación mensual</h4>
-                        {barSummary && <p className="text-xs text-default-600 tnum">{barSummary}</p>}
-                    </CardHeader>
-                    <CardBody className="chart-tokens h-[240px] w-full pt-0">
-                        {barData.length > 0 ? (
-                            <div className="h-full w-full" role="img" aria-label={`Comparación mensual. ${barSummary}`}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={barData} margin={{ top: 4, right: 4, left: -12, bottom: 0 }} barGap={2}>
-                                    <CartesianGrid strokeDasharray="4 4" vertical={false} />
-                                    <XAxis dataKey="date" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={compactAxis} width={48} />
-                                    <Tooltip content={<ChartTooltip />} cursor={{ fill: "var(--rule)" }} />
-                                    <Legend wrapperStyle={{ fontSize: "12px" }} iconType="square" iconSize={10} />
-                                    <Bar dataKey="Activos" fill={IN}  radius={[3, 3, 0, 0]} maxBarSize={28} />
-                                    <Bar dataKey="Deudas"  fill={OUT} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <EmptyChart message="Guarda snapshots para comparar meses" />
-                        )}
-                    </CardBody>
-                </Card>
-
-                {/* ── Distribución de activos ─────────────────── */}
-                <Card className="glass card-hover rule-in shadow-none">
-                    <CardHeader className="items-baseline justify-between gap-3 pb-2">
-                        <h4 className="font-bold text-sm">Distribución de activos</h4>
-                        {assetDist.length > 0 && (
-                            <span className="figure text-[1.65rem] text-money-in-text">{money(assetTotal)}</span>
-                        )}
-                    </CardHeader>
-                    <CardBody className="pt-1">
-                        {assetDist.length > 0 ? (
-                            <DistributionBars rows={assetDist} />
-                        ) : (
-                            <div className="h-[160px]"><EmptyChart message="Agrega activos para ver distribución" /></div>
-                        )}
-                    </CardBody>
-                </Card>
-
-                {/* ── Distribución de gastos ──────────────────── */}
-                <Card className="glass card-hover rule-out shadow-none">
-                    <CardHeader className="items-baseline justify-between gap-3 pb-2">
-                        <div>
-                            <h4 className="font-bold text-sm">Distribución de gastos</h4>
-                            <p className="text-xs text-default-600">{monthLabel(currentMonth)}</p>
                         </div>
-                        {liabilityDist.length > 0 && (
-                            <span className="figure text-[1.65rem] text-money-out-text">{money(liabilityTotal)}</span>
-                        )}
-                    </CardHeader>
-                    <CardBody className="pt-1">
-                        {liabilityDist.length > 0 ? (
-                            <DistributionBars rows={liabilityDist} />
-                        ) : (
-                            <div className="h-[160px]"><EmptyChart message="Aún no hay gastos este mes" /></div>
-                        )}
-                    </CardBody>
-                </Card>
-            </div>
-        </div>
+                        <ul className="legend" style={{ gridTemplateColumns: "repeat(3, auto)", justifyContent: "start", gap: 14 }}>
+                            <li style={{ ["--c" as string]: "var(--pop1)" }}>Activos</li>
+                            <li style={{ ["--c" as string]: "var(--pop4)" }}>Deudas</li>
+                            <li style={{ ["--c" as string]: "var(--pop3)" }}>Apartados</li>
+                        </ul>
+                    </>
+                ) : (
+                    <EmptyChart message="Guarda snapshots para ver tu tendencia" />
+                )}
+            </section>
+
+            {/* ── Comparación mensual ─────────────────────── */}
+            <section className="pop-card chart-tokens">
+                <div className="sec-h">
+                    <h2 className="sec">Comparación mensual</h2>
+                    <span className="chip">3 meses</span>
+                </div>
+                <p className="summary tnum">{barSummary}</p>
+                <div className="h-[190px] w-full" role="img" aria-label={`Ingresos y gastos por mes. ${barSummary}`}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={months} margin={{ top: 18, right: 8, left: 8, bottom: 0 }} barGap={6}>
+                            <XAxis dataKey="mes" tick={{ ...axisTick, fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <YAxis hide domain={[0, (max: number) => Math.max(max * 1.1, 1)]} />
+                            <Tooltip content={<ChartTooltip />} cursor={{ fill: c.line }} />
+                            <Bar dataKey="Ingresos" fill={c.pop1} radius={[10, 10, 0, 0]} maxBarSize={38} minPointSize={4}>
+                                <LabelList dataKey="Ingresos" position="top" formatter={barLabel}
+                                    style={{ fontSize: 10, fontWeight: 700, fill: c.ink, fontFamily: FONT, stroke: "none" }} />
+                            </Bar>
+                            <Bar dataKey="Gastos" fill={c.pop4} radius={[10, 10, 0, 0]} maxBarSize={38} minPointSize={4}>
+                                <LabelList dataKey="Gastos" position="top" formatter={barLabel}
+                                    style={{ fontSize: 10, fontWeight: 700, fill: c.ink, fontFamily: FONT, stroke: "none" }} />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+                <ul className="legend" style={{ gridTemplateColumns: "repeat(2, auto)", justifyContent: "start", gap: 14 }}>
+                    <li style={{ ["--c" as string]: "var(--pop1)" }}>Ingresos</li>
+                    <li style={{ ["--c" as string]: "var(--pop4)" }}>Gastos</li>
+                </ul>
+            </section>
+
+            {/* ── Distribución de activos ─────────────────── */}
+            <section className="pop-card">
+                <div className="sec-h">
+                    <h2 className="sec">Distribución de activos</h2>
+                    {assetDist.length > 0 && <span className="chip tnum">{money(assetTotal)}</span>}
+                </div>
+                {assetDist.length > 0 ? (
+                    <DistributionBars rows={assetDist} />
+                ) : (
+                    <div className="empty">Agrega activos para ver la distribución.</div>
+                )}
+            </section>
+
+            {/* ── Distribución de gastos ──────────────────── */}
+            <section className="pop-card">
+                <div className="sec-h">
+                    <h2 className="sec">Distribución de gastos</h2>
+                    <span className="chip tnum">{expenseDist.length > 0 ? money(expenseTotal) : cap(monthLabel(currentMonth).split(" ")[0])}</span>
+                </div>
+                {expenseDist.length > 0 ? (
+                    <DistributionBars rows={expenseDist} tone="out" />
+                ) : (
+                    <div className="empty">Aún no hay gastos este mes.</div>
+                )}
+            </section>
+        </>
     );
 }

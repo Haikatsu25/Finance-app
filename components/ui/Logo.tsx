@@ -1,19 +1,23 @@
-// Logo "Crece": tres barras que suben y un punto. Las barras toman pop4, pop2 y pop1 y el punto
-// --logo-dot, así que el mismo componente sirve en claro y en noche (mark.svg, sin el fondo).
+// Logo "Tarjeta al día": una tarjeta con su banda y su chip, y un medallón con palomita. Es el
+// mark.svg de docs/design-pop/logo/ sin el fondo. La tarjeta toma pop1, el medallón pop2, y la
+// banda, el borde del medallón y la palomita --logo-dot, así que el mismo componente sirve en claro
+// y en noche; el chip es blanco al 80 %.
 export function Logo({ size = 28, className = "" }: { size?: number; className?: string }) {
   return (
     <svg
-      viewBox="10 8 44 48"
-      width={(size * 44) / 48}
+      viewBox="9 15 52 43"
+      width={(size * 52) / 43}
       height={size}
       className={className}
+      overflow="visible" /* red de seguridad: el dibujo cabe en el viewBox (el borde del medallón llega a x=60.5) */
       role="img"
       aria-label="Finance Control"
     >
-      <rect x="14" y="40" width="10" height="12" rx="4" fill="var(--pop4)" />
-      <rect x="27" y="30" width="10" height="22" rx="4" fill="var(--pop2)" />
-      <rect x="40" y="18" width="10" height="34" rx="4" fill="var(--pop1)" />
-      <circle cx="45" cy="12" r="4" fill="var(--logo-dot)" />
+      <rect x="11" y="17" width="42" height="28" rx="7" fill="var(--pop1)" />
+      <rect x="11" y="24" width="42" height="6" fill="var(--logo-dot)" />
+      <rect x="17" y="35" width="12" height="4" rx="2" fill="#ffffff" opacity="0.8" />
+      <circle cx="48" cy="45" r="11" fill="var(--pop2)" stroke="var(--logo-dot)" strokeWidth="3" />
+      <path d="M42.5 45l3.5 3.5 7-7" fill="none" stroke="var(--logo-dot)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

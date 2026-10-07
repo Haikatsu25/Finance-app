@@ -36,6 +36,7 @@ Radios: tarjetas 24px, héroe y tarjeta de crédito 28px, filas 18px, bloques
 22px, botones y chips 999px (píldora), inputs 16px, hojas modales 28px arriba.
 
 ## Componentes clave (ver HTML para el detalle)
+- **Logo** "Tarjeta al día" (`docs/design-pop/logo/`): tarjeta con banda y chip y un medallón con palomita. Archivos listos (no regenerar): `mark.svg`, `icon*.svg`, PNG de 192/512/maskable, `apple-touch-icon.png` y `favicon.ico` (16/32/48). En la app lo dibuja `components/ui/Logo.tsx` con los tokens (tarjeta pop1, medallón pop2, banda/borde/palomita `--logo-dot`).
 - **Saludo**: avatar circular con degradado pop1→pop3, "Buenas tardes / Rodrigo" (según hora local). Reemplaza al logo en la barra superior en móvil.
 - **Héroe**: marino con tres círculos (pop3 118px arriba-derecha, pop2 54px, pop1 90px abajo-izquierda) recortados por el borde. Botones píldora blanco/translúcido. Anillo cónico con el % de disponible.
 - **Bloques de cifras**: tres tiles de color sólido (pop1/pop4/pop3) con ícono en círculo blanco.

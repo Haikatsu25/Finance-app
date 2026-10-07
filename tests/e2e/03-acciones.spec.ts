@@ -130,3 +130,24 @@ test("16. Tendencia: con menos de 2 snapshots muestra el estado vacío", async (
   await goTab(page, "analisis");
   await expect(aviso).toBeVisible();
 });
+
+test("17. Registro rápido: Agregar siempre activo, marca lo que falta y luego guarda", async ({ page }) => {
+  await openApp(page);
+  await page.getByRole("button", { name: "Agregar registro rápido" }).click();
+  const modal = page.getByRole("dialog");
+  const agregar = modal.getByRole("button", { name: "Agregar", exact: true });
+
+  await expect(agregar).toBeEnabled();
+  await agregar.click();
+  await expect(modal).toBeVisible();
+  await expect(modal.getByText("Dime en qué fue")).toBeVisible();
+  await expect(modal.getByText("Escribe un monto mayor a 0")).toBeVisible();
+
+  for (const k of ["2", "5", "0"]) await modal.getByRole("button", { name: k, exact: true }).click();
+  await modal.getByLabel("¿En qué?").fill("Tacos E2E");
+  await expect(modal.getByText("Dime en qué fue")).toHaveCount(0);
+  const saved = expectSave(page);
+  await agregar.click();
+  await expect(modal).toBeHidden();
+  await saved;
+});

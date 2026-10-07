@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Delete } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { QUICK_CATEGORIES, type QuickAddType } from "./quickAdd";
@@ -47,6 +47,10 @@ export function QuickAddModal({
   quickAmountValid: boolean;
 }) {
   const close = () => onOpenChange(false);
+  // Los avisos solo salen después de tocar Agregar (no mientras se escribe)
+  const [tried, setTried] = useState(false);
+  useEffect(() => { if (!isOpen) setTried(false); }, [isOpen]);
+  const labelMissing = !quickLabel.trim();
   const typed = useRef(0); // cuántos caracteres tenía la última pulsación, para animar solo el nuevo
   const current = TYPES.find((t) => t.id === quickType) ?? TYPES[1];
   const { int, dec } = grouped(quickAmount);
@@ -72,13 +76,15 @@ export function QuickAddModal({
 
       {/* Monto: teclado numérico propio; cada dígito nuevo "brota" */}
       <div className="kp-amt">
-        <div className={`v ${quickAmount ? "" : "empty"}`} role="status" aria-label={quickAmount ? `Monto: ${quickAmount} pesos` : "Monto vacío"}>
+        <div className={`v ${quickAmount ? "" : "empty"} ${tried && !quickAmountValid ? "err-shake" : ""}`} role="status" aria-label={quickAmount ? `Monto: ${quickAmount} pesos` : "Monto vacío"}>
           <i>$</i>
           {quickAmount
             ? chars.map((ch, idx) => <i key={idx} className={idx === chars.length - 1 && typed.current ? "pop" : ""}>{ch}</i>)
             : <i>0.00</i>}
         </div>
-        <small>{current.hint}</small>
+        {tried && !quickAmountValid
+          ? <small className="text-money-out-text" role="alert">Escribe un monto mayor a 0</small>
+          : <small>{current.hint}</small>}
       </div>
 
       <div className="kp">
@@ -91,12 +97,21 @@ export function QuickAddModal({
 
       <form
         className="flex flex-col gap-3"
-        onSubmit={(e) => { e.preventDefault(); if (quickLabel.trim() && quickAmountValid) onSubmit(close); }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          // Siempre activo: si falta algo, marca qué corregir en vez de quedarse mudo
+          if (labelMissing || !quickAmountValid) { setTried(true); return; }
+          onSubmit(close);
+        }}
       >
         <div className="row2">
           <div className="f">
             <label htmlFor="quick-label">¿En qué?</label>
-            <input id="quick-label" placeholder="Ej. Tacos, Nómina" value={quickLabel} onChange={(e) => setQuickLabel(e.target.value)} />
+            <input
+              id="quick-label" placeholder="Ej. Tacos, Nómina" value={quickLabel} onChange={(e) => setQuickLabel(e.target.value)}
+              className={tried && labelMissing ? "err" : ""} aria-invalid={tried && labelMissing} aria-describedby={tried && labelMissing ? "quick-label-err" : undefined}
+            />
+            {tried && labelMissing && <p id="quick-label-err" className="err-msg" role="alert">Dime en qué fue</p>}
           </div>
           <div className="f">
             <label htmlFor="quick-cat">Categoría</label>
@@ -107,7 +122,7 @@ export function QuickAddModal({
         </div>
         <div className="ft">
           <button type="button" className="btn soft" onClick={close}>Cancelar</button>
-          <button type="submit" className="btn" disabled={!quickLabel.trim() || !quickAmountValid}>Agregar</button>
+          <button type="submit" className="btn">Agregar</button>
         </div>
       </form>
     </Sheet>

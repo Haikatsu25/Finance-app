@@ -699,6 +699,7 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .kp-amt .v.err-shake { animation: popd 0.35s var(--spring); }
   .kp-amt .v.empty { color: var(--ink-soft); opacity: 0.5; }
   .kp-amt .v i { display: inline-block; font-style: normal; }
   .kp-amt .v i.pop { animation: popd 0.32s var(--spring) both; }

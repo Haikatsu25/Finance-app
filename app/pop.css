@@ -68,10 +68,10 @@
     box-shadow: var(--sh);
   }
 
-  /* En claro los bloques se oscurecen un poco para que el texto chico de 12px llegue a 4.5:1 */
-  .tile.a { --tile-bg: color-mix(in srgb, var(--pop1) 78%, #000); }
-  .tile.b { --tile-bg: color-mix(in srgb, var(--pop4) 74%, #000); }
-  .tile.c { --tile-bg: color-mix(in srgb, var(--pop3) 78%, #000); }
+  /* Colores exactos de la referencia; el texto es blanco y grande, con 3:1 basta */
+  .tile.a { --tile-bg: var(--pop1); }
+  .tile.b { --tile-bg: var(--pop4); }
+  .tile.c { --tile-bg: var(--pop3); }
   .dark .tile.a { --tile-bg: #1f6f5f; }
   .dark .tile.b { --tile-bg: #b24a3a; }
   .dark .tile.c { --tile-bg: #2b5aa8; }

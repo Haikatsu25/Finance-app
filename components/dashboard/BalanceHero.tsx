@@ -38,10 +38,10 @@ export function BalanceHero({
       className="hero-slab"
       aria-labelledby="balance-label"
     >
-      <div className="flex items-center justify-between gap-3 text-[14px] font-medium text-(--hero-mute)">
+      <div className="flex items-center justify-between gap-3 text-[0.875rem] font-medium text-(--hero-mute)">
         <p id="balance-label">{isPositive ? "Disponible real este mes" : "Déficit este mes"}</p>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border border-white/30 text-white" aria-label="Pesos mexicanos">
+          <span className="text-[0.6875rem] font-bold px-2.5 py-[3px] rounded-full border border-white/30 text-white" aria-label="Pesos mexicanos">
             MXN
           </span>
           {/* En móvil el anillo vive arriba, junto al chip; en escritorio, abajo con los botones */}
@@ -54,12 +54,12 @@ export function BalanceHero({
       <h2 className="figure figure-xl tnum mt-2.5 mb-2">
         {!isPositive && "−"}{p.int}
         {!p.masked && p.cents && (
-          <span className="text-[24px] align-top ml-0.5 inline-block pt-[2px]">{p.cents}</span>
+          <span className="text-[1.5rem] align-top ml-0.5 inline-block pt-[2px]">{p.cents}</span>
         )}
       </h2>
 
       {(totalFixedCosts > 0 || totalMsiMonthly > 0 || totalLiabilities > 0 || ms.expense > 0) && (
-        <p className="text-[13px] leading-[1.45] text-(--hero-mute) max-w-[32ch] md:max-w-[46ch] tnum">
+        <p className="text-[0.8125rem] leading-[1.45] text-(--hero-mute) max-w-[32ch] md:max-w-[46ch] tnum">
           Ya descontado:{" "}
           {totalLiabilities > 0 && <><strong className="text-white font-bold">{money(totalLiabilities)}</strong> de deudas, </>}
           <strong className="text-white font-bold">{money(totalFixedCosts)}</strong> fijos y{" "}

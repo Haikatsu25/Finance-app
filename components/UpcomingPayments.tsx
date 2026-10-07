@@ -47,7 +47,7 @@ export default function UpcomingPayments({ cards, subscriptions, installments = 
               <div className="t">
                 <b>
                   {p.label}
-                  {p.note && <span className="mute text-[11px] font-semibold"> {p.note}</span>}
+                  {p.note && <span className="mute text-[0.6875rem] font-semibold"> {p.note}</span>}
                 </b>
                 <small><span className={`pill ${pill.cls}`}>{pill.text}</span></small>
               </div>

@@ -149,7 +149,7 @@ export default function PlanView({
   // Botones de icono a 44px; los de +/- de mensualidades a 36px
   const ICON_BTN = "size-11 grid place-items-center rounded-full text-default-600 transition-colors hover:bg-brand-soft";
   const STEP_BTN = "size-9 rounded-full bg-(--track) hover:bg-brand-soft disabled:opacity-30 transition-colors flex items-center justify-center";
-  const ACTION_BTN = "h-11 px-4 rounded-full bg-brand-soft text-brand-text text-[13px] font-bold inline-flex items-center gap-1.5 transition-colors";
+  const ACTION_BTN = "h-11 px-4 rounded-full bg-brand-soft text-brand-text text-[0.8125rem] font-bold inline-flex items-center gap-1.5 transition-colors";
   const EMPTY = "text-xs text-default-600 py-4 text-center border-2 border-dashed border-(--rule) rounded-[18px]";
 
   // Funciones de render (no componentes): si fueran componentes internos se
@@ -164,12 +164,12 @@ export default function PlanView({
             <p className="text-sm font-semibold truncate flex items-center gap-1.5">
               {t.label}
               {t.accountId && (
-                <span className="inline-flex items-center gap-0.5 text-[11px] font-bold shrink-0">
+                <span className="inline-flex items-center gap-0.5 text-[0.6875rem] font-bold shrink-0">
                   <Check size={12} aria-hidden /> pagado
                 </span>
               )}
             </p>
-            <p className="text-[11px] text-default-600 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+            <p className="text-[0.6875rem] text-default-600 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
               <span>{t.category || "Sin categoría"}</span>
               <span className="tnum">{new Date(t.date + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</span>
               {acct && (
@@ -366,9 +366,9 @@ export default function PlanView({
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate flex items-center gap-1.5">
                         {sub.label}
-                        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-default-600 shrink-0"><Repeat size={11} aria-hidden /> fijo</span>
+                        <span className="inline-flex items-center gap-0.5 text-[0.6875rem] font-bold text-default-600 shrink-0"><Repeat size={11} aria-hidden /> fijo</span>
                       </p>
-                      <p className="text-[11px] text-default-600">{sub.category || "Suscripción"}, {sub.billingCycle}{note && `, ${note}`}</p>
+                      <p className="text-[0.6875rem] text-default-600">{sub.category || "Suscripción"}, {sub.billingCycle}{note && `, ${note}`}</p>
                     </div>
                     <span className="figure text-[1.35rem] shrink-0">−{moneySmart(amount)}</span>
                   </div>
@@ -386,7 +386,7 @@ export default function PlanView({
                     <div className="h-2 rounded-sm bg-default-200 overflow-hidden">
                       <div className="h-full rounded-sm bg-foreground" style={{ width: `${s.progress}%` }} />
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap text-[11px] text-default-600 tnum">
+                    <div className="flex items-center gap-2 flex-wrap text-[0.6875rem] text-default-600 tnum">
                       {onUpdateInstallment && (
                         <span className="flex items-center gap-1">
                           <button onClick={() => onUpdateInstallment(s.plan.id, { paidAdjust: (s.plan.paidAdjust || 0) - 1 })}
@@ -450,7 +450,7 @@ export default function PlanView({
                   <div key={pc.card.id} className="flex justify-between items-center gap-2 py-2.5 border-b border-default-200 last:border-b-0">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate">{pc.card.label}</p>
-                      <p className="text-[11px] text-default-600">
+                      <p className="text-[0.6875rem] text-default-600">
                         Pago el {pc.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}, {pc.plans} compra{pc.plans !== 1 && "s"} a meses
                       </p>
                     </div>
@@ -459,7 +459,7 @@ export default function PlanView({
                 ))}
               </div>
             )}
-            <p className="text-[11px] text-default-600">Lo que gastes con tarjeta durante el mes se suma aquí cuando lo registres en Gastos & Deudas.</p>
+            <p className="text-[0.6875rem] text-default-600">Lo que gastes con tarjeta durante el mes se suma aquí cuando lo registres en Gastos & Deudas.</p>
           </CardBody>
         </Card>
       </div>
@@ -504,7 +504,7 @@ export default function PlanView({
                             : r.kind === "msi" ? <CreditCardIcon size={13} className="text-default-600 shrink-0" aria-hidden />
                             : <Repeat size={13} className="text-default-600 shrink-0" aria-hidden />}
                           <span className="text-sm font-semibold truncate">{r.label}</span>
-                          {r.note && <span className="text-[11px] text-default-600 shrink-0">({r.note})</span>}
+                          {r.note && <span className="text-[0.6875rem] text-default-600 shrink-0">({r.note})</span>}
                         </div>
                         <div className="flex items-baseline justify-between sm:justify-end gap-2 sm:gap-4 shrink-0">
                           <span className={`figure text-[1.15rem] whitespace-nowrap ${inc ? "text-money-in-text" : ""}`}>{inc ? "+" : "−"}{money(Math.abs(r.amount))}</span>

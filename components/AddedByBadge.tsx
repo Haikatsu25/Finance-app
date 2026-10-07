@@ -19,7 +19,7 @@ export default function AddedByBadge({ addedBy, viewerId, dark = false }: {
   const firstName = addedBy.name.split(" ")[0];
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+      className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold px-2 py-0.5 rounded-full border ${
         dark
           ? "bg-white/10 text-(--face-fg) border-(--face-line)"
           : "bg-default-100 text-default-800 border-default-300"

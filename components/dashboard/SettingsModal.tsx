@@ -165,7 +165,7 @@ export function SettingsModal({
                     {codeCopied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
                   </button>
                 </div>
-                <p className="text-[11px] mute">La otra persona lo ingresa en Ajustes, en «Unirme con código», desde su propia cuenta.</p>
+                <p className="text-[0.6875rem] mute">La otra persona lo ingresa en Ajustes, en «Unirme con código», desde su propia cuenta.</p>
               </div>
             ) : (
               <button type="button" className="btn ghost sm self-start" onClick={generateInvite} disabled={shareBusy}>

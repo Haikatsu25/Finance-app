@@ -43,6 +43,12 @@ export default defineConfig({
       name: "chromium-mobile",
       use: { ...devices["Desktop Chrome"], channel, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
     },
+    {
+      // Pantalla chica (360x780): solo el recorrido visual y la comprobación de textos/selectores
+      name: "mobile-small",
+      testMatch: /0[45]-.*\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], channel, viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
+    },
   ],
 
   // Reutiliza el servidor si ya está arriba; si no, lo levanta con la precarga de DNS

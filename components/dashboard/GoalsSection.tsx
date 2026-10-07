@@ -112,7 +112,7 @@ export function GoalsSection({ items, onAdd, onRemove, onUpdateProgress, viewerI
                 </div>
                 <div className="l">
                   <span className="tnum">
-                    <b className="text-money-in-text text-[13px]">{moneySmart(item.currentAmount)}</b> de {moneySmart(item.targetAmount)}
+                    <b className="text-money-in-text text-[0.8125rem]">{moneySmart(item.currentAmount)}</b> de {moneySmart(item.targetAmount)}
                   </span>
                   {!done && <span>Aparta {moneySmart(perMonth)}/mes</span>}
                 </div>

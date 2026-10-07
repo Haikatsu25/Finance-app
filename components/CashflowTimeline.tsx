@@ -134,7 +134,7 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
                   : <Repeat size={18} />}
               </i>
               <div className="t">
-                <b>{r.label}{r.note && <span className="mute text-[11px] font-semibold"> ({r.note})</span>}</b>
+                <b>{r.label}{r.note && <span className="mute text-[0.6875rem] font-semibold"> ({r.note})</span>}</b>
                 <small>
                   {r.dueDate.toLocaleDateString("es-MX", { day: "numeric", month: "short" })},{" "}
                   {r.daysLeft < 0 ? `venció hace ${Math.abs(r.daysLeft)} d` : r.daysLeft === 0 ? "hoy" : r.daysLeft === 1 ? "mañana" : `en ${r.daysLeft} d`}
@@ -144,7 +144,7 @@ export default function CashflowTimeline({ cards, subscriptions, installments, s
                 <div className={`amt ${isIncome ? "text-money-in-text" : ""}`}>
                   {isIncome ? "+" : "−"}{money(Math.abs(r.amount))}
                 </div>
-                <small className={`text-[11px] font-bold tnum ${negative ? "text-money-out-text" : "mute"}`}>
+                <small className={`text-[0.6875rem] font-bold tnum ${negative ? "text-money-out-text" : "mute"}`}>
                   Saldo {negative && "−"}{money(Math.abs(r.after))}
                 </small>
               </div>

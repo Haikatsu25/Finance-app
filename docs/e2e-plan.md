@@ -13,7 +13,8 @@ pasa a `main`.
     (`NODE_OPTIONS=--require <ruta>/dns-fix.cjs`), `reuseExistingServer: true`.
   - `baseURL`: `http://localhost:3000`.
   - `use`: `screenshot: 'only-on-failure'`, `trace: 'retain-on-failure'`.
-  - Proyectos: `chromium-desktop` (1366x900) y `chromium-mobile` (390x844).
+  - Proyectos: `chromium-desktop` (1366x900), `chromium-mobile` (390x844) y `mobile-small`
+    (360x780; solo corre el recorrido visual y la prueba 14).
 - Script en `package.json`: `"test:e2e": "playwright test"`.
 - Carpeta: `tests/e2e/`. Capturas de recorrido en `test-results/visual/`
   (ignorado en git).
@@ -79,10 +80,15 @@ pasa a `main`.
       horizontal)
     - todos los `button` visibles miden al menos 36x36 px; los de acción
       principal 44x44.
+14. **Móvil, nada se corta**: con datos reales ("Quincena 30 sep",
+    "Fondo de emergencia…") y también con la fuente del sistema al 120 %
+    (tamaño raíz ×1.2; todo está en `rem`): ningún `.it b` ni disparador
+    de Picker (`.pk-btn`, `.pk-val`, filas del Picker) tiene
+    `scrollWidth > clientWidth`.
 
 ## Criterio de éxito
 
-`npm run test:e2e` termina en verde en los dos proyectos. Si algo falla,
+`npm run test:e2e` termina en verde en los tres proyectos. Si algo falla,
 se arregla el código o la prueba (si la prueba estaba mal), nunca se
 salta el escenario.
 

@@ -2,12 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./fixtures";
-import { findOverflow, findSmallButtons, goTab, loadDemo, openApp, type Tab } from "./helpers/app";
+import { findOverflow, findSmallButtons, goTab, loadDemo, openApp, openFirstEdit, type Tab } from "./helpers/app";
 
 const OUT = path.join(process.cwd(), "test-results", "visual");
 const THEMES = ["light", "dark"] as const;
 
-const viewportOf = (info: TestInfo) => info.project.name.replace("chromium-", "");
+const viewportOf = (info: TestInfo) => info.project.name.replace("chromium-", "")  // desktop | mobile | mobile-small;
 
 /** Captura la pantalla y revisa desborde horizontal y tamaños de botones. Los fallos se acumulan. */
 async function inspect(page: Page, info: TestInfo, name: string, theme: string, fullPage: boolean) {
@@ -64,7 +64,7 @@ for (const theme of THEMES) {
     await closeDialogs(page);
 
     await goTab(page, "movimientos");
-    await page.locator('button[aria-label^="Editar "]:visible').first().click();
+    await openFirstEdit(page);
     await expect(page.getByRole("dialog").getByText("Editar movimiento")).toBeVisible();
     await modal("editar");
     await closeDialogs(page);

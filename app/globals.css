@@ -231,7 +231,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    min-height: 44px;
+    min-height: 2.75rem;
     padding: 0 14px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.16);
@@ -292,13 +292,13 @@ body {
   }
 
   .figure-xl {
-    font-size: 46px;
+    font-size: 2.875rem;
     line-height: 1;
     letter-spacing: -0.025em;
   }
 
   @media (min-width: 900px) {
-    .figure-xl { font-size: 54px; }
+    .figure-xl { font-size: 3.375rem; }
   }
 
   .figure-md {
@@ -414,10 +414,10 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 3px;
-    min-width: 52px;
-    min-height: 44px;
+    min-width: 3.25rem;
+    min-height: 2.75rem;
     padding: 4px 0;
-    font-size: 11px;
+    font-size: 0.6875rem;
     font-weight: 700;
     color: var(--ink-soft);
     background: none;
@@ -433,8 +433,8 @@ body {
     bottom: calc(92px + env(safe-area-inset-bottom, 0px));
     right: 18px;
     z-index: 50;
-    width: 56px;
-    height: 56px;
+    width: 3.5rem;
+    min-height: 3.5rem;
     border-radius: 50%;
     display: grid;
     place-items: center;
@@ -486,7 +486,7 @@ body {
       gap: 10px;
       padding: 0 14px 22px;
       font-weight: 800;
-      font-size: 17px;
+      font-size: 1.0625rem;
       letter-spacing: -0.01em;
     }
 
@@ -495,16 +495,16 @@ body {
       justify-content: flex-start;
       gap: 12px;
       min-width: 0;
-      min-height: 48px;
+      min-height: 3rem;
       padding: 0 14px;
       border-radius: 14px;
-      font-size: 14px;
+      font-size: 0.875rem;
     }
 
     .app-nav button[aria-current="page"] { background: var(--brand-soft); }
     .app-nav button:active { transform: scale(0.98); }
 
-    .fab { right: 28px; bottom: 28px; width: 60px; height: 60px; }
+    .fab { right: 28px; bottom: 28px; width: 3.75rem; min-height: 3.75rem; }
   }
 
   @media (min-width: 1200px) {
@@ -530,27 +530,27 @@ body {
   .greet { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
   .greet .av {
-    width: 44px;
-    height: 44px;
+    width: 2.75rem;
+    min-height: 2.75rem;
     flex: none;
     border-radius: 50%;
     display: grid;
     place-items: center;
     color: #ffffff;
     font-weight: 800;
-    font-size: 16px;
+    font-size: 1rem;
     background: linear-gradient(135deg, var(--pop1), var(--pop3));
   }
 
   .dark .greet .av { color: #0a0c12; }
-  .greet small { display: block; font-size: 13px; color: var(--ink-soft); }
-  .greet b { font-size: 19px; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; }
+  .greet small { display: block; font-size: 0.8125rem; color: var(--ink-soft); }
+  .greet b { font-size: 1.1875rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; }
 
   .icons { display: flex; align-items: center; gap: 2px; flex: none; }
 
   .top-icon {
-    width: 44px;
-    height: 44px;
+    width: 2.75rem;
+    min-height: 2.75rem;
     border-radius: 50%;
     border: 0;
     background: transparent;
@@ -634,7 +634,7 @@ body {
     color: #ffffff;
     border-radius: 18px;
     padding: 12px 12px 12px 16px;
-    font-size: 13px;
+    font-size: 0.8125rem;
     font-weight: 600;
     box-shadow: var(--sh);
     animation: toastIn 0.4s var(--spring) both;
@@ -792,21 +792,21 @@ button:active:not(:disabled), [role="button"]:active, .card-face:active {
    botones del héroe, botón flotante) al menos 44px. Va fuera de @layer para ganarle a las clases
    de tamaño "sm" de HeroUI. Se excluyen los botones solo para lectores de pantalla (1x1). */
 :where(button:not(.sr-only):not([aria-label="Descartar"]):not([aria-label="Dismiss"]), [role="button"]:not(.sr-only)) {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
 }
 button.bg-primary,
 button.bg-foreground,
 button[data-solid="true"],
 .fab {
-  min-height: 44px;
+  min-height: 2.75rem;
 }
 button.bg-foreground[aria-label],
 button.bg-primary[aria-label] {
-  min-width: 44px;
+  min-width: 2.75rem;
 }
 
 .cl-userButtonTrigger {
-  min-height: 36px;
-  min-width: 36px;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
 }

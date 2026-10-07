@@ -25,7 +25,7 @@ export function BiometricLockScreen({ unlocking, onUnlock }: {
       >
         Desbloquear
       </Button>
-      <p className="text-[11px] text-white/30 max-w-[260px] text-center">
+      <p className="text-[0.6875rem] text-white/30 max-w-[260px] text-center">
         Si tu huella no funciona, desbloquea con el método de tu dispositivo (PIN/patrón) cuando el sistema lo ofrezca.
       </p>
     </div>

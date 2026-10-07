@@ -527,6 +527,16 @@ textarea::placeholder {
   opacity: 1;
 }
 
+/* Botón de cerrar de TODOS los modales (HeroUI lo dibuja de 32px): 44px, como el resto de
+   acciones. Va fuera de @layer: la clase de utilidad de HeroUI está en una capa y ganaría. */
+[role="dialog"] > button[aria-label="Close"],
+[role="dialog"] > button[aria-label="Cerrar"] {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
 /* Foco: tinta de 2px con un halo del color del fondo, visible
    tanto sobre papel como sobre la losa verde o roja. */
 :focus-visible {

@@ -2,12 +2,13 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  Card, CardBody, Input, Button, Select, SelectItem,
+  Input, Button, Select, SelectItem,
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
 } from "@heroui/react";
 import {
-  ArrowDownCircle, ArrowUpCircle, ChevronLeft, ChevronRight,
-  Plus, Trash2, ReceiptText, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
+  ChevronLeft, ChevronRight,
+  Trash2, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
+  ShoppingBag, Car, Tv, Shirt, HeartPulse, House, Zap, GraduationCap, Banknote, CircleDollarSign,
 } from "lucide-react";
 import { TransactionItem, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
@@ -20,6 +21,24 @@ export const EXPENSE_CATEGORIES = [
   "Entretenimiento", "Ropa", "Educación", "Suscripción", "Otros",
 ];
 export const INCOME_CATEGORIES = ["Nómina", "Freelance", "Venta", "Regalo", "Otros"];
+
+/** Ícono de la fila según la categoría (decorativo) */
+function catIcon(t: TransactionItem): React.ReactNode {
+  const p = { size: 18, "aria-hidden": true } as const;
+  if (t.type === "income") return <Banknote {...p} />;
+  switch (t.category) {
+    case "Comida": case "Súper": return <ShoppingBag {...p} />;
+    case "Transporte": return <Car {...p} />;
+    case "Entretenimiento": return <Tv {...p} />;
+    case "Ropa": return <Shirt {...p} />;
+    case "Salud": return <HeartPulse {...p} />;
+    case "Hogar": return <House {...p} />;
+    case "Servicios": return <Zap {...p} />;
+    case "Educación": return <GraduationCap {...p} />;
+    case "Suscripción": return <Repeat {...p} />;
+    default: return <CircleDollarSign {...p} />;
+  }
+}
 
 /** Solo la primera letra en mayúscula: "octubre de 2026" → "Octubre de 2026" */
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -182,28 +201,27 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const clearFilters = () => { setSearch(""); setFilterCat("all"); setFilterType("all"); };
 
   return (
-    <div className="space-y-4" id="transactions-section">
-      {/* Header + navegación de mes */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div>
-            <h3 className="text-xl font-bold section-title">Movimientos</h3>
-            <p className="text-xs text-default-500 mt-0.5">Cada peso que entra y sale</p>
-          </div>
-        </div>
+    <>
+      {/* Encabezado y navegación de mes */}
+      <div className="wide flex items-center justify-between gap-2 px-0.5" id="transactions-section">
+        <h2 className="sec sec-lg">Movimientos</h2>
         {!searching && (
-          <div className="flex items-stretch rounded-[10px] border-2 border-foreground overflow-hidden">
-            <button onClick={() => setMonth(shiftMonth(month, -1))} className="px-2.5 py-2 hover:bg-foreground/10 text-foreground" aria-label="Mes anterior">
-              <ChevronLeft size={16} />
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setMonth(shiftMonth(month, -1))}
+              className="size-10 grid place-items-center rounded-full bg-(--track) text-foreground"
+              aria-label="Mes anterior"
+            >
+              <ChevronLeft size={18} aria-hidden />
             </button>
-            <span className="text-[13px] font-bold px-3 min-w-[130px] text-center self-center">{cap(monthLabel(month))}</span>
+            <b className="text-[16px] font-extrabold min-w-[116px] text-center">{cap(monthLabel(month))}</b>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
               disabled={month >= maxMonth}
-              className="px-2.5 py-2 hover:bg-foreground/10 text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+              className="size-10 grid place-items-center rounded-full bg-(--track) text-foreground disabled:opacity-30"
               aria-label="Mes siguiente"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={18} aria-hidden />
             </button>
           </div>
         )}
@@ -214,238 +232,210 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
 
       {/* Mes futuro: lo que llevas comprometido */}
       {!searching && !filtering && viewingFuture && (
-        <Card className="glass rule-ink shadow-none">
-          <CardBody className="p-4 flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex-1">
-              <p className="text-sm font-bold">Plan de {monthLabel(month)}</p>
-              <p className="text-xs text-default-500">
-                Gastos que ya sabes que vienen. Se suman aquí y a tu proyección de flujo
-              </p>
+        <section className="pop-card">
+          <div className="sec-h">
+            <h2 className="sec">Plan de {monthLabel(month)}</h2>
+          </div>
+          <p className="summary">
+            Gastos que ya sabes que vienen. Se suman aquí y a tu proyección de flujo.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="kv">
+              <small>Comprometido</small>
+              <b className="num text-money-out-text">{money(summary.expense)}</b>
             </div>
-            <div className="flex gap-4">
-              <div className="text-right">
-                <p className="text-xs font-semibold text-default-500">Comprometido</p>
-                <p className="figure text-3xl text-money-out-text">{money(summary.expense)}</p>
+            {summary.income > 0 && (
+              <div className="kv">
+                <small>Ingresos esperados</small>
+                <b className="num text-money-in-text">{money(summary.income)}</b>
               </div>
-              {summary.income > 0 && (
-                <div className="text-right">
-                  <p className="text-xs font-semibold text-default-500">Ingresos esperados</p>
-                  <p className="figure text-3xl text-money-in-text">{money(summary.income)}</p>
-                </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* ── Búsqueda y filtros ───────────────────────────────── */}
-      <Card className="glass shadow-none">
-        <CardBody className="p-3 flex flex-col sm:flex-row gap-2">
-          <Input
-            placeholder="Buscar en todos los meses… (ej. uber, tacos)"
-            size="sm"
-            variant="bordered"
-            startContent={<Search size={14} className="text-default-400" />}
-            endContent={search && (
-              <button onClick={() => setSearch("")} aria-label="Limpiar búsqueda">
-                <X size={14} className="text-default-400 hover:text-default-600" />
+      {/* ── Búsqueda, filtros y captura ─────────────────────── */}
+      <section className="pop-card">
+        <div className="search">
+          <Search size={16} aria-hidden />
+          <input
+            placeholder="Buscar en todos los meses (ej. uber, tacos)"
+            aria-label="Buscar movimientos"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} aria-label="Limpiar búsqueda" className="grid place-items-center size-9 rounded-full">
+              <X size={14} aria-hidden />
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <select className="field-pill" aria-label="Filtrar categoría" value={filterCat} onChange={(e) => setFilterCat(e.target.value || "all")}>
+            <option value="all">Todas las categorías</option>
+            {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select className="field-pill" aria-label="Filtrar tipo" value={filterType} onChange={(e) => setFilterType(e.target.value || "all")}>
+            <option value="all">Todo</option>
+            <option value="expense">Gastos</option>
+            <option value="income">Ingresos</option>
+          </select>
+        </div>
+
+        {/* Resultados de búsqueda/filtro */}
+        {(searching || filtering) && (
+          <div className="flex items-center justify-between gap-2 flex-wrap mt-3">
+            <p className="text-xs mute">
+              <b className="text-foreground">{filteredTotals.count}</b> resultado{filteredTotals.count !== 1 && "s"}
+              {searching && " en todos los meses"}
+              {": "}gastos <b className="tnum text-money-out-text">{money(filteredTotals.exp)}</b>
+              {filteredTotals.inc > 0 && <>, ingresos <b className="tnum text-money-in-text">{money(filteredTotals.inc)}</b></>}
+            </p>
+            <button type="button" className="btn soft sm" onClick={clearFilters}>
+              <X size={12} aria-hidden /> Limpiar
+            </button>
+          </div>
+        )}
+
+        <form
+          className="mt-3 flex flex-col gap-2.5"
+          onSubmit={(e) => { e.preventDefault(); submit(); }}
+        >
+          <div className={`seg ${type === "expense" ? "out" : "in"}`} role="group" aria-label="Tipo de movimiento">
+            <button type="button" aria-pressed={type === "expense"} onClick={() => { setType("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}>
+              Gasto
+            </button>
+            <button type="button" aria-pressed={type === "income"} onClick={() => { setType("income"); setCategory(INCOME_CATEGORIES[0]); }}>
+              Ingreso
+            </button>
+          </div>
+          <div className="f">
+            <input placeholder="¿En qué?" aria-label="¿En qué?" value={label} onChange={(e) => setLabel(e.target.value)} />
+          </div>
+          <div className="row2">
+            <div className="f">
+              <input
+                type="number" min="0" inputMode="decimal" placeholder="$ 0.00" aria-label="Monto"
+                value={amount} onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className="f">
+              <input type="date" aria-label="Fecha" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+          </div>
+          <div className={accounts.length > 0 ? "row2" : ""}>
+            <div className="f">
+              <select aria-label="Categoría" value={category} onChange={(e) => setCategory(e.target.value || cats[0])}>
+                {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            {accounts.length > 0 && (
+              <div className="f">
+                <select aria-label="Cuenta" value={accountId} onChange={(e) => setAccountId(e.target.value || "none")}>
+                  <option value="none">Sin cuenta</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button className="btn flex-1" type="submit" disabled={!label.trim() || !amountValid}>
+              Registrar
+            </button>
+            {onScanRequest && (
+              <button className="btn soft" type="button" onClick={onScanRequest} aria-label="Escanear ticket" title="Escanear ticket">
+                <ScanLine size={18} aria-hidden />
               </button>
             )}
-            value={search}
-            onValueChange={setSearch}
-            className="flex-1"
-          />
-          <div className="flex gap-2">
-            <Select size="sm" variant="bordered" aria-label="Filtrar categoría" className="w-36"
-              selectedKeys={[filterCat]} onChange={(e) => setFilterCat(e.target.value || "all")}>
-              <>
-                <SelectItem key="all">Todas las categorías</SelectItem>
-                <>{allCats.map((c) => <SelectItem key={c}>{c}</SelectItem>)}</>
-              </>
-            </Select>
-            <Select size="sm" variant="bordered" aria-label="Filtrar tipo" className="w-28"
-              selectedKeys={[filterType]} onChange={(e) => setFilterType(e.target.value || "all")}>
-              <SelectItem key="all">Todo</SelectItem>
-              <SelectItem key="expense">Gastos</SelectItem>
-              <SelectItem key="income">Ingresos</SelectItem>
-            </Select>
+            <button
+              className="btn soft" type="button" disabled={filtered.length === 0}
+              onClick={() => exportCsv(filtered, accountName)} aria-label="Exportar CSV" title="Exportar CSV"
+            >
+              <Download size={18} aria-hidden />
+            </button>
           </div>
-        </CardBody>
-      </Card>
+        </form>
 
-      {/* Resultados de búsqueda/filtro */}
-      {(searching || filtering) && (
-        <div className="flex items-center justify-between gap-2 flex-wrap px-1">
-          <p className="text-xs text-default-500">
-            <span className="font-bold text-foreground">{filteredTotals.count}</span> resultado{filteredTotals.count !== 1 && "s"}
-            {searching && <span className="text-default-500"> en todos los meses</span>}
-            {": "}gastos <span className="font-bold tnum text-money-out-text">{money(filteredTotals.exp)}</span>
-            {filteredTotals.inc > 0 && <>, ingresos <span className="font-bold tnum text-money-in-text">{money(filteredTotals.inc)}</span></>}
+        {dateIsFuture && (
+          <p className="text-[12px] font-semibold mt-2.5">
+            Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de {monthLabel(monthKey(effectiveDate))}
+            {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
+            . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
           </p>
-          <Button size="sm" variant="light" className="text-default-500 h-7" startContent={<X size={12} />} onPress={clearFilters}>
-            Limpiar
-          </Button>
-        </div>
-      )}
-
-      {/* Captura */}
-      <Card className="glass shadow-none">
-        <CardBody className="p-4">
-          <div className="flex flex-col lg:flex-row lg:flex-wrap gap-2">
-            <div className="flex gap-1.5 shrink-0">
-              <button
-                onClick={() => { setType("expense"); setCategory(EXPENSE_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-                  type === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-500"
-                }`}
-              >
-                <ArrowDownCircle size={14} /> Gasto
-              </button>
-              <button
-                onClick={() => { setType("income"); setCategory(INCOME_CATEGORIES[0]); }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-                  type === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-500"
-                }`}
-              >
-                <ArrowUpCircle size={14} /> Ingreso
-              </button>
-            </div>
-            <Input placeholder="¿En qué?" size="sm" variant="bordered" className="lg:flex-1 lg:min-w-[180px] lg:basis-[180px]" value={label} onValueChange={setLabel} />
-            <div className="flex gap-2 flex-wrap">
-              <Input
-                type="number" min="0" inputMode="decimal" placeholder="0.00" size="sm" variant="bordered"
-                startContent={<span className="text-default-400 text-xs font-bold">$</span>}
-                className="w-28" value={amount} onValueChange={setAmount}
-              />
-              <Select size="sm" variant="bordered" aria-label="Categoría" className="w-36"
-                selectedKeys={[category]} onChange={(e) => setCategory(e.target.value || cats[0])}>
-                {cats.map((c) => <SelectItem key={c}>{c}</SelectItem>)}
-              </Select>
-              <Input type="date" size="sm" variant="bordered" aria-label="Fecha" className="w-[130px]" value={date} onValueChange={setDate} />
-              {accounts.length > 0 && (
-                <Select size="sm" variant="bordered" aria-label="Cuenta"
-                  startContent={<Landmark size={13} className="text-default-400 shrink-0" />}
-                  className="w-40"
-                  selectedKeys={[accountId]} onChange={(e) => setAccountId(e.target.value || "none")}>
-                  <>
-                    <SelectItem key="none" textValue="Sin cuenta">Sin cuenta</SelectItem>
-                    <>{accounts.map((a) => <SelectItem key={a.id} textValue={a.label}>{a.label}</SelectItem>)}</>
-                  </>
-                </Select>
-              )}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button size="sm" color={type === "expense" ? "danger" : "success"} variant="solid"
-                className="font-bold flex-1 lg:flex-none" isDisabled={!label.trim() || !amountValid}
-                startContent={<Plus size={14} />} onPress={submit}>
-                Registrar
-              </Button>
-              {onScanRequest && (
-                <Button size="sm" variant="flat" color="secondary" className="font-bold"
-                  startContent={<ScanLine size={14} />} onPress={onScanRequest}>
-                  Escanear ticket
-                </Button>
-              )}
-              <Button size="sm" variant="flat" className="font-bold text-default-500"
-                isDisabled={filtered.length === 0}
-                startContent={<Download size={14} />} onPress={() => exportCsv(filtered, accountName)}>
-                CSV
-              </Button>
-            </div>
-          </div>
-          {dateIsFuture && (
-            <p className="text-[11px] text-foreground font-semibold mt-2">
-              Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de {monthLabel(monthKey(effectiveDate))}
-              {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
-              . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
-            </p>
-          )}
-          {!dateIsFuture && !date && month !== currentMonth && !searching && (
-            <p className="text-[11px] text-default-500 font-semibold mt-2">
-              Se registrará en {monthLabel(month)} (día 1). Elige otro día con el campo de fecha si quieres.
-            </p>
-          )}
-        </CardBody>
-      </Card>
+        )}
+        {!dateIsFuture && !date && month !== currentMonth && !searching && (
+          <p className="text-[12px] mute font-semibold mt-2.5">
+            Se registrará en {monthLabel(month)} (día 1). Elige otro día con el campo de fecha si quieres.
+          </p>
+        )}
+      </section>
 
       {/* Lista agrupada por día */}
-      <Card className="glass shadow-none">
-        <CardBody className="p-0">
-          {grouped.length === 0 ? (
-            <div className="py-14 text-center text-default-400">
-              <ReceiptText size={32} className="mx-auto mb-2 opacity-30" />
-              {searching || filtering ? (
-                <p className="text-sm">Nada coincide con tu búsqueda</p>
-              ) : (
-                <>
-                  <p className="text-sm">{viewingFuture ? `Sin gastos planeados para ${monthLabel(month)}` : `Sin movimientos en ${monthLabel(month)}`}</p>
-                  <p className="text-xs mt-1">{viewingFuture ? "Registra arriba con la fecha de ese mes lo que ya sabes que viene" : "Registra tu primer gasto o ingreso arriba"}</p>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-default-200">
-              {grouped.map(([day, items]) => {
-                const dayTotal = items.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
-                return (
-                  <div key={day} className="px-4 py-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-sm font-bold">
-                        {cap(new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
-                          weekday: "long", day: "numeric", month: "short",
-                          ...(searching ? { year: "numeric" } : {}),
-                        }))}
-                      </p>
-                      <span className={`figure text-xl ${dayTotal >= 0 ? "text-money-in-text" : "text-money-out-text"}`}>
-                        {dayTotal >= 0 ? "+" : "−"}{money(Math.abs(dayTotal))}
-                      </span>
+      <div className="wide flex flex-col gap-3.5">
+        {grouped.length === 0 ? (
+          <div className="empty">
+            {searching || filtering ? (
+              "Nada coincide con tu búsqueda."
+            ) : viewingFuture ? (
+              `Sin gastos planeados para ${monthLabel(month)}. Registra arriba con la fecha de ese mes lo que ya sabes que viene.`
+            ) : (
+              `Sin movimientos en ${monthLabel(month)}. Registra tu primer gasto o ingreso arriba.`
+            )}
+          </div>
+        ) : (
+          grouped.map(([day, items]) => {
+            const dayTotal = items.reduce((s, t) => s + (t.type === "income" ? t.amount : -t.amount), 0);
+            return (
+              <div key={day}>
+                <div className="day">
+                  <b>
+                    {cap(new Date(day + "T12:00:00").toLocaleDateString("es-MX", {
+                      weekday: "long", day: "numeric", month: "short",
+                      ...(searching ? { year: "numeric" } : {}),
+                    }))}
+                  </b>
+                  <span className={`num ${dayTotal >= 0 ? "text-money-in-text" : "text-money-out-text"}`}>
+                    {dayTotal >= 0 ? "+" : "−"}{money(Math.abs(dayTotal))}
+                  </span>
+                </div>
+                <div className="pop-card list" style={{ padding: 8 }}>
+                  {items.map((t) => (
+                    <div key={t.id} className="it">
+                      <i aria-hidden>{catIcon(t)}</i>
+                      <div className="t">
+                        <b>{t.label}</b>
+                        <small className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                          <span>{t.category || "Sin categoría"}</span>
+                          {t.source === "scan" && <span className="inline-flex items-center gap-1"><ScanLine size={11} aria-hidden /> escaneado</span>}
+                          {t.source === "fixed" && <span className="inline-flex items-center gap-1"><Repeat size={11} aria-hidden /> fijo</span>}
+                          {t.accountId && accountName(t.accountId) && (
+                            <span className="inline-flex items-center gap-1 font-semibold text-foreground"><Landmark size={11} aria-hidden /> {accountName(t.accountId)}</span>
+                          )}
+                          <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
+                        </small>
+                      </div>
+                      <div className={`amt ${t.type === "income" ? "text-money-in-text" : ""}`}>
+                        {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
+                      </div>
+                      <div className="acts">
+                        {onUpdate && (
+                          <button onClick={() => openEdit(t)} aria-label={`Editar ${t.label}`}>
+                            <Pencil size={15} aria-hidden />
+                          </button>
+                        )}
+                        <button onClick={() => onRemove(t.id)} aria-label={`Eliminar ${t.label}`}>
+                          <Trash2 size={15} aria-hidden />
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      {items.map((t) => (
-                        <div key={t.id} className="group flex items-center gap-3 py-2.5 border-b border-default-200 last:border-b-0">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold truncate">{t.label}</p>
-                            <p className="text-[11px] text-default-500 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
-                              {t.category || "Sin categoría"}
-                              {t.source === "scan" && <span className="inline-flex items-center gap-1"><ScanLine size={11} aria-hidden /> escaneado</span>}
-                              {t.source === "fixed" && <span className="inline-flex items-center gap-1"><Repeat size={11} aria-hidden /> fijo</span>}
-                              {t.accountId && accountName(t.accountId) && (
-                                <span className="inline-flex items-center gap-1 font-semibold text-foreground"><Landmark size={11} aria-hidden /> {accountName(t.accountId)}</span>
-                              )}
-                              <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
-                            </p>
-                          </div>
-                          <span className={`figure text-[1.35rem] shrink-0 ${t.type === "income" ? "text-money-in-text" : "text-foreground"}`}>
-                            {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
-                          </span>
-                          <div className="flex items-center shrink-0">
-                            {onUpdate && (
-                              <button
-                                onClick={() => openEdit(t)}
-                                className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-foreground/10"
-                                aria-label={`Editar ${t.label}`}
-                              >
-                                <Pencil size={13} />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => onRemove(t.id)}
-                              className="opacity-70 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 text-default-500 hover:text-money-out-text transition-colors p-1.5 rounded-md hover:bg-money-out/10"
-                              aria-label={`Eliminar ${t.label}`}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </CardBody>
-      </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
 
       {/* ── Modal de edición ──────────────────────────────────── */}
       <Modal isOpen={editTx !== null} onOpenChange={(o) => { if (!o) setEditTx(null); }} backdrop="blur">
@@ -517,6 +507,6 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           )}
         </ModalContent>
       </Modal>
-    </div>
+    </>
   );
 }

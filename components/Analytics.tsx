@@ -180,7 +180,7 @@ export default function Analytics({ history, assets, transactions }: AnalyticsPr
                     <h2 className="sec">Tendencia de patrimonio</h2>
                     <span className="chip">{trendData.length} snapshot{trendData.length === 1 ? "" : "s"}</span>
                 </div>
-                {trendData.length > 0 ? (
+                {trendData.length >= 2 ? (
                     <>
                         <p className="summary tnum">{trendSummary}</p>
                         <div className="h-[200px] w-full" role="img" aria-label={`Tendencia de patrimonio. ${trendSummary}`}>
@@ -218,7 +218,7 @@ export default function Analytics({ history, assets, transactions }: AnalyticsPr
                         </ul>
                     </>
                 ) : (
-                    <EmptyChart message="Guarda snapshots para ver tu tendencia" />
+                    <EmptyChart message="Guarda un snapshot más para ver tu tendencia" />
                 )}
             </section>
 

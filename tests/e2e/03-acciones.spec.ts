@@ -117,3 +117,16 @@ test.describe("15. Snapshot de noche", () => {
     await expect(modal.getByRole("button", { name: /7 de octubre de 2026.*seleccionad/i })).toHaveCount(0);
   });
 });
+
+test("16. Tendencia: con menos de 2 snapshots muestra el estado vacío", async ({ page }) => {
+  await openApp(page);
+  await loadDemo(page);
+  await goTab(page, "analisis");
+  const aviso = page.getByText("Guarda un snapshot más para ver tu tendencia");
+  await expect(aviso).toBeVisible();
+
+  await goTab(page, "inicio");
+  await page.locator("#save-snapshot-btn").click(); // un solo snapshot sigue sin alcanzar
+  await goTab(page, "analisis");
+  await expect(aviso).toBeVisible();
+});

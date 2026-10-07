@@ -90,3 +90,15 @@ test("13. Análisis: la distribución de gastos refleja los gastos del mes", asy
   await expect(tarjeta.getByText("$350").first()).toBeVisible(); // total del mes
   await expect(tarjeta.locator("li")).not.toHaveCount(0);
 });
+
+test("14. Historial: un monto en cero va en tinta y sin signo", async ({ page }) => {
+  await openApp(page);
+  await loadDemo(page); // sin deudas: Gastos del snapshot = $0
+  await page.locator("#save-snapshot-btn").click();
+  await goTab(page, "historial");
+
+  const gastos = page.locator("#history-section tbody tr").first().locator("td").nth(2);
+  await expect(gastos).toHaveText("$0");
+  await expect(gastos.locator("span")).toHaveClass(/text-foreground/);
+  await expect(gastos.locator("span")).not.toHaveClass(/money-out/);
+});

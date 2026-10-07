@@ -9,6 +9,12 @@ import { HistorySnapshot } from "@/types";
 import { money } from "@/lib/format";
 import type { NavTab } from "./BottomNav";
 
+/** Cero no es ni entrada ni salida: va en tinta y sin signo. */
+function Amount({ value, tone, sign = "" }: { value: number; tone: string; sign?: string }) {
+  const zero = Math.abs(value) < 0.005;
+  return <span className={zero ? "text-foreground" : tone}>{zero ? money(0) : `${sign}${money(value)}`}</span>;
+}
+
 export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
   activeTab: NavTab;
   history: HistorySnapshot[];
@@ -70,14 +76,14 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="tnum text-money-in-text text-sm font-bold text-right">
-                    {money(h.totalAssets)}
+                  <TableCell className="tnum text-sm font-bold text-right">
+                    <Amount value={h.totalAssets} tone="text-money-in-text" />
                   </TableCell>
-                  <TableCell className="tnum text-money-out-text text-sm font-bold text-right">
-                    −{money(h.totalLiabilities)}
+                  <TableCell className="tnum text-sm font-bold text-right">
+                    <Amount value={h.totalLiabilities} tone="text-money-out-text" sign="−" />
                   </TableCell>
-                  <TableCell className="tnum text-money-hold-text text-sm font-bold text-right">
-                    −{money(h.totalBuckets)}
+                  <TableCell className="tnum text-sm font-bold text-right">
+                    <Amount value={h.totalBuckets} tone="text-money-hold-text" sign="−" />
                   </TableCell>
                   <TableCell className="text-right">
                     <Chip

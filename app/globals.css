@@ -51,6 +51,7 @@
 
   --navy: #0b1f4d;
   --navy2: #0a1a40;
+  --logo-dot: #0b1f4d;
   --brand: #2f9e8f;
   --brand-soft: rgba(47, 158, 143, 0.14);
   --brand-text: #1f7a6e;     /* marca para texto pequeño (AA sobre tarjeta) */
@@ -107,6 +108,7 @@
 
   --navy: #171b25;
   --navy2: #10131a;
+  --logo-dot: #ffffff;
   --brand: #d8f26a;
   --brand-soft: rgba(216, 242, 106, 0.14);
   --brand-text: #d8f26a;
@@ -479,7 +481,9 @@ body {
     }
 
     .app-nav-brand {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       padding: 0 14px 22px;
       font-weight: 800;
       font-size: 17px;

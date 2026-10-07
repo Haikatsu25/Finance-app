@@ -2,15 +2,14 @@
 
 import { Button } from "@heroui/react";
 import { SignInButton } from "@clerk/nextjs";
-import { Wallet, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export function SignedOutLanding() {
   return (
     <div className="min-h-[90dvh] max-w-xl mx-auto flex flex-col justify-center px-6 py-10">
       <div>
-        <div className="inline-flex p-4 rounded-xl bg-ink mb-8">
-          <Wallet className="text-cal w-12 h-12" aria-hidden />
-        </div>
+        <Logo size={72} className="mb-8" />
         <h1 className="figure text-[3.25rem] sm:text-[5.5rem] leading-[1] mb-5">
           Finance Control
         </h1>

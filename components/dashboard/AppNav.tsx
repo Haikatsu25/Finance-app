@@ -2,6 +2,7 @@
 
 import React from "react";
 import { House, AlignLeft, ChartColumn, Sparkles, Clock } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NAVEGACIÓN — móvil: barra flotante de cristal; escritorio (≥900px): riel izquierdo de 232px
@@ -21,7 +22,7 @@ export function AppNav({ active, onChange }: { active: NavTab; onChange: (t: Nav
 
   return (
     <nav className="app-nav" aria-label="Navegación principal">
-      <span className="app-nav-brand">Finance Control</span>
+      <span className="app-nav-brand"><Logo size={30} /> Finance Control</span>
       {tabs.map((t) => (
         <button
           key={t.id}

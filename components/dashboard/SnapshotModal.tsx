@@ -53,7 +53,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
                         <Card key={label} className={`${tone.bg} border ${tone.border} shadow-none`}>
                           <CardBody className="py-3 px-4 flex flex-row items-center justify-between">
                             <div>
-                              <p className={`text-xs font-bold uppercase ${tone.text}`}>{label}</p>
+                              <p className={`text-xs font-bold ${tone.text}`}>{label}</p>
                               <p className={`text-xl font-extrabold tnum ${tone.textStrong}`}>
                                 {money(value)}
                               </p>
@@ -95,7 +95,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
               )}
             </ModalBody>
             <ModalFooter>
-              <Button color="danger" variant="light" onPress={onClose}>Cerrar</Button>
+              <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cerrar</Button>
             </ModalFooter>
           </>
         )}

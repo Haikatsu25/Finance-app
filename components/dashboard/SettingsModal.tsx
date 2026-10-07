@@ -63,7 +63,7 @@ export function SettingsModal({
             <ModalHeader className="flex flex-col gap-1">Ajustes</ModalHeader>
             <ModalBody className="pb-6">
               {/* ── Seguridad ─────────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400">Seguridad</p>
+              <p className="text-sm font-bold text-default-700">Seguridad</p>
               <Button
                 color={lockOn ? "success" : "default"}
                 variant="flat"
@@ -81,7 +81,7 @@ export function SettingsModal({
               )}
 
               {/* ── Notificaciones ────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Recordatorios</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Recordatorios</p>
               <Button
                 color={pushStatus === "on" ? "success" : "default"}
                 variant="flat"
@@ -101,7 +101,7 @@ export function SettingsModal({
               </p>
 
               {/* ── Cuentas compartidas ───────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Cuentas compartidas</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Cuentas compartidas</p>
 
               {isSharedMember ? (
                 <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 space-y-2">
@@ -198,7 +198,7 @@ export function SettingsModal({
               )}
 
               {/* ── Categorías personalizadas ──────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Categorías personalizadas</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Categorías personalizadas</p>
               {([
                 { kind: "expense" as const, label: "Para gastos", list: customExpenseCats, setter: setCustomExpenseCats, value: newCatE, setValue: setNewCatE },
                 { kind: "income" as const, label: "Para ingresos", list: customIncomeCats, setter: setCustomIncomeCats, value: newCatI, setValue: setNewCatI },
@@ -232,7 +232,7 @@ export function SettingsModal({
               ))}
 
               {/* ── Datos ─────────────────────────────────── */}
-              <p className="text-xs font-bold uppercase tracking-wider text-default-400 mt-2">Datos</p>
+              <p className="text-sm font-bold text-default-700 mt-3">Datos</p>
               <p className="text-sm text-default-500 mb-2">
                 Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
               </p>

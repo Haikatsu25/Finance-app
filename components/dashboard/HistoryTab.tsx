@@ -21,12 +21,12 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
       <div className="flex justify-between items-end mb-4">
         <div>
           <h3 className="text-xl font-bold section-title">Historial</h3>
-          <p className="text-xs text-default-400 mt-1">Registro de balances guardados</p>
+          <p className="text-xs text-default-600 mt-1">Registro de balances guardados</p>
         </div>
         {history.length > 0 && (
           <Button
-            size="sm" color="danger" variant="light"
-            startContent={<Trash2 size={14} />}
+            color="danger" variant="light" className="h-11 font-semibold"
+            startContent={<Trash2 size={16} />}
             onPress={onClearOpen}
           >
             Limpiar
@@ -34,7 +34,7 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
         )}
       </div>
 
-      <Card className="glass border-0">
+      <Card className="glass shadow-none">
         <div className="overflow-x-auto">
           <Table
             aria-label="Historial de balances"
@@ -43,11 +43,11 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
             selectionMode="none"
           >
             <TableHeader>
-              <TableColumn className="text-xs font-bold uppercase tracking-wide">Fecha</TableColumn>
-              <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Activos</TableColumn>
-              <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Gastos</TableColumn>
-              <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Apartados</TableColumn>
-              <TableColumn className="text-xs font-bold uppercase tracking-wide text-right">Disponible</TableColumn>
+              <TableColumn className="text-xs font-bold">Fecha</TableColumn>
+              <TableColumn className="text-xs font-bold text-right">Activos</TableColumn>
+              <TableColumn className="text-xs font-bold text-right">Gastos</TableColumn>
+              <TableColumn className="text-xs font-bold text-right">Apartados</TableColumn>
+              <TableColumn className="text-xs font-bold text-right">Disponible</TableColumn>
             </TableHeader>
             <TableBody emptyContent={
               <div className="py-12 text-center text-default-400">
@@ -65,7 +65,7 @@ export function HistoryTab({ activeTab, history, onClearOpen, onOpenDetails }: {
                   <TableCell className="font-medium text-xs py-3">
                     {new Date(h.date).toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" })}
                     {h.auto && (
-                      <span className="ml-1.5 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-default-100 text-default-400">
+                      <span className="ml-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-default-100 text-default-700">
                         auto
                       </span>
                     )}

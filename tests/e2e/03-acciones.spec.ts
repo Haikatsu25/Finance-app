@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { addAsset, goTab, loadDemo, openApp, panel } from "./helpers/app";
+import { addAsset, expectSave, goTab, loadDemo, openApp, panel } from "./helpers/app";
 
 test("9. Transferencia: el aviso nombra monto y cuentas y los saldos cambian", async ({ page }) => {
   await openApp(page);
@@ -69,4 +69,24 @@ test("11. Presupuesto duplicado: una categoría con presupuesto ya no se puede e
   await presupuestos.getByLabel("Límite mensual").fill("999");
   await presupuestos.getByRole("button", { name: "Crear presupuesto" }).click();
   await expect(presupuestos.getByLabel(`Eliminar presupuesto de ${categoria}`)).toHaveCount(1);
+});
+
+test("13. Análisis: la distribución de gastos refleja los gastos del mes", async ({ page }) => {
+  await openApp(page);
+  await goTab(page, "movimientos");
+
+  for (const [que, monto] of [["Tacos E2E", "250"], ["Cine E2E", "100"]]) {
+    await page.getByPlaceholder("¿En qué?").fill(que);
+    await page.locator(`input[placeholder="0.00"]:visible`).fill(monto);
+    const saved = expectSave(page);
+    await page.getByRole("button", { name: "Registrar", exact: true }).click();
+    await saved;
+    await expect(page.getByText(que).first()).toBeVisible();
+  }
+
+  await goTab(page, "analisis");
+  const tarjeta = page.locator("div.glass").filter({ has: page.getByRole("heading", { name: "Distribución de gastos" }) });
+  await expect(tarjeta.getByText("Aún no hay gastos este mes")).toHaveCount(0);
+  await expect(tarjeta.getByText("$350").first()).toBeVisible(); // total del mes
+  await expect(tarjeta.locator("li")).not.toHaveCount(0);
 });

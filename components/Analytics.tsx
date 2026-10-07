@@ -13,14 +13,15 @@ import {
     Bar,
 } from "recharts";
 import { Card, CardHeader, CardBody } from "@heroui/react";
-import { HistorySnapshot, FinanceItem } from "@/types";
+import { HistorySnapshot, FinanceItem, TransactionItem } from "@/types";
 import { BarChart2 } from "lucide-react";
 import { money, round2 } from "@/lib/format";
+import { monthKey, monthLabel, spentByCategory } from "@/lib/finance-utils";
 
 interface AnalyticsProps {
     history: HistorySnapshot[];
     assets: FinanceItem[];
-    liabilities: FinanceItem[];
+    transactions: TransactionItem[];
 }
 
 // Valores de los tokens de dinero (los atributos SVG de recharts no resuelven var())
@@ -112,7 +113,7 @@ function DistributionBars({ rows }: { rows: Row[] }) {
     );
 }
 
-export default function Analytics({ history, assets, liabilities }: AnalyticsProps) {
+export default function Analytics({ history, assets, transactions }: AnalyticsProps) {
     // ── Trend data from history ──────────────────────────────────
     const trendData = [...history]
         .reverse()
@@ -135,7 +136,9 @@ export default function Analytics({ history, assets, liabilities }: AnalyticsPro
     };
 
     const assetDist     = getCategoryData(assets);
-    const liabilityDist = getCategoryData(liabilities);
+    // Gastos del mes en curso, por categoría (los movimientos de tipo gasto, no la lista de deudas)
+    const currentMonth = monthKey(new Date());
+    const liabilityDist = groupRows(Array.from(spentByCategory(transactions, currentMonth), ([name, value]) => ({ name, value })));
     const assetTotal     = assetDist.reduce((s, r) => s + r.value, 0);
     const liabilityTotal = liabilityDist.reduce((s, r) => s + r.value, 0);
 
@@ -253,7 +256,10 @@ export default function Analytics({ history, assets, liabilities }: AnalyticsPro
                 {/* ── Distribución de gastos ──────────────────── */}
                 <Card className="glass card-hover rule-out shadow-none">
                     <CardHeader className="items-baseline justify-between gap-3 pb-2">
-                        <h4 className="font-bold text-sm">Distribución de gastos</h4>
+                        <div>
+                            <h4 className="font-bold text-sm">Distribución de gastos</h4>
+                            <p className="text-xs text-default-600">{monthLabel(currentMonth)}</p>
+                        </div>
                         {liabilityDist.length > 0 && (
                             <span className="figure text-[1.65rem] text-money-out-text">{money(liabilityTotal)}</span>
                         )}
@@ -262,7 +268,7 @@ export default function Analytics({ history, assets, liabilities }: AnalyticsPro
                         {liabilityDist.length > 0 ? (
                             <DistributionBars rows={liabilityDist} />
                         ) : (
-                            <div className="h-[160px]"><EmptyChart message="Agrega gastos para ver distribución" /></div>
+                            <div className="h-[160px]"><EmptyChart message="Aún no hay gastos este mes" /></div>
                         )}
                     </CardBody>
                 </Card>

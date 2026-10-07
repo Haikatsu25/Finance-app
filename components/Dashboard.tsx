@@ -1327,7 +1327,7 @@ export default function Dashboard() {
                 startBalance={available}
                 transactions={transactions}
               />
-              <Analytics history={history} assets={assets} liabilities={liabilities} />
+              <Analytics history={history} assets={assets} transactions={transactions} />
             </div>
           </section>
 

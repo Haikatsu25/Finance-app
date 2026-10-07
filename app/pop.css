@@ -619,6 +619,39 @@
     .add-form .af-btn { order: 5; grid-column: 1 / -1; }
   }
 
+  /* ── Pantalla de entrada con candado ── */
+  .lock-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 999px;
+    font: 700 0.9375rem/1.25 var(--font-jakarta), system-ui, sans-serif;
+    text-align: center;
+    border: 2px solid transparent;
+  }
+
+  .lock-btn svg { flex: none; }
+  .lock-btn-main { background: #ffffff; color: #0a0c12; }
+  .lock-btn-main:disabled { opacity: 0.7; }
+  .lock-btn-ghost { background: transparent; color: #ffffff; border-color: rgba(255, 255, 255, 0.4); }
+  .lock-btn:focus-visible, .lock-link:focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
+
+  .lock-link {
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.75);
+    font: 600 0.8125rem/1.3 var(--font-jakarta), system-ui, sans-serif;
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
 }
 
 @layer components {
@@ -918,3 +951,12 @@ html[data-sheet="open"] .app-col {
 @media (prefers-reduced-motion: reduce) {
   html[data-sheet="open"] .app-col { transform: none; }
 }
+
+/* Tamaños mínimos táctiles. Van FUERA de @layer porque la regla general de botones de globals.css
+   (min-height 36px, sin capa) le gana a cualquier min-height declarado dentro de una capa. */
+button.lock-btn { min-height: 3rem; }
+button.lock-link { min-height: 2.75rem; }
+.it .acts button.acts-more { min-width: 2.75rem; min-height: 2.75rem; }
+button.pk-opt { min-height: 3rem; }
+button.pk-pill { min-height: 2.75rem; }
+button.pk-field { min-height: 3rem; }

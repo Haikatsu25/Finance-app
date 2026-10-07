@@ -46,7 +46,7 @@ export default defineConfig({
     {
       // Pantalla chica (360x780): solo el recorrido visual y la comprobación de textos/selectores
       name: "mobile-small",
-      testMatch: /0[45]-.*\.spec\.ts/,
+      testMatch: /0[456]-.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], channel, viewport: { width: 360, height: 780 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
     },
   ],

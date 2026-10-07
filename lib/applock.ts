@@ -106,3 +106,51 @@ export async function verifyLock(): Promise<boolean> {
         return false;
     }
 }
+
+// ── Entrar con la cuenta en vez de la huella ────────────────────────────────
+// "Entrar con mi cuenta" cierra la sesión de Clerk para volver a iniciar con Google o correo. El
+// candado (fc_lock_on) sigue activado; esta marca solo evita que, al volver a entrar, la app
+// abra otra vez bloqueada. Vive en sessionStorage y se consume UNA vez por carga de la página.
+
+export const LOCK_SKIP_KEY = "fc_lock_skip_once";
+
+type KV = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+/** Guarda la marca antes de cerrar sesión. */
+export function markLockSkipOnce(storage: KV | undefined = safeSession()) {
+    try { storage?.setItem(LOCK_SKIP_KEY, "1"); } catch { /* noop */ }
+}
+
+/** Borra la marca (por ejemplo, cuando se vuelve a iniciar sesión sin recargar). */
+export function clearLockSkipOnce(storage: KV | undefined = safeSession()) {
+    try { storage?.removeItem(LOCK_SKIP_KEY); } catch { /* noop */ }
+}
+
+let skipCache: boolean | null = null;
+
+/**
+ * ¿Hay que saltarse el candado en esta carga? Lee y borra la marca. Con el doble montaje de
+ * StrictMode el efecto corre dos veces: el resultado se recuerda para que ambas den lo mismo.
+ */
+export function consumeLockSkipOnce(storage: KV | undefined = safeSession()): boolean {
+    if (skipCache !== null) return skipCache;
+    let skip = false;
+    try {
+        skip = storage?.getItem(LOCK_SKIP_KEY) === "1";
+        if (skip) storage?.removeItem(LOCK_SKIP_KEY);
+    } catch { /* noop */ }
+    skipCache = skip;
+    return skip;
+}
+
+/** Solo para pruebas: olvida el resultado recordado de consumeLockSkipOnce. */
+export function resetLockSkipCache() { skipCache = null; }
+
+/** ¿La app debe abrir bloqueada? Candado activado y sin marca de "entrar con mi cuenta". */
+export function shouldStartLocked(lockEnabled: boolean, skipOnce: boolean): boolean {
+    return lockEnabled && !skipOnce;
+}
+
+function safeSession(): KV | undefined {
+    try { return typeof window === "undefined" ? undefined : window.sessionStorage; } catch { return undefined; }
+}

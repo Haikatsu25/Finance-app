@@ -22,6 +22,10 @@ test("3. Datos de ejemplo: aparecen activos, la tarjeta Nu (ejemplo) y presupues
   await expect(activos.getByText("BBVA Débito (ejemplo)")).toBeVisible();
   await expect(activos.getByText("Efectivo (ejemplo)")).toBeVisible();
   await expect(cardFace(page, "Nu (ejemplo)")).toBeVisible();
+  // el ciclo de la tarjeta de ejemplo es relativo a hoy: nunca arranca vencida
+  await expect(cardFace(page, "Nu (ejemplo)").getByText(/Pago vencido/)).toHaveCount(0);
+  await expect(cardFace(page, "Nu (ejemplo)").getByText(/Pagas el \d{1,2} \p{L}+, en \d+ días/u)).toBeVisible();
+  await expect(page.getByText(/venció hace/)).toHaveCount(0);
   const presupuestos = panel(page, "Presupuestos del mes");
   await expect(presupuestos.getByText("Comida", { exact: true })).toBeVisible();
   await expect(presupuestos.getByText("Transporte", { exact: true })).toBeVisible();

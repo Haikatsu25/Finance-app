@@ -23,7 +23,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso } from "@/lib/finance-utils";
+import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso, isoDate } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -853,10 +853,15 @@ export default function Dashboard() {
 
   const loadDemoData = () => {
     const today = new Date();
-    const iso = (d: Date) => d.toISOString().split("T")[0];
+    const iso = isoDate; // hora local, no UTC
     const daysAgo = (n: number) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
     const monthsFromNow = (n: number) => { const d = new Date(today); d.setMonth(d.getMonth() + n); return d; };
     const uid = () => crypto.randomUUID();
+    // La tarjeta de ejemplo siempre está "a la mitad de su ciclo": cortó hace 6 días y paga dentro de 14.
+    // Con días fijos (corte 18 / pago 28) aparecía como pago vencido del día 1 al 18 de cada mes.
+    const dayOfMonth = (d: Date) => Math.min(d.getDate(), 28);
+    const cutoffDay = dayOfMonth(daysAgo(6));
+    const dueDay = dayOfMonth(daysAgo(-14));
 
     const cardId = uid();
     const acc1 = uid();
@@ -868,7 +873,7 @@ export default function Dashboard() {
       { id: uid(), label: "Fondo emergencia (ejemplo)", amount: 2000, date: iso(today), type: "bucket", category: "Emergencia" },
     ]);
     setCreditCards([
-      { id: cardId, label: "Nu (ejemplo)", balance: 2350, creditLimit: 20000, cutoffDay: 18, dueDay: 28, apr: 65, minPayment: 0 },
+      { id: cardId, label: "Nu (ejemplo)", balance: 2350, creditLimit: 20000, cutoffDay, dueDay, apr: 65, minPayment: 0 },
     ]);
     setInstallments([
       { id: uid(), cardId, label: "Pantalla (ejemplo)", totalAmount: 6000, months: 6, startDate: iso(daysAgo(65)) },

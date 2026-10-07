@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Trash2, Pencil, CreditCard, ShoppingBag } from "lucide-react";
+import { CreditCard, ShoppingBag } from "lucide-react";
 import { FinanceItem, CreditCardItem } from "@/types";
 import { moneyExact, moneySmart, round2 } from "@/lib/format";
 import AddedByBadge from "../AddedByBadge";
+import { Picker } from "../ui/Picker";
+import { RowActions } from "../ui/RowActions";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION — captura de activos / gastos / apartados
@@ -62,7 +64,7 @@ export function Section({ title, description, icon, items, total, color, categor
           <h2 className="sec">{title}</h2>
           <p className="mute text-xs font-semibold mt-0.5">{description}</p>
         </div>
-        <b className={`figure text-[18px] shrink-0 ${totalCls}`}>{moneyExact(total)}</b>
+        <b className={`figure text-[1.125rem] shrink-0 ${totalCls}`}>{moneyExact(total)}</b>
       </div>
 
       {items.length === 0 ? (
@@ -72,76 +74,62 @@ export function Section({ title, description, icon, items, total, color, categor
           {items.map((item) => (
             <div key={item.id} className="it">
               <i aria-hidden>{item.cardId ? <CreditCard size={18} /> : <ShoppingBag size={18} />}</i>
-              <div className="t">
-                <b>{item.label}</b>
-                <small className="flex items-center gap-x-2 flex-wrap">
-                  {item.cardId && cardName(item.cardId) && <span className="font-semibold">{cardName(item.cardId)}</span>}
-                  {item.category && <span>{item.category}</span>}
-                  <AddedByBadge addedBy={item.addedBy} viewerId={viewerId} />
-                </small>
+              <div className="mid">
+                <div className="t">
+                  <b>{item.label}</b>
+                  <small>{item.category || (item.cardId && cardName(item.cardId)) || ""}</small>
+                </div>
+                <div className="amt">{moneySmart(item.amount)}</div>
               </div>
-              <div className="amt">{moneySmart(item.amount)}</div>
-              <div className="acts">
-                {onEdit && (
-                  <button onClick={() => onEdit(item.id)} aria-label={`Editar ${item.label}`}>
-                    <Pencil size={15} aria-hidden />
-                  </button>
-                )}
-                <button onClick={() => onRemove(item.id)} aria-label={`Eliminar ${item.label}`}>
-                  <Trash2 size={15} aria-hidden />
-                </button>
-              </div>
+              <RowActions name={item.label} onEdit={onEdit && (() => onEdit(item.id))} onRemove={() => onRemove(item.id)} />
             </div>
           ))}
         </div>
       )}
 
-      <div className="mt-3 flex flex-col gap-2">
-        <div className="grid gap-2" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
-          <input
-            className="field-pill" placeholder="Descripción" aria-label="Descripción"
-            value={label} onChange={(e) => setLabel(e.target.value)}
-          />
-          <select
-            className="field-pill" aria-label="Categoría"
-            value={category} onChange={(e) => setCategory(e.target.value || categories[0])}
-          >
-            {categories.map((cat) => <option key={cat}>{cat}</option>)}
-          </select>
-        </div>
+      <div className="add-form">
+        <input
+          className="field-pill af-desc" placeholder="Descripción" aria-label="Descripción"
+          value={label} onChange={(e) => setLabel(e.target.value)}
+        />
+        <Picker
+          className="af-cat" label="Categoría" value={category} onChange={(v) => setCategory(v || categories[0])}
+          options={categories.map((cat) => ({ value: cat, label: cat }))}
+        />
 
         {/* Selector de tarjeta: el gasto se suma a la deuda de esa tarjeta */}
         {hasCards && (
-          <select className="field-pill" aria-label="¿Con qué pagaste?" value={payWith} onChange={(e) => setPayWith(e.target.value || "cash")}>
-            <option value="cash">Efectivo / débito</option>
-            {cards!.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-          </select>
+          <Picker
+            className="af-pay" label="¿Con qué pagaste?" value={payWith} onChange={(v) => setPayWith(v || "cash")}
+            options={[{ value: "cash", label: "Efectivo / débito" }, ...cards!.map((c) => ({ value: c.id, label: c.label }))]}
+          />
         )}
 
-        <div className="grid gap-2" style={{ gridTemplateColumns: "1.4fr 1fr" }}>
-          <input
-            className="field-pill" type="number" min="0" step="0.01" inputMode="decimal"
-            placeholder="$ 0.00" aria-label="Monto"
-            value={amount} onChange={(e) => setAmount(e.target.value)}
-          />
-          <button
-            type="button" className="btn sm"
-            onClick={handleAdd}
-            disabled={!label.trim() || !amountValid || msiTooBig}
-          >
-            {selectedCard ? `Cargar a ${selectedCard.label}` : "Agregar"}
-          </button>
-        </div>
+        <input
+          className="field-pill af-amt" type="number" min="0" step="0.01" inputMode="decimal"
+          placeholder="$ 0.00" aria-label="Monto"
+          value={amount} onChange={(e) => setAmount(e.target.value)}
+        />
+        <button
+          type="button" className="btn sm af-btn"
+          onClick={handleAdd}
+          disabled={!label.trim() || !amountValid || msiTooBig}
+        >
+          {selectedCard ? `Cargar a ${selectedCard.label}` : "Agregar"}
+        </button>
+      </div>
+
+      <div className="mt-2 flex flex-col gap-2">
 
         {/* El total del banco suele incluir las mensualidades MSI ya facturadas */}
         {selectedCard && cardMsi > 0 && (
-          <label className="callout flex items-start gap-2 cursor-pointer">
+          <label className="callout flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox" checked={includeMsi}
               onChange={(e) => setIncludeMsi(e.target.checked)}
-              className="mt-0.5 size-4 accent-(--brand)"
+              className="chk"
             />
-            <span className="text-[12px] leading-snug">
+            <span className="text-[0.75rem] leading-snug">
               El monto ya incluye mis mensualidades de meses
               (<b className="tnum">{moneyExact(cardMsi)}</b>); restarlas
             </span>
@@ -149,7 +137,7 @@ export function Section({ title, description, icon, items, total, color, categor
         )}
 
         {amountValid && msiApplies && !msiTooBig && (
-          <p className="text-[12px] font-bold text-money-in-text tnum">
+          <p className="text-[0.75rem] font-bold text-money-in-text tnum">
             Se registrarán {moneyExact(effectiveAmount)} de contado
             <span className="font-normal mute"> ({moneyExact(parsed)} − {moneyExact(cardMsi)} de MSI)</span>
           </p>
@@ -162,7 +150,7 @@ export function Section({ title, description, icon, items, total, color, categor
         )}
 
         {selectedCard && (
-          <p className="mute text-[12px] leading-snug">
+          <p className="mute text-[0.75rem] leading-snug">
             Se sumará a la deuda de <b>{selectedCard.label}</b>. Cuando lo pagues, elimínalo de esta lista
             (o usa el botón Pagado de la tarjeta) y se descontará.
           </p>

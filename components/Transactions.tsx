@@ -4,14 +4,15 @@ import React, { useMemo, useState } from "react";
 import { Sheet } from "@/components/ui/Sheet";
 import {
   ChevronLeft, ChevronRight,
-  Trash2, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
+  Trash2, ScanLine, Search, X, Pencil, Check, Download, Repeat,
   ShoppingBag, Car, Tv, Shirt, HeartPulse, House, Zap, GraduationCap, Banknote, CircleDollarSign,
 } from "lucide-react";
 import { TransactionItem, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import { monthKey, shiftMonth, monthLabel, summarizeMonth, todayIso as todayLocal } from "@/lib/finance-utils";
 import MonthlySummary from "./MonthlySummary";
-import AddedByBadge from "./AddedByBadge";
+import { Picker } from "./ui/Picker";
+import { RowActions } from "./ui/RowActions";
 
 export const EXPENSE_CATEGORIES = [
   "Comida", "Súper", "Transporte", "Hogar", "Servicios", "Salud",
@@ -211,7 +212,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
             >
               <ChevronLeft size={18} aria-hidden />
             </button>
-            <b className="text-[16px] font-extrabold min-w-[116px] text-center">{cap(monthLabel(month))}</b>
+            <b className="text-[1rem] font-extrabold min-w-[116px] text-center">{cap(monthLabel(month))}</b>
             <button
               onClick={() => setMonth(shiftMonth(month, 1))}
               disabled={month >= maxMonth}
@@ -269,15 +270,10 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-2">
-          <select className="field-pill" aria-label="Filtrar categoría" value={filterCat} onChange={(e) => setFilterCat(e.target.value || "all")}>
-            <option value="all">Todas las categorías</option>
-            {allCats.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <select className="field-pill" aria-label="Filtrar tipo" value={filterType} onChange={(e) => setFilterType(e.target.value || "all")}>
-            <option value="all">Todo</option>
-            <option value="expense">Gastos</option>
-            <option value="income">Ingresos</option>
-          </select>
+          <Picker label="Filtrar categoría" value={filterCat} onChange={(v) => setFilterCat(v || "all")}
+            options={[{ value: "all", label: "Todas las categorías" }, ...allCats.map((c) => ({ value: c, label: c }))]} />
+          <Picker label="Filtrar tipo" value={filterType} onChange={(v) => setFilterType(v || "all")}
+            options={[{ value: "all", label: "Todo" }, { value: "expense", label: "Gastos" }, { value: "income", label: "Ingresos" }]} />
         </div>
 
         {/* Resultados de búsqueda/filtro */}
@@ -323,16 +319,13 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           </div>
           <div className={accounts.length > 0 ? "row2" : ""}>
             <div className="f">
-              <select aria-label="Categoría" value={category} onChange={(e) => setCategory(e.target.value || cats[0])}>
-                {cats.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <Picker variant="field" label="Categoría" value={category} onChange={(v) => setCategory(v || cats[0])}
+                options={cats.map((c) => ({ value: c, label: c }))} />
             </div>
             {accounts.length > 0 && (
               <div className="f">
-                <select aria-label="Cuenta" value={accountId} onChange={(e) => setAccountId(e.target.value || "none")}>
-                  <option value="none">Sin cuenta</option>
-                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-                </select>
+                <Picker variant="field" label="Cuenta" value={accountId} onChange={(v) => setAccountId(v || "none")}
+                  options={[{ value: "none", label: "Sin cuenta" }, ...accounts.map((a) => ({ value: a.id, label: a.label }))]} />
               </div>
             )}
           </div>
@@ -355,14 +348,14 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
         </form>
 
         {dateIsFuture && (
-          <p className="text-[12px] font-semibold mt-2.5">
+          <p className="text-[0.75rem] font-semibold mt-2.5">
             Se registrará como {type === "income" ? "ingreso esperado" : "gasto planeado"} de {monthLabel(monthKey(effectiveDate))}
             {!date && <> (día 1; puedes elegir otro día con el campo de fecha)</>}
             . Aparecerá en ese mes y en tu proyección de flujo, sin mover tus cuentas todavía.
           </p>
         )}
         {!dateIsFuture && !date && month !== currentMonth && !searching && (
-          <p className="text-[12px] mute font-semibold mt-2.5">
+          <p className="text-[0.75rem] mute font-semibold mt-2.5">
             Se registrará en {monthLabel(month)} (día 1). Elige otro día con el campo de fecha si quieres.
           </p>
         )}
@@ -400,31 +393,24 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                   {items.map((t) => (
                     <div key={t.id} className="it">
                       <i aria-hidden>{catIcon(t)}</i>
-                      <div className="t">
-                        <b>{t.label}</b>
-                        <small className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
-                          <span>{t.category || "Sin categoría"}</span>
-                          {t.source === "scan" && <span className="inline-flex items-center gap-1"><ScanLine size={11} aria-hidden /> escaneado</span>}
-                          {t.source === "fixed" && <span className="inline-flex items-center gap-1"><Repeat size={11} aria-hidden /> fijo</span>}
-                          {t.accountId && accountName(t.accountId) && (
-                            <span className="inline-flex items-center gap-1 font-semibold text-foreground"><Landmark size={11} aria-hidden /> {accountName(t.accountId)}</span>
-                          )}
-                          <AddedByBadge addedBy={t.addedBy} viewerId={viewerId} />
-                        </small>
+                      <div className="mid">
+                        <div className="t">
+                          <b>{t.label}</b>
+                          <small>
+                            {t.source === "scan" && <ScanLine size={11} className="inline -mt-0.5 mr-1" aria-label="Escaneado" role="img" />}
+                            {t.source === "fixed" && <Repeat size={11} className="inline -mt-0.5 mr-1" aria-label="Fijo" role="img" />}
+                            {[
+                              t.category || "Sin categoría",
+                              t.accountId ? accountName(t.accountId) : undefined,
+                              t.addedBy?.name && t.addedBy.userId && t.addedBy.userId !== viewerId ? `por ${t.addedBy.name.split(" ")[0]}` : undefined,
+                            ].filter(Boolean).join(" · ")}
+                          </small>
+                        </div>
+                        <div className={`amt ${t.type === "income" ? "text-money-in-text" : ""}`}>
+                          {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
+                        </div>
                       </div>
-                      <div className={`amt ${t.type === "income" ? "text-money-in-text" : ""}`}>
-                        {t.type === "income" ? "+" : "−"}{moneyExact(t.amount)}
-                      </div>
-                      <div className="acts">
-                        {onUpdate && (
-                          <button onClick={() => openEdit(t)} aria-label={`Editar ${t.label}`}>
-                            <Pencil size={15} aria-hidden />
-                          </button>
-                        )}
-                        <button onClick={() => onRemove(t.id)} aria-label={`Eliminar ${t.label}`}>
-                          <Trash2 size={15} aria-hidden />
-                        </button>
-                      </div>
+                      <RowActions name={t.label} onEdit={onUpdate && (() => openEdit(t))} onRemove={() => onRemove(t.id)} />
                     </div>
                   ))}
                 </div>
@@ -478,17 +464,14 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
           </div>
           <div className="f">
             <label htmlFor="tx-e-cat">Categoría</label>
-            <select id="tx-e-cat" value={eCategory} onChange={(e) => setECategory(e.target.value || "Otros")}>
-              {(eType === "expense" ? expenseCats : incomeCats).map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <Picker id="tx-e-cat" variant="field" label="Categoría" value={eCategory} onChange={(v) => setECategory(v || "Otros")}
+              options={(eType === "expense" ? expenseCats : incomeCats).map((c) => ({ value: c, label: c }))} />
           </div>
           {accounts.length > 0 && (
             <div className="f">
               <label htmlFor="tx-e-acc">Cuenta</label>
-              <select id="tx-e-acc" value={eAccountId} onChange={(e) => setEAccountId(e.target.value || "none")}>
-                <option value="none">Sin cuenta</option>
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-              </select>
+              <Picker id="tx-e-acc" variant="field" label="Cuenta" value={eAccountId} onChange={(v) => setEAccountId(v || "none")}
+                options={[{ value: "none", label: "Sin cuenta" }, ...accounts.map((a) => ({ value: a.id, label: a.label }))]} />
             </div>
           )}
 

@@ -91,7 +91,7 @@ export function TopNav({ activeTab, onChangeTab, saveStatus, privacy, onTogglePr
           </Button>
           <ThemeSwitcher />
           <SignedIn>
-            <UserButton />
+            <UserButton appearance={{ elements: { userButtonTrigger: "min-h-9 min-w-9 rounded-full", userButtonAvatarBox: "size-8" } }} />
           </SignedIn>
         </div>
       </div>

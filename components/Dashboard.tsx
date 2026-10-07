@@ -1210,7 +1210,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-2 mb-4">
               <h2 className="text-xl font-bold section-title">Mis finanzas</h2>
               {assets.length >= 2 && (
-                <Button size="sm" variant="flat" color="primary" className="font-bold"
+                <Button size="sm" variant="flat" color="primary" className="font-bold min-h-11"
                   startContent={<ArrowLeftRight size={14} />} onPress={onTransferOpen}>
                   Transferir entre cuentas
                 </Button>

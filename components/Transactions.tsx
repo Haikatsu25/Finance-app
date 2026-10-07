@@ -92,6 +92,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const [eAccountId, setEAccountId] = useState("none");
 
   const openEdit = (t: TransactionItem) => {
+    setEditTried(false);
     setELabel(t.label);
     setEAmount(String(t.amount));
     setEDate(t.date);
@@ -102,7 +103,12 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   };
 
   const editParsed = round2(parseFloat(eAmount));
-  const editValid = !!eLabel.trim() && Number.isFinite(editParsed) && editParsed > 0 && !!eDate;
+  const editLabelOk = !!eLabel.trim();
+  const editAmountOk = Number.isFinite(editParsed) && editParsed > 0;
+  const editDateOk = !!eDate;
+  const editValid = editLabelOk && editAmountOk && editDateOk;
+  // Solo se muestran los errores después de intentar guardar (no mientras se escribe)
+  const [editTried, setEditTried] = useState(false);
 
   /** Devuelve true solo si guardó; así el modal no se cierra con datos inválidos */
   const saveEdit = (): boolean => {
@@ -454,23 +460,26 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => { setEType("expense"); if (!EXPENSE_CATEGORIES.includes(eCategory)) setECategory(EXPENSE_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${eType === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-700"}`}
                   >
                     Gasto
                   </button>
                   <button
                     onClick={() => { setEType("income"); if (!INCOME_CATEGORIES.includes(eCategory)) setECategory(INCOME_CATEGORIES[0]); }}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${eType === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-500"}`}
+                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-700"}`}
                   >
                     Ingreso
                   </button>
                 </div>
-                <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel} />
-                <div className="flex gap-2">
+                <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel}
+                  isInvalid={editTried && !editLabelOk} errorMessage="Escribe una descripción." />
+                <div className="flex gap-2 items-start">
                   <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>}
-                    value={eAmount} onValueChange={setEAmount} className="flex-1" />
-                  <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]" />
+                    startContent={<span className="text-default-500 text-xs">$</span>}
+                    value={eAmount} onValueChange={setEAmount} className="flex-1"
+                    isInvalid={editTried && !editAmountOk} errorMessage="Escribe un monto mayor a 0." />
+                  <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]"
+                    isInvalid={editTried && !editDateOk} errorMessage="Elige una fecha válida." />
                 </div>
                 <Select label="Categoría" variant="bordered"
                   selectedKeys={eCategory ? [eCategory] : []}
@@ -489,11 +498,18 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
                 )}
               </ModalBody>
               <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="solid" className="font-bold"
-                  isDisabled={!editValid}
+                {editTried && !editValid && (
+                  <p role="alert" className="text-xs font-semibold text-money-out-text mr-auto">Revisa los campos marcados.</p>
+                )}
+                <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cancelar</Button>
+                {/* Siempre activo: con datos inválidos no cierra y marca qué corregir (antes quedaba
+                    deshabilitado sin explicar por qué) */}
+                <Button color="primary" variant="solid" className="font-bold h-11"
                   startContent={<Check size={15} />}
-                  onPress={() => { if (saveEdit()) onClose(); }}>
+                  onPress={() => {
+                    if (!editValid) { setEditTried(true); return; }
+                    if (saveEdit()) onClose();
+                  }}>
                   Guardar cambios
                 </Button>
               </ModalFooter>

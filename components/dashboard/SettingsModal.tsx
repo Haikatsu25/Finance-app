@@ -179,7 +179,7 @@ export function SettingsModal({
                         value={joinCode}
                         onValueChange={(v) => setJoinCode(v.toUpperCase())}
                         maxLength={6}
-                        classNames={{ input: "uppercase tracking-widest font-bold" }}
+                        classNames={{ input: joinCode ? "uppercase tracking-widest font-bold" : "" }} /* el código se escribe en mayúsculas; el texto de ayuda no */
                         className="flex-1"
                       />
                       <Button

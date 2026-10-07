@@ -10,9 +10,9 @@ test("9. Transferencia: el aviso nombra monto y cuentas y los saldos cambian", a
   await page.getByRole("button", { name: "Transferir entre cuentas" }).click();
   const modal = page.getByRole("dialog");
   await modal.getByRole("button", { name: "De", exact: true }).click();
-  await page.locator("[data-slot=listbox] li, [role=option]").filter({ hasText: "Origen E2E" }).click();
+  await page.locator("[data-slot=listbox] li, [role=option]").filter({ hasText: "Origen E2E" }).last().click();
   await modal.getByRole("button", { name: "Hacia", exact: true }).click();
-  await page.locator("[data-slot=listbox] li, [role=option]").filter({ hasText: "Destino E2E" }).click();
+  await page.locator("[data-slot=listbox] li, [role=option]").filter({ hasText: "Destino E2E" }).last().click();
   await modal.getByLabel("Monto").fill("1200");
   await modal.getByRole("button", { name: "Transferir", exact: true }).click();
   await expect(modal).toBeHidden();

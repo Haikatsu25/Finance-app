@@ -58,7 +58,7 @@ export function BalanceHero({
       )}
 
       <div className="flex items-center justify-between gap-2.5 mt-3.5">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2">
           <button id="save-snapshot-btn" type="button" className="slab-btn" data-solid="true" onClick={onSaveSnapshot}>
             Guardar snapshot
           </button>

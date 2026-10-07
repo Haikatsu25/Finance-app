@@ -99,8 +99,8 @@
 
   .ring {
     --p: 0;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     flex: none;
     border-radius: 50%;
     display: grid;
@@ -110,8 +110,8 @@
   }
 
   .ring span {
-    width: 42px;
-    height: 42px;
+    width: 39px;
+    height: 39px;
     border-radius: 50%;
     display: grid;
     place-items: center;

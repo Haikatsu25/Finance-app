@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import {
-  Input, Button, Select, SelectItem,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
-} from "@heroui/react";
+import { Sheet } from "@/components/ui/Sheet";
 import {
   ChevronLeft, ChevronRight,
   Trash2, ScanLine, Search, X, Pencil, Check, Download, Landmark, Repeat,
@@ -437,76 +434,73 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
         )}
       </div>
 
-      {/* ── Modal de edición ──────────────────────────────────── */}
-      <Modal isOpen={editTx !== null} onOpenChange={(o) => { if (!o) setEditTx(null); }} backdrop="blur">
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex items-center gap-2">
-                <Pencil size={17} className="text-foreground" />
-                Editar movimiento
-              </ModalHeader>
-              <ModalBody>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => { setEType("expense"); if (!EXPENSE_CATEGORIES.includes(eCategory)) setECategory(EXPENSE_CATEGORIES[0]); }}
-                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "expense" ? "bg-money-out text-white" : "bg-default-100 text-default-700"}`}
-                  >
-                    Gasto
-                  </button>
-                  <button
-                    onClick={() => { setEType("income"); if (!INCOME_CATEGORIES.includes(eCategory)) setECategory(INCOME_CATEGORIES[0]); }}
-                    className={`flex-1 min-h-11 rounded-lg text-sm font-bold transition-colors ${eType === "income" ? "bg-money-in text-(--slab-in-fg)" : "bg-default-100 text-default-700"}`}
-                  >
-                    Ingreso
-                  </button>
-                </div>
-                <Input label="Descripción" variant="bordered" value={eLabel} onValueChange={setELabel}
-                  isInvalid={editTried && !editLabelOk} errorMessage="Escribe una descripción." />
-                <div className="flex gap-2 items-start">
-                  <Input label="Monto" type="number" min="0" inputMode="decimal" variant="bordered"
-                    startContent={<span className="text-default-500 text-xs">$</span>}
-                    value={eAmount} onValueChange={setEAmount} className="flex-1"
-                    isInvalid={editTried && !editAmountOk} errorMessage="Escribe un monto mayor a 0." />
-                  <Input label="Fecha" type="date" variant="bordered" value={eDate} onValueChange={setEDate} className="w-[160px]"
-                    isInvalid={editTried && !editDateOk} errorMessage="Elige una fecha válida." />
-                </div>
-                <Select label="Categoría" variant="bordered"
-                  selectedKeys={eCategory ? [eCategory] : []}
-                  onChange={(e) => setECategory(e.target.value || "Otros")}>
-                  {(eType === "expense" ? expenseCats : incomeCats).map((c) => <SelectItem key={c}>{c}</SelectItem>)}
-                </Select>
-                {accounts.length > 0 && (
-                  <Select label="Cuenta" variant="bordered"
-                    selectedKeys={[eAccountId]}
-                    onChange={(e) => setEAccountId(e.target.value || "none")}>
-                    <>
-                      <SelectItem key="none" textValue="Sin cuenta">Sin cuenta</SelectItem>
-                      <>{accounts.map((a) => <SelectItem key={a.id} textValue={a.label}>{a.label}</SelectItem>)}</>
-                    </>
-                  </Select>
-                )}
-              </ModalBody>
-              <ModalFooter>
-                {editTried && !editValid && (
-                  <p role="alert" className="text-xs font-semibold text-money-out-text mr-auto">Revisa los campos marcados.</p>
-                )}
-                <Button variant="light" className="h-11 font-semibold" onPress={onClose}>Cancelar</Button>
-                {/* Siempre activo: con datos inválidos no cierra y marca qué corregir (antes quedaba
-                    deshabilitado sin explicar por qué) */}
-                <Button color="primary" variant="solid" className="font-bold h-11"
-                  startContent={<Check size={15} />}
-                  onPress={() => {
-                    if (!editValid) { setEditTried(true); return; }
-                    if (saveEdit()) onClose();
-                  }}>
-                  Guardar cambios
-                </Button>
-              </ModalFooter>
-            </>
+      {/* ── Hoja de edición ──────────────────────────────────── */}
+      <Sheet open={editTx !== null} onOpenChange={(o) => { if (!o) setEditTx(null); }} title="Editar movimiento">
+        <form
+          className="flex flex-col gap-3" noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            // Siempre activo: con datos inválidos no cierra y marca qué corregir
+            if (!editValid) { setEditTried(true); return; }
+            saveEdit();
+          }}
+        >
+          <div className={`seg ${eType === "expense" ? "out" : "in"}`} role="group" aria-label="Tipo de movimiento">
+            <button type="button" aria-pressed={eType === "expense"}
+              onClick={() => { setEType("expense"); if (!EXPENSE_CATEGORIES.includes(eCategory)) setECategory(EXPENSE_CATEGORIES[0]); }}>
+              Gasto
+            </button>
+            <button type="button" aria-pressed={eType === "income"}
+              onClick={() => { setEType("income"); if (!INCOME_CATEGORIES.includes(eCategory)) setECategory(INCOME_CATEGORIES[0]); }}>
+              Ingreso
+            </button>
+          </div>
+
+          <div className="f">
+            <label htmlFor="tx-e-label">Descripción</label>
+            <input id="tx-e-label" value={eLabel} onChange={(e) => setELabel(e.target.value)}
+              className={editTried && !editLabelOk ? "err" : ""} aria-invalid={editTried && !editLabelOk} />
+            {editTried && !editLabelOk && <p className="err-msg">Escribe una descripción.</p>}
+          </div>
+          <div className="row2" style={{ alignItems: "start" }}>
+            <div className="f">
+              <label htmlFor="tx-e-amount">Monto</label>
+              <input id="tx-e-amount" type="number" min="0" inputMode="decimal" value={eAmount} onChange={(e) => setEAmount(e.target.value)}
+                className={editTried && !editAmountOk ? "err" : ""} aria-invalid={editTried && !editAmountOk} />
+              {editTried && !editAmountOk && <p className="err-msg">Escribe un monto mayor a 0.</p>}
+            </div>
+            <div className="f">
+              <label htmlFor="tx-e-date">Fecha</label>
+              <input id="tx-e-date" type="date" value={eDate} onChange={(e) => setEDate(e.target.value)}
+                className={editTried && !editDateOk ? "err" : ""} aria-invalid={editTried && !editDateOk} />
+              {editTried && !editDateOk && <p className="err-msg">Elige una fecha válida.</p>}
+            </div>
+          </div>
+          <div className="f">
+            <label htmlFor="tx-e-cat">Categoría</label>
+            <select id="tx-e-cat" value={eCategory} onChange={(e) => setECategory(e.target.value || "Otros")}>
+              {(eType === "expense" ? expenseCats : incomeCats).map((c) => <option key={c}>{c}</option>)}
+            </select>
+          </div>
+          {accounts.length > 0 && (
+            <div className="f">
+              <label htmlFor="tx-e-acc">Cuenta</label>
+              <select id="tx-e-acc" value={eAccountId} onChange={(e) => setEAccountId(e.target.value || "none")}>
+                <option value="none">Sin cuenta</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+              </select>
+            </div>
           )}
-        </ModalContent>
-      </Modal>
+
+          <div className="ft">
+            {editTried && !editValid && (
+              <p role="alert" className="err-msg mr-auto">Revisa los campos marcados.</p>
+            )}
+            <button type="button" className="btn soft" onClick={() => setEditTx(null)}>Cancelar</button>
+            <button type="submit" className="btn"><Check size={16} aria-hidden /> Guardar cambios</button>
+          </div>
+        </form>
+      </Sheet>
     </>
   );
 }

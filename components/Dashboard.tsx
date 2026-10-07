@@ -44,6 +44,7 @@ import { StatCard } from "./dashboard/StatCard";
 import { DashboardSkeleton } from "./dashboard/DashboardSkeleton";
 import { AppNav, NAV_ORDER, type NavTab } from "./dashboard/AppNav";
 import { TabView, type TabDirection } from "./dashboard/TabView";
+import { SuccessReveal } from "./ui/SuccessReveal";
 import { Section } from "./dashboard/Section";
 import { SubscriptionsSection } from "./dashboard/SubscriptionsSection";
 import { GoalsSection } from "./dashboard/GoalsSection";
@@ -1010,7 +1011,7 @@ export default function Dashboard() {
           `${(data.subscriptions || []).length} fijos`,
           `${(data.goals || []).length} metas`,
           `${(data.history || []).length} snapshots`,
-        ].join(" · ");
+        ].join(", ");
         setImportError(null);
         setImportPreview({ data, counts });
         onImportOpen();
@@ -1089,7 +1090,9 @@ export default function Dashboard() {
 
   return (
     <div className="app-shell text-foreground font-sans">
-      <AppNav active={activeTab} onChange={changeTab} />
+      <SignedIn>
+        <AppNav active={activeTab} onChange={changeTab} />
+      </SignedIn>
 
       <div className="app-col">
       {/* ── ENCABEZADO: saludo y atajos ──────────────────────── */}
@@ -1109,11 +1112,6 @@ export default function Dashboard() {
 
       {/* ── SIGNED IN ─────────────────────────────────────────── */}
       <SignedIn>
-        {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
-        {locked && (
-          <BiometricLockScreen unlocking={unlocking} onUnlock={handleUnlock} />
-        )}
-
         {isLoading ? (
           <DashboardSkeleton />
         ) : loadError ? (
@@ -1339,6 +1337,14 @@ export default function Dashboard() {
           </TabView>
         </main>
         )}
+      </SignedIn>
+      </div>
+
+      <SignedIn>
+        {/* ── CANDADO BIOMÉTRICO ──────────────────────────────── */}
+        {locked && (
+          <BiometricLockScreen unlocking={unlocking} onUnlock={handleUnlock} />
+        )}
 
         {/* ── FAB → registro rápido ───────────────────────────── */}
         {!isLoading && !loadError && (
@@ -1448,6 +1454,8 @@ export default function Dashboard() {
           pushStatus={pushStatus}
           pushBusy={pushBusy}
           togglePush={togglePush}
+          privacy={privacy}
+          onTogglePrivacy={togglePrivacy}
           isSharedMember={isSharedMember}
           shareBusy={shareBusy}
           leaveShared={leaveShared}
@@ -1484,7 +1492,7 @@ export default function Dashboard() {
         {/* ── MODAL: conflicto de sincronización ──────────────── */}
         <SyncConflictModal isOpen={conflictData !== null} onResolve={resolveConflict} />
       </SignedIn>
-      </div>
+      <SuccessReveal />
     </div>
   );
 }

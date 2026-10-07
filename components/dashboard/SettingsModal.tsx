@@ -1,19 +1,27 @@
 "use client";
 
 import React from "react";
-import { Modal, ModalContent, ModalHeader, ModalBody, Input, Button } from "@heroui/react";
+import { useTheme } from "next-themes";
 import { UserButton } from "@clerk/nextjs";
 import {
-  Fingerprint, Bell, BellOff, Users, LogOut, Trash2, Check, Copy, UserPlus,
+  Users, LogOut, Trash2, Check, Copy, UserPlus,
   Tag, X, Plus, Download, Upload, Mic, CircleHelp,
 } from "lucide-react";
+import { Sheet } from "@/components/ui/Sheet";
 
 type SetStrings = React.Dispatch<React.SetStateAction<string[]>>;
+
+function Switch({ on, onToggle, label, disabled }: { on: boolean; onToggle: () => void; label: string; disabled?: boolean }) {
+  return (
+    <button type="button" className="sw" role="switch" aria-checked={on} aria-label={label} onClick={onToggle} disabled={disabled} />
+  );
+}
 
 export function SettingsModal({
   isOpen, onOpenChange, onClearOpen,
   lockOn, bioAvailable, toggleBiometricLock,
   pushStatus, pushBusy, togglePush,
+  privacy, onTogglePrivacy,
   isSharedMember, shareBusy, leaveShared, leaveArmed,
   members, removeMember, inviteCode, codeCopied, copyInvite, generateInvite,
   joinCode, setJoinCode, joinShared, shareError,
@@ -30,6 +38,8 @@ export function SettingsModal({
   pushStatus: "on" | "off" | "denied" | "unsupported";
   pushBusy: boolean;
   togglePush: () => void;
+  privacy: boolean;
+  onTogglePrivacy: () => void;
   isSharedMember: boolean;
   shareBusy: boolean;
   leaveShared: () => void;
@@ -58,242 +68,200 @@ export function SettingsModal({
   onVoiceOpen: () => void;
   onStartTour: () => void;
 }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const night = resolvedTheme === "dark";
+  const close = () => onOpenChange(false);
+
+  const pushLabel =
+    pushStatus === "denied" ? "Notificaciones bloqueadas en el navegador"
+    : pushStatus === "unsupported" ? "Este navegador no soporta notificaciones"
+    : "3 días antes, 1 día antes y el día límite; y un día antes del corte";
+
   return (
-    <Modal isOpen={isOpen} onOpenChange={onOpenChange} backdrop="blur">
-      <ModalContent>
-        {(onClose) => (
+    <Sheet open={isOpen} onOpenChange={onOpenChange} title="Ajustes" wide>
+      {/* ── Preferencias ─────────────────────────────── */}
+      <div>
+        <div className="setrow">
+          <div><b>Ocultar montos</b><small>Muestra $•••• en toda la app</small></div>
+          <Switch on={privacy} onToggle={onTogglePrivacy} label="Ocultar montos" />
+        </div>
+        <div className="setrow">
+          <div><b>Modo noche</b><small>Fondo negro y halo lima</small></div>
+          <Switch on={night} onToggle={() => setTheme(night ? "light" : "dark")} label="Modo noche" />
+        </div>
+        <div className="setrow">
+          <div><b>Recordatorios de corte y pago</b><small>{pushLabel}</small></div>
+          <Switch
+            on={pushStatus === "on"} onToggle={togglePush} label="Recordatorios de corte y pago"
+            disabled={pushStatus === "unsupported" || pushStatus === "denied" || pushBusy}
+          />
+        </div>
+        <div className="setrow">
+          <div>
+            <b>Bloqueo con huella o Face ID</b>
+            <small>
+              {!bioAvailable && !lockOn
+                ? "Este dispositivo no tiene huella o Face ID disponible (o el sitio no está en HTTPS)"
+                : "Al abrir la app"}
+            </small>
+          </div>
+          <Switch on={lockOn} onToggle={toggleBiometricLock} label="Bloqueo con huella o Face ID" disabled={!bioAvailable && !lockOn} />
+        </div>
+      </div>
+
+      {/* ── Atajos que en móvil no caben en el encabezado ── */}
+      <div className="flex flex-wrap items-center gap-2 sm:hidden">
+        <button type="button" className="btn soft sm" onClick={() => { close(); onVoiceOpen(); }}>
+          <Mic size={16} aria-hidden /> Asistente de voz
+        </button>
+        <button type="button" className="btn soft sm" onClick={() => { close(); onStartTour(); }}>
+          <CircleHelp size={16} aria-hidden /> Iniciar tour
+        </button>
+        <UserButton />
+      </div>
+
+      {/* ── Cuentas compartidas ──────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <h3 className="sec" style={{ fontSize: 14 }}>Cuentas compartidas</h3>
+
+        {isSharedMember ? (
+          <div className="callout flex flex-col gap-2">
+            <p className="flex items-center gap-2">
+              <Users size={15} className="shrink-0" aria-hidden />
+              <span>Estás viendo <b>cuentas compartidas</b> de otra persona.</span>
+            </p>
+            <p className="mute text-xs">Tus datos personales se conservan y regresan cuando salgas.</p>
+            <button type="button" className="btn danger sm self-start" onClick={leaveShared} disabled={shareBusy}>
+              <LogOut size={14} aria-hidden /> {leaveArmed ? "¿Seguro? Toca de nuevo para salir" : "Salir de estas cuentas"}
+            </button>
+          </div>
+        ) : (
           <>
-            <ModalHeader className="flex flex-col gap-1">Ajustes</ModalHeader>
-            <ModalBody className="pb-6">
-              {/* ── Atajos que en móvil no caben en el encabezado ── */}
-              <div className="flex flex-wrap items-center gap-2 sm:hidden">
-                <Button variant="flat" startContent={<Mic size={16} />} onPress={() => { onClose(); onVoiceOpen(); }}>
-                  Asistente de voz
-                </Button>
-                <Button variant="flat" startContent={<CircleHelp size={16} />} onPress={() => { onClose(); onStartTour(); }}>
-                  Iniciar tour
-                </Button>
-                <UserButton />
-              </div>
-
-              {/* ── Seguridad ─────────────────────────────── */}
-              <p className="text-sm font-bold text-default-700">Seguridad</p>
-              <Button
-                color={lockOn ? "success" : "default"}
-                variant="flat"
-                startContent={<Fingerprint size={18} />}
-                isDisabled={!bioAvailable && !lockOn}
-                onPress={toggleBiometricLock}
-                className="justify-start"
-              >
-                {lockOn ? "Bloqueo biométrico: ACTIVADO (toca para quitar)" : "Activar bloqueo con huella / Face ID"}
-              </Button>
-              {!bioAvailable && !lockOn && (
-                <p className="text-[11px] text-default-400 -mt-1">
-                  Este dispositivo no tiene huella/Face ID disponible (o el sitio no está en HTTPS).
-                </p>
-              )}
-
-              {/* ── Notificaciones ────────────────────────── */}
-              <p className="text-sm font-bold text-default-700 mt-3">Recordatorios</p>
-              <Button
-                color={pushStatus === "on" ? "success" : "default"}
-                variant="flat"
-                startContent={pushStatus === "on" ? <Bell size={18} /> : <BellOff size={18} />}
-                isDisabled={pushStatus === "unsupported" || pushStatus === "denied" || pushBusy}
-                isLoading={pushBusy}
-                onPress={togglePush}
-                className="justify-start"
-              >
-                {pushStatus === "on" ? "Recordatorios: ACTIVADOS (toca para quitar)"
-                  : pushStatus === "denied" ? "Notificaciones bloqueadas en el navegador"
-                  : pushStatus === "unsupported" ? "Este navegador no soporta notificaciones"
-                  : "Activar recordatorios de corte y pago"}
-              </Button>
-              <p className="text-[11px] text-default-400 -mt-1">
-                Te avisamos 3 días antes, 1 día antes y el día de tu fecha límite de pago, y un día antes del corte.
-              </p>
-
-              {/* ── Cuentas compartidas ───────────────────── */}
-              <p className="text-sm font-bold text-default-700 mt-3">Cuentas compartidas</p>
-
-              {isSharedMember ? (
-                <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 space-y-2">
-                  <p className="text-sm text-default-600 flex items-center gap-2">
-                    <Users size={15} className="text-foreground shrink-0" />
-                    Estás viendo <span className="font-bold">cuentas compartidas</span> de otra persona.
-                  </p>
-                  <p className="text-[11px] text-default-400">
-                    Tus datos personales se conservan y regresan cuando salgas.
-                  </p>
-                  <Button
-                    size="sm" color="danger" variant="flat"
-                    startContent={<LogOut size={14} />}
-                    isLoading={shareBusy}
-                    onPress={leaveShared}
-                  >
-                    {leaveArmed ? "¿Seguro? Toca de nuevo para salir" : "Salir de estas cuentas"}
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  {members.length > 0 && (
-                    <div className="space-y-1.5">
-                      {members.map((m) => (
-                        <div key={m.userId} className="flex items-center gap-2 p-2 rounded-lg bg-default-100 border border-default-200">
-                          <Users size={13} className="text-foreground shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-default-700 truncate">{m.name || "Sin nombre"}</p>
-                            {m.email && <p className="text-[10px] text-default-400 truncate">{m.email}</p>}
-                          </div>
-                          <button
-                            onClick={() => removeMember(m.userId)}
-                            className="p-1.5 rounded-lg text-default-500 hover:text-money-out-text hover:bg-money-out/10 transition-colors shrink-0"
-                            aria-label={`Quitar a ${m.name || m.email || "miembro"}`}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      ))}
+            {members.length > 0 && (
+              <div className="list">
+                {members.map((m) => (
+                  <div key={m.userId} className="it">
+                    <i aria-hidden><Users size={16} /></i>
+                    <div className="t">
+                      <b>{m.name || "Sin nombre"}</b>
+                      {m.email && <small>{m.email}</small>}
                     </div>
-                  )}
-
-                  {inviteCode ? (
-                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 space-y-1.5">
-                      <p className="text-[11px] text-default-500">Comparte este código (vence en 72 h):</p>
-                      <div className="flex items-center gap-2">
-                        <span className="figure text-4xl tracking-[0.12em] text-foreground">
-                          {inviteCode}
-                        </span>
-                        <Button isIconOnly size="sm" variant="flat" color={codeCopied ? "success" : "default"} onPress={copyInvite} aria-label="Copiar código">
-                          {codeCopied ? <Check size={14} /> : <Copy size={14} />}
-                        </Button>
-                      </div>
-                      <p className="text-[10px] text-default-400">
-                        La otra persona lo ingresa en Ajustes → &quot;Unirme con código&quot; desde su propia cuenta.
-                      </p>
+                    <div className="acts">
+                      <button onClick={() => removeMember(m.userId)} aria-label={`Quitar a ${m.name || m.email || "miembro"}`}>
+                        <Trash2 size={15} aria-hidden />
+                      </button>
                     </div>
-                  ) : (
-                    <Button
-                      variant="flat" color="primary"
-                      startContent={<UserPlus size={16} />}
-                      isLoading={shareBusy}
-                      onPress={generateInvite}
-                      className="justify-start"
-                    >
-                      Invitar a alguien (generar código)
-                    </Button>
-                  )}
-
-                  {members.length === 0 && (
-                    <div className="flex gap-2">
-                      <Input
-                        size="sm" variant="bordered" placeholder="Código de invitación"
-                        aria-label="Código de invitación"
-                        value={joinCode}
-                        onValueChange={(v) => setJoinCode(v.toUpperCase())}
-                        maxLength={6}
-                        classNames={{ input: joinCode ? "uppercase tracking-widest font-bold" : "" }} /* el código se escribe en mayúsculas; el texto de ayuda no */
-                        className="flex-1"
-                      />
-                      <Button
-                        size="sm" variant="flat" color="secondary" className="font-bold"
-                        isDisabled={joinCode.trim().length !== 6}
-                        isLoading={shareBusy}
-                        onPress={joinShared}
-                      >
-                        Unirme
-                      </Button>
-                    </div>
-                  )}
-
-                  {shareError && <p className="text-[11px] text-money-out-text font-semibold">{shareError}</p>}
-                </>
-              )}
-
-              {/* ── Categorías personalizadas ──────────────── */}
-              <p className="text-sm font-bold text-default-700 mt-3">Categorías personalizadas</p>
-              {([
-                { kind: "expense" as const, label: "Para gastos", list: customExpenseCats, setter: setCustomExpenseCats, value: newCatE, setValue: setNewCatE },
-                { kind: "income" as const, label: "Para ingresos", list: customIncomeCats, setter: setCustomIncomeCats, value: newCatI, setValue: setNewCatI },
-              ]).map(({ kind, label: catLabel, list, setter, value, setValue }) => (
-                <div key={kind} className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-default-500">{catLabel}</p>
-                  {list.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {list.map((c) => (
-                        <span key={c} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-full bg-ink/5 text-foreground border border-ink/20">
-                          <Tag size={10} />
-                          {c}
-                          <button onClick={() => setter((prev) => prev.filter((x) => x !== c))} aria-label={`Quitar ${c}`} className="hover:text-money-out-text ml-0.5">
-                            <X size={11} />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Input size="sm" variant="bordered" placeholder={kind === "expense" ? "Ej. Mascota, Gym" : "Ej. Propinas"}
-                      value={value} onValueChange={setValue}
-                      onKeyDown={(e) => { if (e.key === "Enter") addCustomCat(kind); }}
-                      className="flex-1" aria-label={`Nueva categoría ${catLabel}`} />
-                    <Button size="sm" variant="flat" color="primary" isIconOnly isDisabled={!value.trim()}
-                      onPress={() => addCustomCat(kind)} aria-label="Agregar categoría">
-                      <Plus size={14} />
-                    </Button>
                   </div>
-                </div>
-              ))}
-
-              {/* ── Datos ─────────────────────────────────── */}
-              <p className="text-sm font-bold text-default-700 mt-3">Datos</p>
-              <p className="text-sm text-default-500 mb-2">
-                Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Button
-                  color="primary"
-                  variant="flat"
-                  startContent={<Download size={18} />}
-                  onPress={() => { exportData(); onClose(); }}
-                >
-                  Exportar Respaldo (.json)
-                </Button>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    aria-label="Importar respaldo"
-                    className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
-                    onChange={(e) => { onImportFile(e); onClose(); }}
-                  />
-                  <Button
-                    color="secondary"
-                    variant="flat"
-                    startContent={<Upload size={18} />}
-                    className="w-full pointer-events-none"
-                  >
-                    Importar Respaldo
-                  </Button>
-                </div>
-                <Button
-                  color="danger"
-                  variant="flat"
-                  startContent={<Trash2 size={18} />}
-                  onPress={() => { onClose(); onClearOpen(); }}
-                >
-                  Limpiar Historial
-                </Button>
+                ))}
               </div>
+            )}
 
-              <a href="/privacidad" target="_blank" rel="noopener"
-                className="text-[11px] text-default-500 hover:text-foreground underline underline-offset-2 mt-2">
-                Aviso de privacidad
-              </a>
-            </ModalBody>
+            {inviteCode ? (
+              <div className="callout flex flex-col gap-1.5">
+                <p className="text-xs mute">Comparte este código (vence en 72 h):</p>
+                <div className="flex items-center gap-2">
+                  <span className="figure text-4xl tracking-[0.12em]">{inviteCode}</span>
+                  <button type="button" className="btn soft sm" onClick={copyInvite} aria-label="Copiar código">
+                    {codeCopied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+                  </button>
+                </div>
+                <p className="text-[11px] mute">La otra persona lo ingresa en Ajustes, en «Unirme con código», desde su propia cuenta.</p>
+              </div>
+            ) : (
+              <button type="button" className="btn ghost sm self-start" onClick={generateInvite} disabled={shareBusy}>
+                <UserPlus size={16} aria-hidden /> Invitar a alguien (generar código)
+              </button>
+            )}
+
+            {members.length === 0 && (
+              <div className="flex gap-2">
+                <input
+                  className="field-pill flex-1" placeholder="Código de invitación" aria-label="Código de invitación"
+                  value={joinCode} maxLength={6}
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                  style={joinCode ? { letterSpacing: "0.1em", fontWeight: 700 } : undefined}
+                />
+                <button type="button" className="btn ghost sm" disabled={joinCode.trim().length !== 6 || shareBusy} onClick={joinShared}>
+                  Unirme
+                </button>
+              </div>
+            )}
+
+            {shareError && <p className="err-msg">{shareError}</p>}
           </>
         )}
-      </ModalContent>
-    </Modal>
+      </div>
+
+      {/* ── Categorías personalizadas ────────────────── */}
+      <div className="flex flex-col gap-3">
+        <h3 className="sec" style={{ fontSize: 14 }}>Categorías personalizadas</h3>
+        {([
+          { kind: "expense" as const, label: "Para gastos", list: customExpenseCats, setter: setCustomExpenseCats, value: newCatE, setValue: setNewCatE },
+          { kind: "income" as const, label: "Para ingresos", list: customIncomeCats, setter: setCustomIncomeCats, value: newCatI, setValue: setNewCatI },
+        ]).map(({ kind, label: catLabel, list, setter, value, setValue }) => (
+          <div key={kind} className="flex flex-col gap-1.5">
+            <p className="text-xs font-semibold mute">{catLabel}</p>
+            {list.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {list.map((c) => (
+                  <span key={c} className="chip inline-flex items-center gap-1">
+                    <Tag size={11} aria-hidden />
+                    {c}
+                    <button
+                      onClick={() => setter((prev) => prev.filter((x) => x !== c))} aria-label={`Quitar ${c}`}
+                      className="grid place-items-center size-9 -my-2 -mr-2 rounded-full"
+                    >
+                      <X size={12} aria-hidden />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                className="field-pill flex-1" placeholder={kind === "expense" ? "Ej. Mascota, Gym" : "Ej. Propinas"}
+                aria-label={`Nueva categoría ${catLabel}`}
+                value={value} onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") addCustomCat(kind); }}
+              />
+              <button type="button" className="btn ghost sm" style={{ minWidth: 44 }} disabled={!value.trim()}
+                onClick={() => addCustomCat(kind)} aria-label="Agregar categoría">
+                <Plus size={16} aria-hidden />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Datos ────────────────────────────────────── */}
+      <div className="flex flex-col gap-2.5">
+        <h3 className="sec" style={{ fontSize: 14 }}>Datos</h3>
+        <p className="mute text-sm">
+          Exporta tus datos como un archivo JSON de respaldo, o importa un archivo previamente exportado.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn soft sm" onClick={() => { exportData(); close(); }}>
+            <Download size={16} aria-hidden /> Exportar respaldo (.json)
+          </button>
+          <div className="relative">
+            <input
+              type="file" accept=".json,application/json" aria-label="Importar respaldo"
+              className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
+              onChange={(e) => { onImportFile(e); close(); }}
+            />
+            <span className="btn soft sm pointer-events-none">
+              <Upload size={16} aria-hidden /> Importar respaldo
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="ft">
+        <button type="button" className="btn danger sm" onClick={() => { close(); onClearOpen(); }}>
+          <Trash2 size={16} aria-hidden /> Limpiar historial
+        </button>
+        <button type="button" className="btn" onClick={close}>Listo</button>
+      </div>
+    </Sheet>
   );
 }

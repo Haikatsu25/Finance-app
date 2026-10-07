@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@heroui/react";
 import { Undo2 } from "lucide-react";
 
 export function UndoToast({ label, message, onUndo }: {
@@ -11,18 +10,16 @@ export function UndoToast({ label, message, onUndo }: {
 }) {
   return (
     <div className="undo-toast" role="status">
-      <span className={`min-w-0 text-xs text-default-600 ${message ? "leading-snug line-clamp-2" : "truncate"}`}>
-        {message ?? <>Se eliminó <span className="font-bold">{label}</span></>}
+      <span className={`min-w-0 flex-1 ${message ? "leading-snug line-clamp-2" : "truncate"}`}>
+        {message ?? <>Se eliminó <b>{label}</b></>}
       </span>
-      <Button
-        variant="flat"
-        color="primary"
-        className="font-bold h-11 min-w-11 shrink-0"
-        startContent={<Undo2 size={14} />}
-        onPress={onUndo}
+      <button
+        type="button"
+        onClick={onUndo}
+        className="min-h-11 shrink-0 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 font-extrabold"
       >
-        Deshacer
-      </Button>
+        <Undo2 size={14} aria-hidden /> Deshacer
+      </button>
     </div>
   );
 }

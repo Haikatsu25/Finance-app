@@ -749,17 +749,6 @@ textarea::placeholder {
   opacity: 1;
 }
 
-/* Botón de cerrar de TODOS los modales (HeroUI lo dibuja de 32px): 44px. Va fuera de @layer:
-   la clase de utilidad de HeroUI está en una capa y ganaría. */
-[role="dialog"] > button[aria-label="Close"],
-[role="dialog"] > button[aria-label="Cerrar"] {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-}
-
 /* Foco: anillo de marca de 2px, visible sobre tarjeta, héroe y fondo */
 :focus-visible {
   outline: 2px solid var(--brand);

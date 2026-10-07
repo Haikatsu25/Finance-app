@@ -68,7 +68,7 @@ export default function AIInsights({ data, onAskAI }: {
               negatives.slice(0, 4).map((f) => (
                 <li key={f.label}>
                   <b>{String(f.points).replace("-", "−")}</b>
-                  <div>{f.label}<small>{f.detail}</small></div>
+                  <div><span>{f.label}</span><small>{f.detail}</small></div>
                 </li>
               ))
             )}

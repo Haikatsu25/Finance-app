@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Input, Button, Select, SelectItem,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure,
-} from "@heroui/react";
+import { useDisclosure } from "@heroui/react";
+import { Sheet } from "@/components/ui/Sheet";
+import { celebrate, originOf } from "@/components/ui/SuccessReveal";
 import {
   CreditCard as CreditCardIcon, Plus, Trash2, Calculator, AlertTriangle,
   Check, CalendarClock, Layers, ChevronDown, ChevronUp, BadgeCheck, Pencil, Minus, Scissors,
@@ -113,8 +112,8 @@ export default function CreditCards({
   onUpdateCard?: (id: string, patch: Partial<CreditCardItem>) => void;
   onUpdateInstallment?: (id: string, patch: Partial<InstallmentPlan>) => void;
 }) {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const { isOpen: isMsiOpen, onOpen: onMsiOpen, onOpenChange: onMsiChange } = useDisclosure();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isMsiOpen, onOpen: onMsiOpen, onClose: onMsiChange } = useDisclosure();
   const [simCard, setSimCard] = useState<CreditCardItem | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [cardToDelete, setCardToDelete] = useState<CreditCardItem | null>(null);
@@ -482,227 +481,224 @@ export default function CreditCards({
         </div>
       )}
 
-      {/* ── Modal: alta de tarjeta ─────────────────────────────── */}
-      <Modal isOpen={isOpen} onOpenChange={(o) => { onOpenChange(); if (!o) setEditingCard(null); }} backdrop="blur">
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader>{editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}</ModalHeader>
-              <ModalBody>
-                <div className="flex gap-2">
-                  <Input label="Nombre" placeholder="Ej. BBVA Azul, Nu" variant="bordered" value={label} onValueChange={setLabel} className="flex-1" />
-                  <Input
-                    label="Últimos 4 dígitos" placeholder="1234" variant="bordered" className="w-[150px]"
-                    inputMode="numeric" maxLength={4} value={last4}
-                    onValueChange={(v) => setLast4(v.replace(/\D/g, "").slice(0, 4))}
-                    isInvalid={last4 !== "" && last4.length !== 4}
-                    description="Opcional"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  {!editingCard && (
-                    <Input label="Deuda de contado" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>} value={balance} onValueChange={setBalance} />
-                  )}
-                  <Input label="Límite de crédito" type="number" min="0" inputMode="decimal" placeholder="0.00" variant="bordered"
-                    startContent={<span className="text-default-400 text-xs">$</span>} value={creditLimit} onValueChange={setCreditLimit} />
-                </div>
-                {editingCard && (
-                  <p className="text-[11px] text-default-400">
-                    La deuda de contado se actualiza desde la propia tarjeta (campo &quot;Reemplazar deuda&quot; o gastos vinculados).
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <Input label="Día de corte" type="number" min="1" max="31" placeholder="15" variant="bordered" value={cutoffDay} onValueChange={setCutoffDay} />
-                  <Input label="Día límite de pago" type="number" min="1" max="31" placeholder="5" variant="bordered" value={dueDay} onValueChange={setDueDay} />
-                  <Input label="Tasa anual %" type="number" min="0" placeholder="60" variant="bordered" value={apr} onValueChange={setApr} />
-                </div>
-                <p className="text-[11px] text-default-400">
-                  Las compras a meses se agregan aparte, con el botón &quot;Compra a meses&quot;.
-                </p>
-              </ModalBody>
-              <ModalFooter>
-                <Button variant="light" onPress={onClose}>Cancelar</Button>
-                <Button color="primary" variant="solid" className="font-bold" isDisabled={!validCard} onPress={() => submitCard(onClose)}>
-                  {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
-                </Button>
-              </ModalFooter>
-            </>
+      {/* ── Hoja: alta y edición de tarjeta ─────────────────────── */}
+      <Sheet
+        open={isOpen}
+        onOpenChange={(o) => { if (!o) { setEditingCard(null); onClose(); } else onOpen(); }}
+        title={editingCard ? `Editar ${editingCard.label}` : "Nueva tarjeta de crédito"}
+      >
+        <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); submitCard(onClose); }}>
+          <div className="row2" style={{ gridTemplateColumns: "1.6fr 1fr" }}>
+            <div className="f">
+              <label htmlFor="cc-label">Nombre</label>
+              <input id="cc-label" placeholder="Ej. BBVA Azul, Nu" value={label} onChange={(e) => setLabel(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-last4">Últimos 4 dígitos</label>
+              <input
+                id="cc-last4" placeholder="1234" inputMode="numeric" maxLength={4} value={last4}
+                onChange={(e) => setLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                className={last4 !== "" && last4.length !== 4 ? "err" : ""}
+              />
+            </div>
+          </div>
+          <div className="row2">
+            {!editingCard && (
+              <div className="f">
+                <label htmlFor="cc-balance">Deuda de contado</label>
+                <input id="cc-balance" type="number" min="0" inputMode="decimal" placeholder="$ 0.00" value={balance} onChange={(e) => setBalance(e.target.value)} />
+              </div>
+            )}
+            <div className="f">
+              <label htmlFor="cc-limit">Límite de crédito</label>
+              <input id="cc-limit" type="number" min="0" inputMode="decimal" placeholder="$ 0.00" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} />
+            </div>
+          </div>
+          {editingCard && (
+            <p className="mute text-xs">
+              La deuda de contado se actualiza desde la propia tarjeta (campo «Reemplazar deuda» o gastos vinculados).
+            </p>
           )}
-        </ModalContent>
-      </Modal>
+          <div className="row2" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+            <div className="f">
+              <label htmlFor="cc-cut">Día de corte</label>
+              <input id="cc-cut" type="number" min="1" max="31" placeholder="15" value={cutoffDay} onChange={(e) => setCutoffDay(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-due">Día límite de pago</label>
+              <input id="cc-due" type="number" min="1" max="31" placeholder="5" value={dueDay} onChange={(e) => setDueDay(e.target.value)} />
+            </div>
+            <div className="f">
+              <label htmlFor="cc-apr">Tasa anual %</label>
+              <input id="cc-apr" type="number" min="0" placeholder="60" value={apr} onChange={(e) => setApr(e.target.value)} />
+            </div>
+          </div>
+          <p className="mute text-xs">
+            Las compras a meses se agregan aparte, con el botón «Compra a meses».
+          </p>
+          <div className="ft">
+            <button type="button" className="btn soft" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn" disabled={!validCard}>
+              {editingCard ? "Guardar cambios" : "Guardar tarjeta"}
+            </button>
+          </div>
+        </form>
+      </Sheet>
 
-      {/* ── Modal: compra a meses sin intereses ────────────────── */}
-      <Modal isOpen={isMsiOpen} onOpenChange={(o) => { onMsiChange(); if (!o) setEditingPlan(null); }} backdrop="blur">
-        <ModalContent>
-          {(onClose) => {
-            const amt = parseFloat(msiAmount);
-            const mths = parseInt(msiMonths) || 12;
-            const monthly = Number.isFinite(amt) && amt > 0 ? amt / mths : 0;
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <Layers size={18} className="text-foreground" />
-                  {editingPlan ? `Editar "${editingPlan.label}"` : "Compra a meses sin intereses"}
-                </ModalHeader>
-                <ModalBody>
-                  <Select label="Tarjeta" variant="bordered" selectedKeys={msiCardId ? [msiCardId] : []}
-                    onChange={(e) => setMsiCardId(e.target.value)}>
-                    {cards.map((c) => <SelectItem key={c.id}>{c.label}</SelectItem>)}
-                  </Select>
-                  <Input label="¿Qué compraste?" placeholder="Ej. Laptop, Refrigerador" variant="bordered" value={msiLabel} onValueChange={setMsiLabel} />
-                  <div className="flex gap-2">
-                    <Input label="Monto total" type="number" min="0" step="0.01" inputMode="decimal" placeholder="0.00" variant="bordered"
-                      startContent={<span className="text-default-400 text-xs">$</span>} value={msiAmount} onValueChange={setMsiAmount} className="flex-1" />
-                    <Select label="Plazo" variant="bordered" className="w-32" selectedKeys={[msiMonths]}
-                      onChange={(e) => setMsiMonths(e.target.value || "12")}>
-                      {TERMS.map((t) => <SelectItem key={String(t)}>{`${t} meses`}</SelectItem>)}
-                    </Select>
-                  </div>
-                  <Input label="Fecha de compra" type="date" variant="bordered" value={msiDate} onValueChange={setMsiDate}
-                    description="Si la dejas vacía se usa hoy" />
+      {/* ── Hoja: compra a meses sin intereses ──────────────────── */}
+      {(() => {
+        const amt = parseFloat(msiAmount);
+        const mths = parseInt(msiMonths) || 12;
+        const monthly = Number.isFinite(amt) && amt > 0 ? amt / mths : 0;
+        const closeMsi = () => onMsiChange();
+        return (
+          <Sheet
+            open={isMsiOpen}
+            onOpenChange={(o) => { if (!o) { setEditingPlan(null); closeMsi(); } else onMsiOpen(); }}
+            title={editingPlan ? `Editar «${editingPlan.label}»` : "Compra a meses sin intereses"}
+          >
+            <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); submitMsi(closeMsi); }}>
+              <div className="f">
+                <label htmlFor="msi-card">Tarjeta</label>
+                <select id="msi-card" value={msiCardId} onChange={(e) => setMsiCardId(e.target.value)}>
+                  {cards.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="f">
+                <label htmlFor="msi-label">¿Qué compraste?</label>
+                <input id="msi-label" placeholder="Ej. Laptop, Refrigerador" value={msiLabel} onChange={(e) => setMsiLabel(e.target.value)} />
+              </div>
+              <div className="row2">
+                <div className="f">
+                  <label htmlFor="msi-amount">Monto total</label>
+                  <input id="msi-amount" type="number" min="0" step="0.01" inputMode="decimal" placeholder="$ 0.00" value={msiAmount} onChange={(e) => setMsiAmount(e.target.value)} />
+                </div>
+                <div className="f">
+                  <label htmlFor="msi-months">Plazo</label>
+                  <select id="msi-months" value={msiMonths} onChange={(e) => setMsiMonths(e.target.value || "12")}>
+                    {TERMS.map((t) => <option key={t} value={String(t)}>{`${t} meses`}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="f">
+                <label htmlFor="msi-date">Fecha de compra</label>
+                <input id="msi-date" type="date" value={msiDate} onChange={(e) => setMsiDate(e.target.value)} />
+                <span className="mute text-xs">Si la dejas vacía se usa hoy</span>
+              </div>
 
-                  {editingPlan && (
-                    <Input
-                      label="Mensualidades ya pagadas" type="number" min="0" max={String(mths)} step="1"
-                      inputMode="numeric" variant="bordered" value={msiPaid} onValueChange={setMsiPaid}
-                      endContent={<span className="text-default-400 text-xs">de {mths}</span>}
-                      description="Súbela si ya diste por pagada la del mes que viene aunque no llegue tu fecha de pago"
-                    />
-                  )}
+              {editingPlan && (
+                <div className="f">
+                  <label htmlFor="msi-paid">Mensualidades ya pagadas (de {mths})</label>
+                  <input id="msi-paid" type="number" min="0" max={String(mths)} step="1" inputMode="numeric" value={msiPaid} onChange={(e) => setMsiPaid(e.target.value)} />
+                  <span className="mute text-xs">Súbela si ya diste por pagada la del mes que viene aunque no llegue tu fecha de pago</span>
+                </div>
+              )}
 
-                  {monthly > 0 && (
-                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20 flex items-center gap-3">
-                      <CalendarClock size={18} className="text-foreground shrink-0" />
-                      <p className="text-sm text-default-600">
-                        Pagarás <span className="figure text-xl">{moneyExact(monthly)}</span> al mes durante{" "}
-                        <span className="font-bold">{mths} meses</span>.
-                      </p>
-                    </div>
-                  )}
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button color="primary" variant="solid" className="font-bold"
-                    isDisabled={!validMsi} onPress={() => submitMsi(onClose)}>
-                    {editingPlan ? "Guardar cambios" : "Agregar a meses"}
-                  </Button>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </ModalContent>
-      </Modal>
+              {monthly > 0 && (
+                <p className="callout brand flex items-center gap-2">
+                  <CalendarClock size={18} className="shrink-0" aria-hidden />
+                  <span>
+                    Pagarás <b className="text-lg tnum">{moneyExact(monthly)}</b> al mes durante <b>{mths} meses</b>.
+                  </span>
+                </p>
+              )}
 
-      {/* ── Modal: marcar deuda de contado como pagada ─────────── */}
-      <Modal isOpen={cardToPay !== null} onOpenChange={(o) => { if (!o) setCardToPay(null); }} backdrop="blur" size="sm">
-        <ModalContent>
-          {(onClose) => {
-            const linked = cardToPay ? liabilities.filter((l) => l.cardId === cardToPay.id) : [];
-            const bd = cardToPay ? cardDebtBreakdown(cardToPay, installments) : null;
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <BadgeCheck size={18} className="text-foreground" />
-                  Marcar como pagada
-                </ModalHeader>
-                <ModalBody>
-                  <p className="text-sm text-default-600">
-                    La deuda de contado de <span className="font-bold">{cardToPay?.label}</span>{" "}
-                    (<span className="font-bold tnum">{money(bd?.cash || 0)}</span>) quedará en <span className="font-bold">$0</span>.
-                  </p>
-                  {cardToPay && (
-                    <p className="text-xs text-default-600">
-                      Se marcará como pagado el estado de cuenta que vence el{" "}
-                      <span className="font-bold">{statementDueDate(cardToPay).toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</span>.
-                    </p>
-                  )}
-                  {linked.length > 0 && (
-                    <p className="text-xs text-default-500">
-                      También se quitarán sus <span className="font-bold">{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</span> de
-                      Gastos &amp; Deudas. Tu balance disponible se libera.
-                    </p>
-                  )}
-                  {bd && bd.installmentRemaining > 0 && (
-                    <p className="text-xs text-default-600">
-                      Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
-                    </p>
-                  )}
-                  <p className="text-[11px] text-default-400">Tendrás 5 segundos para deshacerlo.</p>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button
-                    color="success" variant="solid" className="font-bold"
-                    startContent={<BadgeCheck size={15} />}
-                    onPress={() => {
-                      if (cardToPay && onMarkPaid) onMarkPaid(cardToPay.id);
-                      setCardToPay(null);
-                      onClose();
-                    }}
-                  >
-                    Sí, ya pagué
-                  </Button>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </ModalContent>
-      </Modal>
+              <div className="ft">
+                <button type="button" className="btn soft" onClick={closeMsi}>Cancelar</button>
+                <button type="submit" className="btn" disabled={!validMsi}>
+                  {editingPlan ? "Guardar cambios" : "Agregar a meses"}
+                </button>
+              </div>
+            </form>
+          </Sheet>
+        );
+      })()}
 
-      {/* ── Modal: confirmar eliminación de tarjeta ────────────── */}
-      <Modal isOpen={cardToDelete !== null} onOpenChange={(o) => { if (!o) setCardToDelete(null); }} backdrop="blur" size="sm">
-        <ModalContent>
-          {(onClose) => {
-            const plans = cardToDelete ? installments.filter((p) => p.cardId === cardToDelete.id) : [];
-            return (
-              <>
-                <ModalHeader className="flex items-center gap-2">
-                  <AlertTriangle size={18} className="text-money-out-text" />
-                  Eliminar tarjeta
-                </ModalHeader>
-                <ModalBody>
-                  <p className="text-sm text-default-600">
-                    ¿Seguro que quieres eliminar <span className="font-bold">{cardToDelete?.label}</span>?
-                  </p>
-                  {plans.length > 0 && (
-                    <div className="p-3 rounded-lg bg-ink/5 border border-ink/20">
-                      <p className="text-xs text-default-600">
-                        También se eliminarán sus{" "}
-                        <span className="font-bold">{plans.length} compra{plans.length > 1 ? "s" : ""} a meses</span>:
-                      </p>
-                      <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
-                        {plans.map((p) => (
-                          <li key={p.id} className="text-xs text-default-600 tnum">
-                            {p.label}: {money(p.totalAmount)} a {p.months} meses
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-default-400">
-                    Podrás deshacerlo durante 5 segundos con el botón que aparecerá abajo.
-                  </p>
-                </ModalBody>
-                <ModalFooter>
-                  <Button variant="light" onPress={onClose}>Cancelar</Button>
-                  <Button
-                    color="danger" variant="solid" className="font-bold"
-                    startContent={<Trash2 size={15} />}
-                    onPress={() => {
-                      if (cardToDelete) onRemove(cardToDelete.id);
-                      setCardToDelete(null);
-                      onClose();
-                    }}
-                  >
-                    Sí, eliminar
-                  </Button>
-                </ModalFooter>
-              </>
-            );
-          }}
-        </ModalContent>
-      </Modal>
+      {/* ── Hoja: marcar deuda de contado como pagada ───────────── */}
+      {(() => {
+        const linked = cardToPay ? liabilities.filter((l) => l.cardId === cardToPay.id) : [];
+        const bd = cardToPay ? cardDebtBreakdown(cardToPay, installments) : null;
+        const closePay = () => setCardToPay(null);
+        return (
+          <Sheet open={cardToPay !== null} onOpenChange={(o) => { if (!o) closePay(); }} title="Marcar como pagada">
+            <p className="text-[15px] leading-relaxed">
+              La deuda de contado de <b>{cardToPay?.label}</b> (<b className="tnum">{money(bd?.cash || 0)}</b>) quedará en <b>$0</b>.
+            </p>
+            {cardToPay && (
+              <p className="callout">
+                Se marcará como pagado el estado de cuenta que vence el{" "}
+                <b>{statementDueDate(cardToPay).toLocaleDateString("es-MX", { day: "numeric", month: "long" })}</b>.
+              </p>
+            )}
+            {linked.length > 0 && (
+              <p className="callout">
+                También se quitarán sus <b>{linked.length} gasto{linked.length > 1 ? "s" : ""} vinculado{linked.length > 1 ? "s" : ""}</b> de
+                Gastos y deudas. Tu balance disponible se libera.
+              </p>
+            )}
+            {bd && bd.installmentRemaining > 0 && (
+              <p className="callout brand">
+                Tus compras a meses no se tocan: sigues debiendo {money(bd.installmentRemaining)} en mensualidades.
+              </p>
+            )}
+            <p className="summary" style={{ margin: 0 }}>Tendrás 5 segundos para deshacerlo.</p>
+            <div className="ft">
+              <button type="button" className="btn soft" onClick={closePay}>Cancelar</button>
+              <button
+                type="button" className="btn"
+                onClick={(e) => {
+                  if (!cardToPay || !onMarkPaid) return;
+                  const origin = originOf(e.currentTarget);
+                  const paid = cardToPay;
+                  const amount = bd?.dueThisMonth || bd?.cash || 0;
+                  onMarkPaid(paid.id);
+                  closePay();
+                  celebrate({ amount: money(amount), text: `Pago registrado: ${paid.label}`, tone: "paid", ...origin });
+                }}
+              >
+                <BadgeCheck size={16} aria-hidden /> Sí, ya pagué
+              </button>
+            </div>
+          </Sheet>
+        );
+      })()}
+
+      {/* ── Hoja: confirmar eliminación de tarjeta ──────────────── */}
+      {(() => {
+        const plans = cardToDelete ? installments.filter((p) => p.cardId === cardToDelete.id) : [];
+        const closeDel = () => setCardToDelete(null);
+        return (
+          <Sheet open={cardToDelete !== null} onOpenChange={(o) => { if (!o) closeDel(); }} title="Eliminar tarjeta">
+            <p className="text-[15px] leading-relaxed">
+              ¿Seguro que quieres eliminar <b>{cardToDelete?.label}</b>?
+            </p>
+            {plans.length > 0 && (
+              <div className="callout warn">
+                <p>
+                  También se eliminarán sus <b>{plans.length} compra{plans.length > 1 ? "s" : ""} a meses</b>:
+                </p>
+                <ul className="mt-1.5 space-y-0.5 list-disc pl-4">
+                  {plans.map((p) => (
+                    <li key={p.id} className="text-xs tnum">{p.label}: {money(p.totalAmount)} a {p.months} meses</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="summary" style={{ margin: 0 }}>
+              Podrás deshacerlo durante 5 segundos con el botón que aparecerá abajo.
+            </p>
+            <div className="ft">
+              <button type="button" className="btn soft" onClick={closeDel}>Cancelar</button>
+              <button
+                type="button" className="btn danger"
+                onClick={() => { if (cardToDelete) onRemove(cardToDelete.id); closeDel(); }}
+              >
+                <Trash2 size={16} aria-hidden /> Sí, eliminar
+              </button>
+            </div>
+          </Sheet>
+        );
+      })()}
 
       <DebtSimulator card={simCard} onClose={() => setSimCard(null)} />
     </section>

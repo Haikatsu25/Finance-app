@@ -25,6 +25,11 @@ export function BalanceHero({
   const p = moneyParts(Math.abs(animatedAvailable));
   const ms = summarizeMonth(transactions, currentMonthKey);
   const pct = totalAssets > 0 ? Math.max(0, Math.min(100, (animatedAvailable / totalAssets) * 100)) : 0;
+  const ringProps = {
+    style: { ["--p" as string]: Math.round(pct) },
+    role: "img" as const,
+    "aria-label": `Disponible real: ${Math.round(pct)}% de tus activos`,
+  };
 
   return (
     <section
@@ -35,9 +40,15 @@ export function BalanceHero({
     >
       <div className="flex items-center justify-between gap-3 text-[14px] font-medium text-(--hero-mute)">
         <p id="balance-label">{isPositive ? "Disponible real este mes" : "Déficit este mes"}</p>
-        <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border border-white/30 text-white" aria-label="Pesos mexicanos">
-          MXN
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold px-2.5 py-[3px] rounded-full border border-white/30 text-white" aria-label="Pesos mexicanos">
+            MXN
+          </span>
+          {/* En móvil el anillo vive arriba, junto al chip; en escritorio, abajo con los botones */}
+          <div className="ring ring-sm min-[431px]:hidden" {...ringProps}>
+            <span>{Math.round(pct)}%</span>
+          </div>
+        </div>
       </div>
 
       <h2 className="figure figure-xl tnum mt-2.5 mb-2">
@@ -58,7 +69,7 @@ export function BalanceHero({
       )}
 
       <div className="flex items-center justify-between gap-2.5 mt-3.5">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button id="save-snapshot-btn" type="button" className="slab-btn" data-solid="true" onClick={onSaveSnapshot}>
             Guardar snapshot
           </button>
@@ -66,7 +77,7 @@ export function BalanceHero({
             Ver historial
           </button>
         </div>
-        <div className="ring" style={{ ["--p" as string]: Math.round(pct) }} role="img" aria-label={`Disponible real: ${Math.round(pct)}% de tus activos`}>
+        <div className="ring max-[430px]:hidden" {...ringProps}>
           <span>{Math.round(pct)}%</span>
         </div>
       </div>

@@ -151,3 +151,22 @@ test("17. Registro rápido: Agregar siempre activo, marca lo que falta y luego g
   await expect(modal).toBeHidden();
   await saved;
 });
+
+test("18. Héroe en móvil: con cifras largas el anillo y los botones caben dentro", async ({ page }, info) => {
+  test.skip(info.project.name !== "chromium-mobile", "El anillo cambia de lugar solo en ≤430px");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp(page);
+  await loadDemo(page);
+  await addAsset(page, "Cuenta grande E2E", 1234567.89);
+
+  const hero = (await page.locator("#balance-card").boundingBox())!;
+  const ring = (await page.locator("#balance-card .ring:visible").boundingBox())!;
+  expect(ring.width).toBe(44);
+  expect(ring.x + ring.width).toBeLessThanOrEqual(hero.x + hero.width - 12); // dentro, con margen
+  const botones = page.locator("#balance-card .slab-btn");
+  await expect(botones).toHaveCount(2);
+  for (const b of await botones.all()) {
+    const box = (await b.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(hero.x + hero.width - 12);
+  }
+});

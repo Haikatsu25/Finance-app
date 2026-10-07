@@ -121,6 +121,9 @@
     font-size: 12px;
   }
 
+  .ring-sm { width: 44px; height: 44px; }
+  .ring-sm span { width: 33px; height: 33px; font-size: 10px; letter-spacing: -0.02em; }
+
   /* ── Barra de reparto y leyenda ── */
   .bar {
     display: flex;

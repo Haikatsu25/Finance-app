@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Delete } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { QUICK_CATEGORIES, type QuickAddType } from "./quickAdd";
+import { Picker } from "../ui/Picker";
 
 const TYPES: { id: QuickAddType; label: string; seg: "in" | "out" | "hold"; hint: string }[] = [
   { id: "asset",     label: "Activo",   seg: "in",   hint: "Monto de la cuenta" },
@@ -115,9 +116,8 @@ export function QuickAddModal({
           </div>
           <div className="f">
             <label htmlFor="quick-cat">Categoría</label>
-            <select id="quick-cat" value={quickCategory} onChange={(e) => setQuickCategory(e.target.value || QUICK_CATEGORIES[quickType][0])}>
-              {QUICK_CATEGORIES[quickType].map((cat) => <option key={cat}>{cat}</option>)}
-            </select>
+            <Picker id="quick-cat" variant="field" label="Categoría" value={quickCategory} onChange={(v) => setQuickCategory(v || QUICK_CATEGORIES[quickType][0])}
+              options={QUICK_CATEGORIES[quickType].map((cat) => ({ value: cat, label: cat }))} />
           </div>
         </div>
         <div className="ft">

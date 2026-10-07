@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { addAsset, dismissSuccess, expectSave, goTab, loadDemo, openApp, panel } from "./helpers/app";
+import { addAsset, dismissSuccess, expectSave, goTab, loadDemo, openApp, openFirstEdit, panel, pick } from "./helpers/app";
 
 test("9. Transferencia: el aviso nombra monto y cuentas y los saldos cambian", async ({ page }) => {
   await openApp(page);
@@ -9,8 +9,8 @@ test("9. Transferencia: el aviso nombra monto y cuentas y los saldos cambian", a
   const activos = panel(page, "Ingresos y activos");
   await page.getByRole("button", { name: "Transferir", exact: true }).click();
   const modal = page.getByRole("dialog");
-  await modal.getByLabel("De", { exact: true }).selectOption({ label: "Origen E2E, $5,000" });
-  await modal.getByLabel("Hacia", { exact: true }).selectOption({ label: "Destino E2E, $100" });
+  await pick(page, modal, "De", "Origen E2E, $5,000");
+  await pick(page, modal, "Hacia", "Destino E2E, $100");
   await modal.getByLabel("Monto").fill("1200");
   await modal.getByRole("button", { name: "Transferir", exact: true }).click();
   await expect(modal).toBeHidden();
@@ -26,7 +26,7 @@ test("10. Edición inválida: el modal no se cierra y explica qué corregir", as
   await loadDemo(page);
   await goTab(page, "movimientos");
 
-  await page.locator('button[aria-label^="Editar "]:visible').first().click();
+  await openFirstEdit(page);
   const modal = page.getByRole("dialog");
   await expect(modal.getByText("Editar movimiento")).toBeVisible();
 
@@ -60,7 +60,11 @@ test("11. Presupuesto duplicado: una categoría con presupuesto ya no se puede e
   const creada = await presupuestos.getByLabel(/Eliminar presupuesto de/).getAttribute("aria-label");
   const categoria = creada!.replace("Eliminar presupuesto de ", "");
 
-  await expect(presupuestos.getByLabel("Categoría").locator(`option[value="${categoria}"]`)).toHaveCount(0);
+  await presupuestos.getByRole("combobox", { name: "Categoría", exact: true }).click();
+  await expect(page.getByRole("listbox", { name: "Categoría" }).getByRole("option", { name: categoria, exact: true })).toHaveCount(0);
+  await expect(page.locator('[role="option"]:focus')).toHaveCount(1); // la hoja/menú ya movió el foco a sus opciones
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("listbox", { name: "Categoría" })).toBeHidden();
 
   // y aunque se intente crear otro, sigue habiendo un solo presupuesto de esa categoría
   await presupuestos.getByLabel("Límite mensual").fill("999");

@@ -14,6 +14,7 @@ import {
   nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus, todayIso, isoDate } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
+import { Picker } from "./ui/Picker";
 
 const TERMS = [3, 6, 9, 12, 18, 24];
 
@@ -560,9 +561,8 @@ export default function CreditCards({
             <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); submitMsi(closeMsi); }}>
               <div className="f">
                 <label htmlFor="msi-card">Tarjeta</label>
-                <select id="msi-card" value={msiCardId} onChange={(e) => setMsiCardId(e.target.value)}>
-                  {cards.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                </select>
+                <Picker id="msi-card" variant="field" label="Tarjeta" value={msiCardId} onChange={setMsiCardId}
+                  options={cards.map((c) => ({ value: c.id, label: c.label }))} />
               </div>
               <div className="f">
                 <label htmlFor="msi-label">¿Qué compraste?</label>
@@ -575,9 +575,8 @@ export default function CreditCards({
                 </div>
                 <div className="f">
                   <label htmlFor="msi-months">Plazo</label>
-                  <select id="msi-months" value={msiMonths} onChange={(e) => setMsiMonths(e.target.value || "12")}>
-                    {TERMS.map((t) => <option key={t} value={String(t)}>{`${t} meses`}</option>)}
-                  </select>
+                  <Picker id="msi-months" variant="field" label="Plazo" value={msiMonths} onChange={(v) => setMsiMonths(v || "12")}
+                    options={TERMS.map((t) => ({ value: String(t), label: `${t} meses` }))} />
                 </div>
               </div>
               <div className="f">
@@ -621,7 +620,7 @@ export default function CreditCards({
         const closePay = () => setCardToPay(null);
         return (
           <Sheet open={cardToPay !== null} onOpenChange={(o) => { if (!o) closePay(); }} title="Marcar como pagada">
-            <p className="text-[15px] leading-relaxed">
+            <p className="text-[0.9375rem] leading-relaxed">
               La deuda de contado de <b>{cardToPay?.label}</b> (<b className="tnum">{money(bd?.cash || 0)}</b>) quedará en <b>$0</b>.
             </p>
             {cardToPay && (
@@ -669,7 +668,7 @@ export default function CreditCards({
         const closeDel = () => setCardToDelete(null);
         return (
           <Sheet open={cardToDelete !== null} onOpenChange={(o) => { if (!o) closeDel(); }} title="Eliminar tarjeta">
-            <p className="text-[15px] leading-relaxed">
+            <p className="text-[0.9375rem] leading-relaxed">
               ¿Seguro que quieres eliminar <b>{cardToDelete?.label}</b>?
             </p>
             {plans.length > 0 && (

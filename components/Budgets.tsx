@@ -7,6 +7,7 @@ import { money, round2 } from "@/lib/format";
 import { monthKey, spentByCategory } from "@/lib/finance-utils";
 import { EXPENSE_CATEGORIES } from "./Transactions";
 import AddedByBadge from "./AddedByBadge";
+import { Picker } from "./ui/Picker";
 
 const ICON_BTN = "size-9 grid place-items-center rounded-full text-(--ink-soft) transition-colors hover:bg-brand-soft hover:text-(--brand-text)";
 
@@ -131,15 +132,14 @@ export default function Budgets({ budgets, transactions, onAdd, onRemove, onUpda
       )}
 
       <div className="mt-3 flex flex-col sm:flex-row gap-2">
-        <select
-          className="field-pill sm:flex-1" aria-label="Categoría"
+        <Picker
+          className="sm:flex-1" label="Categoría"
           disabled={available.length === 0}
           value={effectiveCategory}
-          onChange={(e) => { if (e.target.value) setCategory(e.target.value); }}
-        >
-          {available.length === 0 && <option value="">Ya tienes presupuesto en todas</option>}
-          {available.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+          placeholder="Ya tienes presupuesto en todas"
+          onChange={(v) => { if (v) setCategory(v); }}
+          options={available.map((c) => ({ value: c, label: c }))}
+        />
         <input
           className="field-pill sm:w-44" type="number" min="0" inputMode="decimal"
           placeholder="Límite mensual $" aria-label="Límite mensual"

@@ -8,6 +8,7 @@ import { TransactionItem } from "@/types";
 import { round2 } from "@/lib/format";
 import { EXPENSE_CATEGORIES } from "./Transactions";
 import { todayIso } from "@/lib/finance-utils";
+import { Picker } from "./ui/Picker";
 
 type ScanState = "idle" | "processing" | "review" | "error";
 
@@ -152,9 +153,8 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
           </div>
           <div className="f">
             <label htmlFor="scan-cat">Categoría</label>
-            <select id="scan-cat" value={category} onChange={(e) => setCategory(e.target.value || "Otros")}>
-              {EXPENSE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <Picker id="scan-cat" variant="field" label="Categoría" value={category} onChange={(v) => setCategory(v || "Otros")}
+              options={EXPENSE_CATEGORIES.map((c) => ({ value: c, label: c }))} />
           </div>
         </div>
       )}

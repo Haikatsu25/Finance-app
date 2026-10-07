@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import { FinanceItem } from "@/types";
 import { QUICK_CATEGORIES, type EditKind } from "./quickAdd";
+import { Picker } from "../ui/Picker";
 
 export function EditModal({
   editTarget, setEditTarget, liabilities, onSave,
@@ -56,9 +57,8 @@ export function EditModal({
             </div>
             <div className="f">
               <label htmlFor="ed-cat">Categoría</label>
-              <select id="ed-cat" value={eCategory} onChange={(e) => setECategory(e.target.value)}>
-                {QUICK_CATEGORIES[kind].map((c) => <option key={c}>{c}</option>)}
-              </select>
+              <Picker id="ed-cat" variant="field" label="Categoría" value={eCategory} onChange={setECategory}
+                options={QUICK_CATEGORIES[kind].map((c) => ({ value: c, label: c }))} />
             </div>
             {kind === "liability" && editTarget && liabilities.find((l) => l.id === editTarget.id)?.cardId && (
               <p className="callout">
@@ -76,10 +76,8 @@ export function EditModal({
             </div>
             <div className="f">
               <label htmlFor="ed-cycle">Ciclo</label>
-              <select id="ed-cycle" value={eCycle} onChange={(e) => setECycle(e.target.value === "anual" ? "anual" : "mensual")}>
-                <option value="mensual">Mensual</option>
-                <option value="anual">Anual</option>
-              </select>
+              <Picker id="ed-cycle" variant="field" label="Ciclo" value={eCycle} onChange={(v) => setECycle(v === "anual" ? "anual" : "mensual")}
+                options={[{ value: "mensual", label: "Mensual" }, { value: "anual", label: "Anual" }]} />
             </div>
           </div>
         )}

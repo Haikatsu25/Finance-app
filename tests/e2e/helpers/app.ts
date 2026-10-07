@@ -22,6 +22,26 @@ export async function goTab(page: Page, tab: Tab) {
   await page.waitForTimeout(400);
 }
 
+/** Elige una opción de un Picker (hoja en móvil, menú flotante en escritorio) por el nombre del disparador. */
+export async function pick(page: Page, scope: Page | Locator, label: string, option: string | RegExp) {
+  await scope.getByRole("combobox", { name: label, exact: true }).click();
+  const list = page.getByRole("listbox", { name: label, exact: true });
+  await expect(list).toBeVisible();
+  await list.getByRole("option", { name: option, exact: typeof option === "string" }).click();
+  await expect(list).toBeHidden();
+}
+
+/**
+ * Abre la edición de la primera fila visible. En móvil las acciones de cada fila van tras un
+ * botón "⋯" que abre una hoja con Editar / Eliminar; en escritorio hay botones sueltos.
+ */
+export async function openFirstEdit(page: Page) {
+  const direct = page.locator('button[aria-label^="Editar "]:visible').first();
+  if (await direct.count()) { await direct.click(); return; }
+  await page.locator('button[aria-label^="Acciones de "]:visible').first().click();
+  await page.getByRole("dialog").getByRole("button", { name: "Editar", exact: true }).click();
+}
+
 /** Tarjeta (sección) de la app localizada por su título (h2). */
 export function panel(page: Page, title: string | RegExp): Locator {
   const h2 = typeof title === "string" ? `normalize-space()="${title}"` : null;

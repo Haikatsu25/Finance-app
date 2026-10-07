@@ -5,6 +5,7 @@ import { Sheet } from "@/components/ui/Sheet";
 import { celebrate, originOf } from "@/components/ui/SuccessReveal";
 import { FinanceItem } from "@/types";
 import { money } from "@/lib/format";
+import { Picker } from "../ui/Picker";
 
 export function TransferModal({
   isOpen, onOpenChange, onTransfer, assets,
@@ -39,17 +40,13 @@ export function TransferModal({
     <Sheet open={isOpen} onOpenChange={onOpenChange} title="Transferir entre cuentas">
       <div className="f">
         <label htmlFor="tr-from">De</label>
-        <select id="tr-from" value={tFrom} onChange={(e) => setTFrom(e.target.value)}>
-          <option value="" disabled>Elige una cuenta</option>
-          {assets.map((a) => <option key={a.id} value={a.id}>{`${a.label}, ${money(a.amount)}`}</option>)}
-        </select>
+        <Picker id="tr-from" variant="field" label="De" value={tFrom} onChange={setTFrom} placeholder="Elige una cuenta"
+          options={assets.map((a) => ({ value: a.id, label: `${a.label}, ${money(a.amount)}` }))} />
       </div>
       <div className="f">
         <label htmlFor="tr-to">Hacia</label>
-        <select id="tr-to" value={tTo} onChange={(e) => setTTo(e.target.value)}>
-          <option value="" disabled>Elige una cuenta</option>
-          {assets.filter((a) => a.id !== tFrom).map((a) => <option key={a.id} value={a.id}>{`${a.label}, ${money(a.amount)}`}</option>)}
-        </select>
+        <Picker id="tr-to" variant="field" label="Hacia" value={tTo} onChange={setTTo} placeholder="Elige una cuenta"
+          options={assets.filter((a) => a.id !== tFrom).map((a) => ({ value: a.id, label: `${a.label}, ${money(a.amount)}` }))} />
       </div>
       <div className="f">
         <label htmlFor="tr-amount">Monto</label>

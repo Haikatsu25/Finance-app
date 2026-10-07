@@ -5,11 +5,11 @@
 export function Logo({ size = 28, className = "" }: { size?: number; className?: string }) {
   return (
     <svg
-      viewBox="9 15 50 43"
-      width={(size * 50) / 43}
+      viewBox="9 15 52 43"
+      width={(size * 52) / 43}
       height={size}
       className={className}
-      overflow="visible" /* el borde del medallón (x hasta 60.5) sale 1.5 del viewBox de mark.svg */
+      overflow="visible" /* red de seguridad: el dibujo cabe en el viewBox (el borde del medallón llega a x=60.5) */
       role="img"
       aria-label="Finance Control"
     >

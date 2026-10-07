@@ -38,6 +38,21 @@ export function isoDate(d: Date): string {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** Hoy como YYYY-MM-DD en la zona horaria del usuario (única fuente de "hoy" para fechas de captura). */
+export function todayIso(now: Date = new Date()): string {
+    return isoDate(now);
+}
+
+/**
+ * Día calendario LOCAL de un valor guardado. Los snapshots se guardan como instante UTC
+ * ("2026-10-07T03:00:00.000Z" es el 6 de octubre en México); cortar el texto en la "T" daría el 7.
+ * Una fecha ya de 10 caracteres (YYYY-MM-DD) se devuelve igual.
+ */
+export function localDay(value: string | Date): string {
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    return isoDate(typeof value === "string" ? new Date(value) : value);
+}
+
 /** Fecha YYYY-MM-DD que existe de verdad (rechaza "2026-13-45", que cumple el formato). */
 function isRealIsoDate(s: unknown): s is string {
     if (typeof s !== "string") return false;

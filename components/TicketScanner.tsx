@@ -8,6 +8,7 @@ import { ScanLine, Camera, Check, AlertTriangle } from "lucide-react";
 import { TransactionItem } from "@/types";
 import { round2 } from "@/lib/format";
 import { EXPENSE_CATEGORIES } from "./Transactions";
+import { todayIso } from "@/lib/finance-utils";
 
 type ScanState = "idle" | "processing" | "review" | "error";
 
@@ -91,7 +92,7 @@ export default function TicketScanner({ isOpen, onOpenChange, onConfirm }: {
     onConfirm({
       label: label.trim(),
       amount: round2(parseFloat(amount)),
-      date: date || new Date().toISOString().split("T")[0],
+      date: date || todayIso(),
       type: "expense",
       category,
       source: "scan",

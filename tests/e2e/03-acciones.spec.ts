@@ -102,3 +102,21 @@ test("14. Historial: un monto en cero va en tinta y sin signo", async ({ page })
   await expect(gastos.locator("span")).toHaveClass(/text-foreground/);
   await expect(gastos.locator("span")).not.toHaveClass(/money-out/);
 });
+
+test.describe("15. Snapshot de noche", () => {
+  // 21:30 del 6 de octubre en México = 03:30 UTC del 7: el día que se cortaba mal.
+  test.use({ timezoneId: "America/Mexico_City" });
+
+  test("el calendario del snapshot marca el mismo día que el encabezado", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2026-10-07T03:30:00Z"));
+    await openApp(page);
+    await page.locator("#save-snapshot-btn").click();
+    await goTab(page, "historial");
+    await page.locator("#history-section tbody tr").first().click();
+
+    const modal = page.getByRole("dialog");
+    await expect(modal.getByText("martes, 6 de octubre de 2026")).toBeVisible();
+    await expect(modal.getByRole("button", { name: /6 de octubre de 2026.*seleccionad/i })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /7 de octubre de 2026.*seleccionad/i })).toHaveCount(0);
+  });
+});

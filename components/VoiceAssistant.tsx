@@ -7,7 +7,7 @@ import {
 import { Mic, MicOff, Check, CreditCard as CreditCardIcon, Volume2, AlertTriangle } from "lucide-react";
 import { CreditCardItem, TransactionItem, InstallmentPlan } from "@/types";
 import { money, round2 } from "@/lib/format";
-import { bestCardFor, CardRecommendation } from "@/lib/finance-utils";
+import { bestCardFor, CardRecommendation, todayIso } from "@/lib/finance-utils";
 
 // ─────────────────────────────────────────────────────────────────
 // Asistente de voz 100% local: Web Speech API para escuchar,
@@ -153,7 +153,7 @@ export default function VoiceAssistant({ isOpen, onOpenChange, cards, installmen
       const tx: Omit<TransactionItem, "id"> = {
         label: intent.label,
         amount: intent.amount,
-        date: new Date().toISOString().split("T")[0],
+        date: todayIso(),
         type: "expense",
         category: intent.category,
         source: "manual",
@@ -169,7 +169,7 @@ export default function VoiceAssistant({ isOpen, onOpenChange, cards, installmen
       const tx: Omit<TransactionItem, "id"> = {
         label: intent.label,
         amount: intent.amount,
-        date: new Date().toISOString().split("T")[0],
+        date: todayIso(),
         type: "income",
         category: "Nómina",
         source: "manual",

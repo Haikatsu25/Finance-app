@@ -5,6 +5,7 @@ import { parseDate } from "@internationalized/date";
 import { DollarSign, ShieldAlert, Wallet } from "lucide-react";
 import { FinanceItem, HistorySnapshot } from "@/types";
 import { money } from "@/lib/format";
+import { localDay } from "@/lib/finance-utils";
 import { TONE } from "./tone";
 
 export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
@@ -39,7 +40,7 @@ export function SnapshotModal({ isOpen, onOpenChange, selectedSnapshot }: {
                     <div className="flex justify-center">
                       <CalendarWidget
                         aria-label="Fecha del snapshot"
-                        value={parseDate(selectedSnapshot.date.split("T")[0])}
+                        value={parseDate(localDay(selectedSnapshot.date))}
                         isReadOnly
                         className="border border-default-200 rounded-lg"
                       />

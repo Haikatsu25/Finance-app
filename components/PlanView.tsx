@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { TransactionItem, SubscriptionItem, InstallmentPlan, CreditCardItem, FinanceItem } from "@/types";
 import { money, moneySmart, moneyParts, round2 } from "@/lib/format";
-import { planMonth, monthKey, shiftMonth, monthLabel } from "@/lib/finance-utils";
+import { planMonth, monthKey, shiftMonth, monthLabel, todayIso as todayLocal } from "@/lib/finance-utils";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "./Transactions";
 import AddedByBadge from "./AddedByBadge";
 
@@ -63,7 +63,7 @@ export default function PlanView({
 
   const currentMonth = monthKey(new Date());
   const prevMonth = shiftMonth(month, -1);
-  const todayIso = new Date().toISOString().split("T")[0];
+  const todayIso = todayLocal();
   const daysToStart = (() => {
     const [y, m] = month.split("-").map(Number);
     const first = new Date(y, m - 1, 1);

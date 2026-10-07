@@ -23,7 +23,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import { biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock } from "@/lib/applock";
-import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth } from "@/lib/finance-utils";
+import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
 import Analytics from "./Analytics";
 import Transactions from "./Transactions";
@@ -529,7 +529,7 @@ export default function Dashboard() {
       id: crypto.randomUUID(),
       label,
       amount: rounded,
-      date: date || new Date().toISOString().split("T")[0],
+      date: date || todayIso(),
       type,
       category,
       ...(type === "liability" && cardId ? { cardId } : {}),
@@ -922,7 +922,7 @@ export default function Dashboard() {
   const pendingFixedTotal = round2(pendingFixed.reduce((s, i) => s + i.amount, 0));
 
   const registerFixedCharges = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayIso();
     setTransactions((prev) => [
       ...prev,
       ...pendingFixed.map((s) => ({
@@ -981,7 +981,7 @@ export default function Dashboard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `finance-backup-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `finance-backup-${todayIso()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

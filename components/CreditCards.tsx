@@ -12,8 +12,7 @@ import {
 import { CreditCardItem, InstallmentPlan, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
 import {
-  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus,
-} from "@/lib/finance-utils";
+  nextOccurrence, paymentDueDate, statementDueDate, daysUntil, cardDebtBreakdown, totalDebtBreakdown, installmentStatus, todayIso } from "@/lib/finance-utils";
 import DebtSimulator from "./DebtSimulator";
 import AddedByBadge from "./AddedByBadge";
 
@@ -273,7 +272,7 @@ export default function CreditCards({
       label: msiLabel.trim(),
       totalAmount: round2(parseFloat(msiAmount)),
       months: parseInt(msiMonths) || 12,
-      startDate: msiDate || new Date().toISOString().split("T")[0],
+      startDate: msiDate || todayIso(),
     });
     setMsiLabel(""); setMsiAmount(""); setMsiDate("");
     close();

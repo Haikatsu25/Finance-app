@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { TransactionItem, FinanceItem } from "@/types";
 import { money, moneyExact, round2 } from "@/lib/format";
-import { monthKey, shiftMonth, monthLabel, summarizeMonth } from "@/lib/finance-utils";
+import { monthKey, shiftMonth, monthLabel, summarizeMonth, todayIso as todayLocal } from "@/lib/finance-utils";
 import MonthlySummary from "./MonthlySummary";
 import AddedByBadge from "./AddedByBadge";
 
@@ -44,7 +44,7 @@ function exportCsv(rows: TransactionItem[], accountName: (id?: string) => string
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `movimientos-${new Date().toISOString().split("T")[0]}.csv`;
+  a.download = `movimientos-${todayLocal()}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -125,7 +125,7 @@ export default function Transactions({ transactions, onAdd, onRemove, onUpdate, 
   const currentMonth = monthKey(new Date());
   const maxMonth = shiftMonth(currentMonth, 3);
   const viewingFuture = month > currentMonth;
-  const todayIso = new Date().toISOString().split("T")[0];
+  const todayIso = todayLocal();
   // Fecha efectiva: la que escribas; si no escribes ninguna y estás viendo
   // otro mes, se registra en ESE mes (día 1); si no, hoy.
   const effectiveDate = date || (!searching && month !== currentMonth ? `${month}-01` : todayIso);

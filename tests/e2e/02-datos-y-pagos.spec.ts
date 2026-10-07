@@ -18,14 +18,14 @@ test("3. Datos de ejemplo: aparecen activos, la tarjeta Nu (ejemplo) y presupues
   await openApp(page);
   await loadDemo(page);
 
-  const activos = panel(page, "Ingresos & Activos");
+  const activos = panel(page, "Ingresos y activos");
   await expect(activos.getByText("BBVA Débito (ejemplo)")).toBeVisible();
   await expect(activos.getByText("Efectivo (ejemplo)")).toBeVisible();
   await expect(cardFace(page, "Nu (ejemplo)")).toBeVisible();
   // el ciclo de la tarjeta de ejemplo es relativo a hoy: nunca arranca vencida
   await expect(cardFace(page, "Nu (ejemplo)").getByText(/Pago vencido/)).toHaveCount(0);
   await expect(cardFace(page, "Nu (ejemplo)").getByText(/Pagas el \d{1,2} \p{L}+, en \d+ días/u)).toBeVisible();
-  await expect(page.getByText(/venció hace/)).toHaveCount(0);
+  await expect(page.getByText(/Venció hace/)).toHaveCount(0);
   const presupuestos = panel(page, "Presupuestos del mes");
   await expect(presupuestos.getByText("Comida", { exact: true })).toBeVisible();
   await expect(presupuestos.getByText("Transporte", { exact: true })).toBeVisible();
@@ -38,7 +38,7 @@ test("4. Pago vencido: en la tarjeta, en Por pagar, en el score y en los hallazg
   await expect(cardFace(page, CARD).getByText(/Pago vencido hace \d+ días?/)).toBeVisible();
   const porPagar = panel(page, "Por pagar");
   await expect(porPagar.getByText(CARD)).toBeVisible();
-  await expect(porPagar.getByText(/venció hace \d+ días?/)).toBeVisible();
+  await expect(porPagar.getByText(/Venció hace \d+ días?/)).toBeVisible();
 
   await goTab(page, "ia");
   await expect(page.getByText("Pagos vencidos", { exact: true })).toBeVisible();

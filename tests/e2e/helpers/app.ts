@@ -8,26 +8,26 @@ export async function openApp(page: Page) {
 
 export type Tab = "inicio" | "movimientos" | "analisis" | "ia" | "historial";
 
-// La barra superior (escritorio) y la inferior (móvil) usan etiquetas distintas; solo una es visible.
+// La barra flotante (móvil) y el riel (escritorio) son la misma navegación con las mismas etiquetas.
 const TAB_LABELS: Record<Tab, RegExp> = {
   inicio: /^Inicio$/,
-  movimientos: /^(Movimientos|Movs)$/,
+  movimientos: /^Movs$/,
   analisis: /^Análisis$/,
-  ia: /^(FinanceAI|IA)$/,
+  ia: /^IA$/,
   historial: /^Historial$/,
 };
 
 export async function goTab(page: Page, tab: Tab) {
-  await page.getByRole("button", { name: TAB_LABELS[tab] }).click();
+  await page.getByRole("navigation", { name: "Navegación principal" }).getByRole("button", { name: TAB_LABELS[tab] }).click();
   await page.waitForTimeout(400);
 }
 
-/** Tarjeta de un panel de Inicio localizada por su título (h3). */
+/** Tarjeta (sección) de la app localizada por su título (h2). */
 export function panel(page: Page, title: string | RegExp): Locator {
-  const h3 = typeof title === "string" ? `normalize-space()="${title}"` : null;
-  return h3
-    ? page.locator(`xpath=//h3[${h3}]/ancestor::div[contains(@class,"glass")][1]`)
-    : page.locator("div.glass").filter({ has: page.getByRole("heading", { name: title }) }).first();
+  const h2 = typeof title === "string" ? `normalize-space()="${title}"` : null;
+  return h2
+    ? page.locator(`xpath=//h2[${h2}]/ancestor::section[contains(@class,"pop-card")][1]`)
+    : page.locator("section.pop-card").filter({ has: page.getByRole("heading", { name: title }) }).first();
 }
 
 /** Cara de una tarjeta de crédito por su nombre. */
@@ -49,9 +49,9 @@ export async function loadDemo(page: Page) {
 }
 
 export async function addAsset(page: Page, label: string, amount: number) {
-  const card = panel(page, "Ingresos & Activos");
+  const card = panel(page, "Ingresos y activos");
   await card.getByPlaceholder("Descripción").fill(label);
-  await card.getByPlaceholder("0.00").fill(String(amount));
+  await card.getByPlaceholder("$ 0.00").fill(String(amount));
   await card.getByRole("button", { name: "Agregar", exact: true }).click();
   await expect(card.getByText(label)).toBeVisible();
 }
@@ -85,6 +85,14 @@ export async function seedOverdueCard(page: Page, label = "BBVA E2E") {
   await expect(cardFace(page, label).getByText(/Pago vencido hace/)).toBeVisible();
 }
 
+/** Cierra la confirmación a pantalla completa (se cierra sola a los 2.6s; tocarla la cierra ya). */
+export async function dismissSuccess(page: Page) {
+  const overlay = page.locator(".success");
+  await overlay.waitFor({ state: "visible", timeout: 5_000 }).catch(() => {});
+  if (await overlay.isVisible()) await overlay.click({ position: { x: 20, y: 20 } });
+  await expect(overlay).toHaveCount(0);
+}
+
 /** Pulsa "Pagado" en una tarjeta y confirma el modal; devuelve el texto del modal. */
 export async function payCard(page: Page, label: string): Promise<string> {
   await cardFace(page, label).getByRole("button", { name: "Pagado" }).click();
@@ -93,6 +101,7 @@ export async function payCard(page: Page, label: string): Promise<string> {
   const text = (await modal.innerText()).replace(/\s+/g, " ");
   await modal.getByRole("button", { name: "Sí, ya pagué" }).click();
   await expect(modal).toBeHidden();
+  await dismissSuccess(page);
   return text;
 }
 

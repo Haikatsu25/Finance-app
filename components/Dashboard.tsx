@@ -24,7 +24,7 @@ import { useTheme } from "next-themes";
 import { money, round2, loadPrivacyMode, setPrivacyMode } from "@/lib/format";
 import {
   biometricsAvailable, isLockEnabled, enableLock, disableLock, verifyLock,
-  clearLockSkipOnce, consumeLockSkipOnce, markLockSkipOnce, shouldStartLocked,
+  clearLockSkipOnce, consumeLockSkipOnce, markLockSkipOnce,
 } from "@/lib/applock";
 import { cardDebtBreakdown, cycleKey, monthKey, shiftMonth, todayIso, isoDate } from "@/lib/finance-utils";
 import { getPushStatus, enablePush, disablePush } from "@/lib/push-client";
@@ -189,10 +189,11 @@ export default function Dashboard() {
     setPrivacy(loadPrivacyMode());
 
     // Candado biométrico: si está activado, la app abre bloqueada
-    // (salvo que se haya vuelto con "Entrar con mi cuenta": fc_lock_skip_once, de una sola vez)
+    // Hasta que Clerk confirme la sesión se queda bloqueada (nunca en falso): el efecto de
+    // fc_lock_skip_once, más abajo, es el único que puede abrirla sin huella.
     const enabled = isLockEnabled();
     setLockOn(enabled);
-    setLocked(shouldStartLocked(enabled, consumeLockSkipOnce()));
+    setLocked(enabled);
     biometricsAvailable().then((ok) => { setBioAvailable(ok); setBioChecked(true); });
     getPushStatus().then(setPushStatus);
   }, []);
@@ -294,10 +295,12 @@ export default function Dashboard() {
     }
   };
 
-  // Si se vuelve a iniciar sesión sin recargar la página, la marca ya no hace falta
+  // Regreso de "Entrar con mi cuenta": la marca fc_lock_skip_once se consume solo cuando Clerk ya
+  // cargó Y confirma la sesión. Una carga intermedia (p. ej. el sso-callback de Google) no la gasta.
   useEffect(() => {
-    if (isSignedIn) clearLockSkipOnce();
-  }, [isSignedIn]);
+    if (!isLoaded || !isSignedIn) return;
+    if (consumeLockSkipOnce()) setLocked(false);
+  }, [isLoaded, isSignedIn]);
 
   const toggleBiometricLock = async () => {
     if (lockOn) {

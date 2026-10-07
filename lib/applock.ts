@@ -110,7 +110,7 @@ export async function verifyLock(): Promise<boolean> {
 // ── Entrar con la cuenta en vez de la huella ────────────────────────────────
 // "Entrar con mi cuenta" cierra la sesión de Clerk para volver a iniciar con Google o correo. El
 // candado (fc_lock_on) sigue activado; esta marca solo evita que, al volver a entrar, la app
-// abra otra vez bloqueada. Vive en sessionStorage y se consume UNA vez por carga de la página.
+// abra otra vez bloqueada. Vive en sessionStorage y se consume UNA vez, ya con la sesión confirmada.
 
 export const LOCK_SKIP_KEY = "fc_lock_skip_once";
 
@@ -126,25 +126,19 @@ export function clearLockSkipOnce(storage: KV | undefined = safeSession()) {
     try { storage?.removeItem(LOCK_SKIP_KEY); } catch { /* noop */ }
 }
 
-let skipCache: boolean | null = null;
-
 /**
- * ¿Hay que saltarse el candado en esta carga? Lee y borra la marca. Con el doble montaje de
- * StrictMode el efecto corre dos veces: el resultado se recuerda para que ambas den lo mismo.
+ * ¿Hay que saltarse el candado? Lee y borra la marca (una sola vez). Llamar solo cuando Clerk ya
+ * confirmó la sesión: si se llamara antes, una carga intermedia se comería la marca.
  */
 export function consumeLockSkipOnce(storage: KV | undefined = safeSession()): boolean {
-    if (skipCache !== null) return skipCache;
-    let skip = false;
     try {
-        skip = storage?.getItem(LOCK_SKIP_KEY) === "1";
+        const skip = storage?.getItem(LOCK_SKIP_KEY) === "1";
         if (skip) storage?.removeItem(LOCK_SKIP_KEY);
-    } catch { /* noop */ }
-    skipCache = skip;
-    return skip;
+        return skip;
+    } catch {
+        return false;
+    }
 }
-
-/** Solo para pruebas: olvida el resultado recordado de consumeLockSkipOnce. */
-export function resetLockSkipCache() { skipCache = null; }
 
 /** ¿La app debe abrir bloqueada? Candado activado y sin marca de "entrar con mi cuenta". */
 export function shouldStartLocked(lockEnabled: boolean, skipOnce: boolean): boolean {
